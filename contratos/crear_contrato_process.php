@@ -19,22 +19,23 @@ $es_part_time = isset($_POST['es_part_time']) ? 1 : 0;
 // --- 2. VALIDACIONES DE REGLAS DE NEGOCIO ---
 
 // Regla: Plazo Fijo
-if ($tipo_contrato == 'Fijo' && $fecha_termino == null) {
-    $_SESSION['flash_message'] = ['type' => 'error', 'message' => 'Error: Un contrato a Plazo Fijo DEBE tener una Fecha de Término.'];
-    header('Location: ' . BASE_URL . '/contratos/crear_contrato.php');
-    exit;
+if ($tipo_contrato == 'Fijo') {
+    if ($fecha_termino == null) {
+        $_SESSION['flash_message'] = ['type' => 'error', 'message' => 'Error: Un contrato a Plazo Fijo DEBE tener una Fecha de Término.'];
+        header('Location: ' . BASE_URL . '/contratos/crear_contrato.php');
+        exit;
+    }
+    // NUEVA REGLA: Fecha término > Fecha inicio
+    if ($fecha_termino <= $fecha_inicio) {
+        $_SESSION['flash_message'] = ['type' => 'error', 'message' => 'Error: La fecha de término debe ser posterior a la fecha de inicio.'];
+        header('Location: ' . BASE_URL . '/contratos/crear_contrato.php');
+        exit;
+    }
 }
 
 // Regla: Indefinido
 if ($tipo_contrato == 'Indefinido' && $fecha_termino != null) {
     $_SESSION['flash_message'] = ['type' => 'error', 'message' => 'Error: Un contrato Indefinido NO DEBE tener Fecha de Término.'];
-    header('Location: ' . BASE_URL . '/contratos/crear_contrato.php');
-    exit;
-}
-
-// Regla: Part Time (Tu nueva regla)
-if ($es_part_time == 1 && $tipo_contrato != 'Fijo') {
-    $_SESSION['flash_message'] = ['type' => 'error', 'message' => 'Error: El Part-Time solo puede seleccionarse para contratos de Plazo Fijo.'];
     header('Location: ' . BASE_URL . '/contratos/crear_contrato.php');
     exit;
 }

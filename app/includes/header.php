@@ -1,5 +1,6 @@
 <?php
-// Este archivo asume que bootstrap.php (que define BASE_URL) ya fue cargado
+// Obtener el nombre del archivo actual (ej: gestionar_contratos.php)
+$pagina_actual = basename($_SERVER['PHP_SELF']);
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -7,7 +8,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema de Reportes</title>
+    <title>Gestión Reportes</title>
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
@@ -20,7 +21,6 @@
     <link href="<?php echo BASE_URL; ?>/public/assets/css/style.css" rel="stylesheet">
 
     <style>
-        /* (El CSS del style... va aquí) */
         body {
             background-color: #f4f7f6;
         }
@@ -31,6 +31,7 @@
             align-items: stretch;
         }
 
+        /* --- SIDEBAR ESTILOS --- */
         #sidebar {
             min-width: 250px;
             max-width: 250px;
@@ -59,12 +60,15 @@
             padding: 10px;
         }
 
+        /* Estilos de los Enlaces del Menú */
         #sidebar ul li a {
             padding: 10px 20px;
             font-size: 1.1em;
             display: block;
             color: rgba(255, 255, 255, 0.8);
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            text-decoration: none !important;
+            /* QUITAR SUBRAYADO */
         }
 
         #sidebar ul li a:hover {
@@ -72,9 +76,23 @@
             background: #fff;
         }
 
+        /* CLASE ACTIVE (Fondo Azul) */
         #sidebar ul li.active>a {
             color: #fff;
             background: #007bff;
+            font-weight: bold;
+        }
+
+        /* Submenús */
+        #sidebar ul ul a {
+            font-size: 0.9em !important;
+            padding-left: 30px !important;
+            background: #4b545c;
+        }
+
+        #sidebar ul ul a:hover {
+            background: #fff !important;
+            color: #343a40 !important;
         }
 
         #content {
@@ -105,7 +123,8 @@
             </div>
 
             <ul class="list-unstyled components">
-                <li class="active">
+
+                <li class="<?php echo ($pagina_actual == 'index.php') ? 'active' : ''; ?>">
                     <a href="<?php echo BASE_URL; ?>/index.php"><i class="fas fa-tachometer-alt me-2"></i> Dashboard</a>
                 </li>
 
@@ -114,37 +133,53 @@
                         <a href="#adminMenu" data-bs-toggle="collapse" aria-expanded="false" class="dropdown-toggle">
                             <i class="fas fa-users-cog me-2"></i> Administración
                         </a>
-                        <ul class="collapse list-unstyled" id="adminMenu">
-                            <li><a href="<?php echo BASE_URL; ?>/admin/gestionar_usuarios.php">Gestión Usuarios</a></li>
+                        <ul class="collapse list-unstyled <?php echo ($pagina_actual == 'gestionar_usuarios.php' || $pagina_actual == 'gestionar_sis.php' || $pagina_actual == 'gestionar_afps.php' || $pagina_actual == 'cierres_mensuales.php') ? 'show' : ''; ?>" id="adminMenu">
+                            <li class="<?php echo ($pagina_actual == 'gestionar_usuarios.php') ? 'active' : ''; ?>">
+                                <a href="<?php echo BASE_URL; ?>/admin/gestionar_usuarios.php">Gestión Usuarios</a>
+                            </li>
+                            <li class="<?php echo ($pagina_actual == 'gestionar_sis.php') ? 'active' : ''; ?>">
+                                <a href="<?php echo BASE_URL; ?>/admin/gestionar_sis.php">Registro Histórico SIS</a>
+                            </li>
+                            <li class="<?php echo ($pagina_actual == 'gestionar_afps.php') ? 'active' : ''; ?>">
+                                <a href="<?php echo BASE_URL; ?>/maestros/gestionar_afps.php">AFPs</a>
+                            </li>
+                            <li class="<?php echo ($pagina_actual == 'cierres_mensuales.php') ? 'active' : ''; ?>">
+                                <a href="<?php echo BASE_URL; ?>/planillas/cierres_mensuales.php">Cierre Mensual</a>
+                            </li>
                         </ul>
                     </li>
                 <?php endif; ?>
 
                 <li>
                     <a href="#maestrosMenu" data-bs-toggle="collapse" aria-expanded="false" class="dropdown-toggle">
-                        <i class="fas fa-book me-2"></i> Gestionar
+                        <i class="fas fa-book me-2"></i> Maestros
                     </a>
-                    <ul class="collapse list-unstyled" id="maestrosMenu">
-                        <li><a href="<?php echo BASE_URL; ?>/maestros/gestionar_empleadores.php">Empleadores</a></li>
-                        <li><a href="<?php echo BASE_URL; ?>/maestros/gestionar_trabajadores.php">Trabajadores</a></li>
-                        <li><a href="<?php echo BASE_URL; ?>/maestros/gestionar_sindicatos.php">Sindicatos</a></li>
-                        <li><a href="<?php echo BASE_URL; ?>/maestros/gestionar_afps.php">AFPs (Comisiones)</a></li>
+                    <ul class="collapse list-unstyled <?php echo (in_array($pagina_actual, ['gestionar_empleadores.php', 'gestionar_trabajadores.php', 'gestionar_sindicatos.php'])) ? 'show' : ''; ?>" id="maestrosMenu">
+                        <li class="<?php echo ($pagina_actual == 'gestionar_empleadores.php') ? 'active' : ''; ?>">
+                            <a href="<?php echo BASE_URL; ?>/maestros/gestionar_empleadores.php">Empleadores</a>
+                        </li>
+                        <li class="<?php echo ($pagina_actual == 'gestionar_trabajadores.php') ? 'active' : ''; ?>">
+                            <a href="<?php echo BASE_URL; ?>/maestros/gestionar_trabajadores.php">Trabajadores</a>
+                        </li>
+                        <li class="<?php echo ($pagina_actual == 'gestionar_sindicatos.php') ? 'active' : ''; ?>">
+                            <a href="<?php echo BASE_URL; ?>/maestros/gestionar_sindicatos.php">Sindicatos</a>
+                        </li>
+
                     </ul>
                 </li>
-                <li>
+
+                <li class="<?php echo (in_array($pagina_actual, ['gestionar_contratos.php', 'crear_contrato.php', 'editar_contrato.php'])) ? 'active' : ''; ?>">
                     <a href="<?php echo BASE_URL; ?>/contratos/gestionar_contratos.php"><i class="fas fa-file-signature me-2"></i> Gestión de Contratos</a>
                 </li>
-                <li>
-                    <a href="<?php echo BASE_URL; ?>/planillas/cargar_selector.php"><i class="fas fa-file-invoice me-2"></i>Generar Reporte</a>
+
+                <li class="<?php echo (in_array($pagina_actual, ['cargar_selector.php', 'cargar_grid.php'])) ? 'active' : ''; ?>">
+                    <a href="<?php echo BASE_URL; ?>/planillas/cargar_selector.php"><i class="fas fa-file-invoice me-2"></i> Generar Reporte</a>
                 </li>
-                <li>
-                    <a href="<?php echo BASE_URL; ?>/reportes/reportes_selector.php"><i class="fas fa-file-pdf me-2"></i>Ver Reportes</a>
+
+                <li class="<?php echo (in_array($pagina_actual, ['reportes_selector.php', 'reportes_resultados.php'])) ? 'active' : ''; ?>">
+                    <a href="<?php echo BASE_URL; ?>/reportes/reportes_selector.php"><i class="fas fa-file-pdf me-2"></i> Ver Reportes</a>
                 </li>
-                <?php if (isset($_SESSION['user_role']) && ($_SESSION['user_role'] == 'admin' || $_SESSION['user_role'] == 'contador')): ?>
-                    <li>
-                        <a href="<?php echo BASE_URL; ?>/planillas/cierres_mensuales.php"><i class="fas fa-lock me-2"></i> Cierre Mensual</a>
-                    </li>
-                <?php endif; ?>
+
             </ul>
         </nav>
 

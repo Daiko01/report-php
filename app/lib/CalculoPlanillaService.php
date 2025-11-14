@@ -5,7 +5,6 @@ class CalculoPlanillaService
     private $stmt_trab;
     private $stmt_sind;
     private $stmt_afp_comision;
-    private $stmt_tramos_af;
 
     private $tramos_af_cacheados = [];
 
@@ -52,27 +51,18 @@ class CalculoPlanillaService
         return $this->tramos_af_cacheados[$fecha_reporte];
     }
 
-    /**
-     * Esta es la función principal que calcula todo para una fila.
-     * @param array $fila_planilla Los datos de la planilla (ID, sueldo, dias, etc.)
-     * @param int $mes El mes del reporte
-     * @param int $ano El año del reporte
-     * @return array Array de descuentos calculados
-     */
     public function calcularFila($fila_planilla, $mes, $ano)
     {
         $this->stmt_trab->execute([$fila_planilla['trabajador_id']]);
         $trabajador = $this->stmt_trab->fetch();
 
         $sueldo_imponible = (int)$fila_planilla['sueldo_imponible'];
-        $dias_trabajados = (int)$fila_planilla['dias_trabajados'];
-        // El imponible ya viene prorrateado, solo aplicamos topes
 
         $base_afp = min($sueldo_imponible, self::TOPE_IMPONIBLE_AFP);
         $base_salud = min($sueldo_imponible, self::TOPE_IMPONIBLE_SALUD);
         $base_cesantia = min($sueldo_imponible, self::TOPE_IMPONIBLE_CESANTIA);
 
-        // Descuento AFP
+        // 1. Descuento AFP
         $descuento_afp = 0;
         if ($trabajador['estado_previsional'] == 'Activo' && $trabajador['afp_id']) {
             $this->stmt_afp_comision->execute(['afp_id' => $trabajador['afp_id'], 'ano' => $ano, 'mes' => $mes]);
@@ -81,19 +71,29 @@ class CalculoPlanillaService
             $descuento_afp = round($base_afp * (self::COTIZACION_AFP_OBLIGATORIA + $comision_afp));
         }
 
-        // Descuento Salud
+        // 2. Descuento Salud
         $descuento_salud_7pct = round($base_salud * self::COTIZACION_SALUD_MINIMA);
 
-        // Seguro Cesantía
+        // 3. Seguro Cesantía (CORRECCIÓN BUG CRÍTICO)
         $seguro_cesantia_trabajador = 0;
-        $es_pensionado_cotiza = ($trabajador['estado_previsional'] == 'Pensionado' && $fila_planilla['cotiza_cesantia_pensionado'] == 1);
-        if ($trabajador['estado_previsional'] == 'Activo' || $es_pensionado_cotiza) {
+        $seguro_cesantia_empleador = 0; // Variable para uso interno/futuro si necesitamos guardarla
+
+        // ¿Debe cotizar cesantía? (Si es Activo O si es Pensionado con el Toggle Activado)
+        $cotiza_cesantia = ($trabajador['estado_previsional'] == 'Activo') ||
+            ($trabajador['estado_previsional'] == 'Pensionado' && $fila_planilla['cotiza_cesantia_pensionado'] == 1);
+
+        if ($cotiza_cesantia) {
             if ($fila_planilla['tipo_contrato'] == 'Indefinido') {
+                // Indefinido: 0.6% Trabajador, 2.4% Empleador
                 $seguro_cesantia_trabajador = round($base_cesantia * 0.006);
+                // (El aporte del empleador se calcula en el reporte, pero la lógica base es esta)
+            } else {
+                // Fijo: 0% Trabajador, 3.0% Empleador
+                $seguro_cesantia_trabajador = 0;
             }
         }
 
-        // Sindicato
+        // 4. Sindicato
         $descuento_sindicato = 0;
         if ($trabajador['sindicato_id']) {
             $this->stmt_sind->execute([$trabajador['sindicato_id']]);
@@ -101,7 +101,7 @@ class CalculoPlanillaService
             $descuento_sindicato = $sindicato ? (int)$sindicato['descuento'] : 0;
         }
 
-        // Asignación Familiar
+        // 5. Asignación Familiar
         $asignacion_familiar_calculada = 0;
         $tramos_af = $this->getTramosAF("$ano-$mes-01");
         if ($trabajador['tiene_cargas'] == 1 && $trabajador['numero_cargas'] > 0) {

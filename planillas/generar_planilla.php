@@ -93,7 +93,32 @@ try {
 
     // 9. Recorrer contratos y generar filas
     foreach ($contratos_vigentes as $c) {
+        // === INICIO LÓGICA DE "MÁQUINA DEL TIEMPO" (ANEXOS) ===
+        // 1. Copiar datos base del contrato
+        $datos_contrato = $c; // $c es un array con los datos actuales de la BD
 
+        // 2. Buscar anexos que sean ANTERIORES o IGUALES al fin del mes del reporte
+        //    y ordenarlos cronológicamente para aplicar los cambios en orden.
+        $stmt_anexos = $pdo->prepare("SELECT * FROM anexos_contrato WHERE contrato_id = ? AND fecha_anexo <= ? ORDER BY fecha_anexo ASC");
+        $stmt_anexos->execute([$c['id'], $ultimo_dia]);
+        $anexos = $stmt_anexos->fetchAll();
+
+        // 3. Reconstruir el estado del contrato para este mes
+        // (Aplicamos todos los cambios históricos hasta la fecha del reporte)
+        foreach ($anexos as $anexo) {
+            if ($anexo['nuevo_sueldo']) $datos_contrato['sueldo_imponible'] = $anexo['nuevo_sueldo'];
+            if ($anexo['nuevo_tipo_contrato']) $datos_contrato['tipo_contrato'] = $anexo['nuevo_tipo_contrato'];
+            if ($anexo['nuevo_es_part_time'] !== null) $datos_contrato['es_part_time'] = $anexo['nuevo_es_part_time'];
+
+            // Fecha término es delicado. Si el anexo define una fecha, la usamos.
+            // Si cambia a Indefinido, la fecha término podría ser NULL.
+            if ($anexo['nueva_fecha_termino']) {
+                $datos_contrato['fecha_termino'] = $anexo['nueva_fecha_termino'];
+            } elseif ($anexo['nuevo_tipo_contrato'] == 'Indefinido') {
+                $datos_contrato['fecha_termino'] = null;
+            }
+        }
+        // === FIN LÓGICA ANEXOS ===
         // 9.1. Cálculo de Días y Sueldo Proporcional (CORREGIDO)
         $fecha_inicio_contrato = strtotime($c['fecha_inicio']);
         $fecha_inicio_mes = strtotime($primer_dia);

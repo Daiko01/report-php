@@ -37,6 +37,9 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
 
 <div class="container-fluid">
     <h1 class="h3 mb-4 text-gray-800">Editar Contrato</h1>
+    <a href="gestionar_contratos.php" class="btn btn-secondary mb-3">
+        <i class="fas fa-arrow-left me-2"></i> Volver a Contratos
+    </a>
     <h5><?php echo htmlspecialchars($contrato['trabajador_nombre']); ?> en <?php echo htmlspecialchars($contrato['empleador_nombre']); ?></h5>
 
     <?php if ($contrato['esta_finiquitado']): ?>
@@ -72,41 +75,102 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
                 </div>
 
                 <div class="tab-pane fade" id="anexos" role="tabpanel">
-                    <h5>Agregar Anexo</h5>
-                    <form action="agregar_anexo_process.php" method="POST" class="border p-3 mb-4">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i> Los anexos modifican las condiciones del contrato a partir de la fecha indicada.
+                    </div>
+
+                    <form action="agregar_anexo_process.php" method="POST" class="border p-3 mb-4 bg-light rounded">
                         <input type="hidden" name="contrato_id" value="<?php echo $contrato_id; ?>">
+
+                        <h6 class="text-primary mb-3">Detalles del Cambio</h6>
+
                         <div class="mb-3">
-                            <label for="descripcion" class="form-label">Descripción del Anexo</label>
-                            <textarea class="form-control" name="descripcion" required></textarea>
+                            <label class="form-label">Descripción del Anexo</label>
+                            <input type="text" class="form-control" name="descripcion" placeholder="Ej: Cambio a contrato indefinido" required>
                         </div>
+
                         <div class="row">
-                            <div class="col-md-4">
-                                <label for="fecha_anexo" class="form-label">Fecha del Anexo</label>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Fecha de Vigencia</label>
                                 <input type="date" class="form-control" name="fecha_anexo" value="<?php echo date('Y-m-d'); ?>" required>
                             </div>
-                            <div class="col-md-4">
-                                <label for="nuevo_sueldo" class="form-label">Nuevo Sueldo Base (Opcional)</label>
-                                <input type="number" class="form-control" name="nuevo_sueldo" placeholder="<?php echo $contrato['sueldo_imponible']; ?>">
+
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Nuevo Sueldo Base</label>
+                                <input type="number" class="form-control" name="nuevo_sueldo" placeholder="Actual: $<?php echo number_format($contrato['sueldo_imponible'], 0, ',', '.'); ?>">
+                                <div class="form-text">Dejar vacío si no cambia.</div>
                             </div>
-                            <div class="col-md-4">
-                                <label for="nueva_fecha_termino" class="form-label">Nueva Fecha Término (Opcional)</label>
+
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Nueva Fecha Término</label>
                                 <input type="date" class="form-control" name="nueva_fecha_termino">
+                                <div class="form-text">Dejar vacío si no cambia.</div>
                             </div>
                         </div>
-                        <button type="submit" class="btn btn-success mt-3">Guardar Anexo</button>
+
+                        <hr>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Tipo de Contrato (Actual: <strong><?php echo $contrato['tipo_contrato']; ?></strong>)</label>
+                                <select class="form-select" name="nuevo_tipo_contrato">
+                                    <option value="">-- No cambiar --</option>
+                                    <?php if ($contrato['tipo_contrato'] == 'Fijo'): ?>
+                                        <option value="Indefinido">Cambiar a Indefinido</option>
+                                    <?php else: ?>
+                                        <option value="Fijo">Cambiar a Plazo Fijo</option>
+                                    <?php endif; ?>
+                                </select>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Jornada (Actual: <strong><?php echo $contrato['es_part_time'] ? 'Part-Time' : 'Full-Time'; ?></strong>)</label>
+                                <select class="form-select" name="nuevo_es_part_time">
+                                    <option value="">-- No cambiar --</option>
+                                    <?php if ($contrato['es_part_time']): ?>
+                                        <option value="0">Cambiar a Full-Time (45hrs)</option>
+                                    <?php else: ?>
+                                        <option value="1">Cambiar a Part-Time</option>
+                                    <?php endif; ?>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="text-end">
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-save me-2"></i> Guardar Anexo y Actualizar Contrato
+                            </button>
+                        </div>
                     </form>
 
-                    <h5>Historial de Anexos</h5>
-                    <table class="table">
-                        <tbody>
-                            <?php foreach ($anexos as $anexo): ?>
+                    <h6 class="font-weight-bold text-primary">Historial de Anexos</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered">
+                            <thead class="table-light">
                                 <tr>
-                                    <td><?php echo date('d-m-Y', strtotime($anexo['fecha_anexo'])); ?></td>
-                                    <td><?php echo htmlspecialchars($anexo['descripcion']); ?></td>
+                                    <th>Fecha Vigencia</th>
+                                    <th>Descripción</th>
+                                    <th>Cambios</th>
                                 </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($anexos as $anexo): ?>
+                                    <tr>
+                                        <td><?php echo date('d-m-Y', strtotime($anexo['fecha_anexo'])); ?></td>
+                                        <td><?php echo htmlspecialchars($anexo['descripcion']); ?></td>
+                                        <td>
+                                            <ul class="mb-0 pl-3" style="font-size: 0.9em;">
+                                                <?php if ($anexo['nuevo_sueldo']) echo "<li>Sueldo: $" . number_format($anexo['nuevo_sueldo'], 0, ',', '.') . "</li>"; ?>
+                                                <?php if ($anexo['nueva_fecha_termino']) echo "<li>Término: " . date('d-m-Y', strtotime($anexo['nueva_fecha_termino'])) . "</li>"; ?>
+                                                <?php if ($anexo['nuevo_tipo_contrato']) echo "<li>Tipo: " . $anexo['nuevo_tipo_contrato'] . "</li>"; ?>
+                                                <?php if ($anexo['nuevo_es_part_time'] !== null) echo "<li>Jornada: " . ($anexo['nuevo_es_part_time'] ? 'Part-Time' : 'Full-Time') . "</li>"; ?>
+                                            </ul>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
 
                 <div class="tab-pane fade" id="finiquito" role="tabpanel">

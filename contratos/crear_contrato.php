@@ -53,7 +53,7 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
                     </div>
                     <div class="col-md-4 mb-3 d-flex align-items-center">
                         <div class="form-check form-switch form-check-lg mt-4">
-                            <input class="form-check-input" type="checkbox" id="es_part_time" name="es_part_time" value="1" disabled>
+                            <input class="form-check-input" type="checkbox" id="es_part_time" name="es_part_time" value="1">
                             <label class="form-check-label" for="es_part_time">Es Part-Time</label>
                         </div>
                     </div>
@@ -79,27 +79,26 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
 </div>
 
 <?php require_once dirname(__DIR__) . '/app/includes/footer.php'; ?>
+
 <script>
     $(document).ready(function() {
         const $tipoContrato = $('#tipo_contrato');
         const $wrapperFechaTermino = $('#wrapper-fecha-termino');
         const $inputFechaTermino = $('#fecha_termino');
-        const $checkPartTime = $('#es_part_time');
+
+        // CORRECCIÓN: Ya no seleccionamos el checkbox para bloquearlo
 
         function toggleFields() {
             if ($tipoContrato.val() === 'Fijo') {
-                // Regla: Plazo Fijo
+                // Regla: Plazo Fijo requiere fecha
                 $wrapperFechaTermino.show();
                 $inputFechaTermino.prop('required', true);
-                // Regla: Part Time habilitado
-                $checkPartTime.prop('disabled', false);
             } else {
-                // Regla: Indefinido
+                // Regla: Indefinido no tiene fecha
                 $wrapperFechaTermino.hide();
                 $inputFechaTermino.prop('required', false).val('');
-                // Regla: Part Time deshabilitado
-                $checkPartTime.prop('disabled', true).prop('checked', false);
             }
+            // CORRECCIÓN: Eliminada la lógica que deshabilitaba el Part-Time
         }
 
         $tipoContrato.on('change', toggleFields);

@@ -57,9 +57,14 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
             <h1 class="h3 mb-0 text-gray-800">Planilla Período <?php echo "$mes / $ano"; ?></h1>
             <h5 class="text-muted"><?php echo htmlspecialchars($empleador['nombre']) . " (" . $empleador['rut'] . ")"; ?></h5>
         </div>
-        <button class="btn btn-success btn-lg shadow-sm" id="btn-guardar-planilla">
-            <i class="fas fa-save me-2"></i> Guardar Planilla
-        </button>
+        <div class="d-flex flex-column align-items-end gap-2">
+            <a href="cargar_selector.php" class="btn btn-outline-secondary btn-sm">
+                <i class="fas fa-arrow-left me-1"></i> Cambiar Período
+            </a>
+            <button class="btn btn-success btn-lg shadow-sm" id="btn-guardar-planilla">
+                <i class="fas fa-save me-2"></i> Guardar Planilla
+            </button>
+        </div>
     </div>
 
     <div class="card shadow mb-4">

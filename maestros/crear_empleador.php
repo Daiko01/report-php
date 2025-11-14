@@ -26,7 +26,7 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
             <h6 class="m-0 font-weight-bold text-primary">Datos del Empleador</h6>
         </div>
         <div class="card-body">
-            
+
             <form action="crear_empleador_process.php" method="POST" class="needs-validation" novalidate>
                 <div class="row">
                     <div class="col-md-8 mb-3">
@@ -34,7 +34,7 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
                         <input type="text" class="form-control" id="nombre" name="nombre" required>
                         <div class="invalid-feedback">El nombre es obligatorio.</div>
                     </div>
-                    
+
                     <div class="col-md-4 mb-3">
                         <label for="rut" class="form-label">RUT</label>
                         <input type="text" class="form-control rut-input" id="rut" name="rut" maxlength="12" required>
@@ -58,14 +58,14 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
                         <label for="mutual_seguridad_id" class="form-label">Mutual de Seguridad</label>
                         <select class="form-select" id="mutual_seguridad_id" name="mutual_seguridad_id" required>
                             <option value="" disabled selected>Seleccione...</option>
-                             <?php foreach ($mutuales as $mutual): ?>
+                            <?php foreach ($mutuales as $mutual): ?>
                                 <option value="<?php echo $mutual['id']; ?>"><?php echo htmlspecialchars($mutual['nombre']); ?></option>
                             <?php endforeach; ?>
                         </select>
                         <div class="invalid-feedback">Seleccione una mutual.</div>
                     </div>
                 </div>
-                
+
                 <div class="row">
                     <div class="col-md-4 mb-3">
                         <label for="tasa_mutual" class="form-label">Tasa Mutual (Ej: 0.93)</label>
@@ -92,18 +92,18 @@ require_once dirname(__DIR__) . '/app/includes/footer.php';
 ?>
 
 <script>
-(function () {
-  'use strict'
-  var forms = document.querySelectorAll('.needs-validation')
-  Array.prototype.slice.call(forms)
-    .forEach(function (form) {
-      form.addEventListener('submit', function (event) {
-        if (!form.checkValidity()) {
-          event.preventDefault()
-          event.stopPropagation()
-        }
-        form.classList.add('was-validated')
-      }, false)
-    })
-})()
+    (function() {
+        'use strict'
+        var forms = document.querySelectorAll('.needs-validation')
+        Array.prototype.slice.call(forms)
+            .forEach(function(form) {
+                form.addEventListener('submit', function(event) {
+                    if (!form.checkValidity()) {
+                        event.preventDefault()
+                        event.stopPropagation()
+                    }
+                    form.classList.add('was-validated')
+                }, false)
+            })
+    })()
 </script>

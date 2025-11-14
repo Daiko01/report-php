@@ -42,11 +42,26 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
                             <div class="col-md-6 mb-3">
                                 <label for="mes" class="form-label">Mes</label>
                                 <select class="form-select" id="mes" name="mes" required>
-                                    <?php for ($m = 1; $m <= 12; $m++): ?>
-                                        <option value="<?php echo $m; ?>" <?php echo ($m == date('n')) ? 'selected' : ''; ?>>
-                                            <?php echo strftime('%B', mktime(0, 0, 0, $m, 1)); ?>
+                                    <?php
+                                    $meses = [
+                                        1 => 'Enero',
+                                        2 => 'Febrero',
+                                        3 => 'Marzo',
+                                        4 => 'Abril',
+                                        5 => 'Mayo',
+                                        6 => 'Junio',
+                                        7 => 'Julio',
+                                        8 => 'Agosto',
+                                        9 => 'Septiembre',
+                                        10 => 'Octubre',
+                                        11 => 'Noviembre',
+                                        12 => 'Diciembre'
+                                    ];
+                                    foreach ($meses as $num => $nombre): ?>
+                                        <option value="<?php echo $num; ?>" <?php echo ($num == date('n')) ? 'selected' : ''; ?>>
+                                            <?php echo $nombre; ?>
                                         </option>
-                                    <?php endfor; ?>
+                                    <?php endforeach; ?>
                                 </select>
                             </div>
                             <div class="col-md-6 mb-3">

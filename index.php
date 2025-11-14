@@ -29,71 +29,114 @@ try {
 }
 // --- FIN DE LÓGICA DEL DASHBOARD ---
 
-
 // 3. Cargar el Header (Layout)
 require_once __DIR__ . '/app/includes/header.php';
 ?>
 
-<div class="container-fluid">
+<div class="container-fluid px-3 px-md-4">
 
-    <h1 class="h3 mb-4 text-gray-800">Dashboard</h1>
+    <!-- Header con Bienvenida -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1 text-gradient-primary">Dashboard</h1>
+            <p class="text-muted mb-0">Bienvenido de vuelta, aquí tienes un resumen de tu sistema</p>
+        </div>
+        <div class="d-none d-md-block">
+            <span class="badge bg-light text-dark">
+                <i class="fas fa-calendar me-1"></i>
+                <?php echo date('d M Y'); ?>
+            </span>
+        </div>
+    </div>
 
-    <div class="row">
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-primary shadow h-100 py-2">
+    <!-- KPI Cards Modernas -->
+    <div class="row g-3 mb-4">
+        <!-- Empleadores Activos -->
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="card card-kpi card-employers h-100">
                 <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Empleadores Activos</div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800"><?php echo $kpi_empleadores; ?></div>
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="kpi-content">
+                            <div class="kpi-label">Empleadores</div>
+                            <div class="kpi-value"><?php echo $kpi_empleadores; ?></div>
+                            <div class="kpi-trend text-success">
+                                <i class="fas fa-chart-line me-1"></i>
+                                <span>Activos</span>
+                            </div>
                         </div>
-                        <div class="col-auto">
-                            <i class="fas fa-building fa-2x text-gray-300"></i>
+                        <div class="kpi-icon">
+                            <div class="icon-wrapper bg-primary">
+                                <i class="fas fa-building"></i>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-success shadow h-100 py-2">
+
+        <!-- Trabajadores Registrados -->
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="card card-kpi card-workers h-100">
                 <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Trabajadores Registrados</div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800"><?php echo $kpi_trabajadores; ?></div>
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="kpi-content">
+                            <div class="kpi-label">Trabajadores</div>
+                            <div class="kpi-value"><?php echo $kpi_trabajadores; ?></div>
+                            <div class="kpi-trend text-info">
+                                <i class="fas fa-users me-1"></i>
+                                <span>Registrados</span>
+                            </div>
                         </div>
-                        <div class="col-auto">
-                            <i class="fas fa-users fa-2x text-gray-300"></i>
+                        <div class="kpi-icon">
+                            <div class="icon-wrapper bg-success">
+                                <i class="fas fa-users"></i>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-info shadow h-100 py-2">
+
+        <!-- Contratos Vigentes -->
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="card card-kpi card-contracts h-100">
                 <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Contratos Vigentes</div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800"><?php echo $kpi_contratos_vigentes; ?></div>
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="kpi-content">
+                            <div class="kpi-label">Contratos</div>
+                            <div class="kpi-value"><?php echo $kpi_contratos_vigentes; ?></div>
+                            <div class="kpi-trend text-warning">
+                                <i class="fas fa-file-contract me-1"></i>
+                                <span>Vigentes</span>
+                            </div>
                         </div>
-                        <div class="col-auto">
-                            <i class="fas fa-file-signature fa-2x text-gray-300"></i>
+                        <div class="kpi-icon">
+                            <div class="icon-wrapper bg-info">
+                                <i class="fas fa-file-signature"></i>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-warning shadow h-100 py-2">
+
+        <!-- Planillas Este Mes -->
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="card card-kpi card-payrolls h-100">
                 <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">Planillas (Este Mes)</div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800"><?php echo $kpi_planillas_mes_actual; ?></div>
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="kpi-content">
+                            <div class="kpi-label">Planillas</div>
+                            <div class="kpi-value"><?php echo $kpi_planillas_mes_actual; ?></div>
+                            <div class="kpi-trend text-primary">
+                                <i class="fas fa-calendar-check me-1"></i>
+                                <span>Este Mes</span>
+                            </div>
                         </div>
-                        <div class="col-auto">
-                            <i class="fas fa-file-invoice fa-2x text-gray-300"></i>
+                        <div class="kpi-icon">
+                            <div class="icon-wrapper bg-warning">
+                                <i class="fas fa-file-invoice"></i>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -101,31 +144,158 @@ require_once __DIR__ . '/app/includes/header.php';
         </div>
     </div>
 
-    <div class="row">
-        <div class="col-lg-6">
-            <div class="card shadow mb-4">
-                <div class="card-header py-3">
-                    <h6 class="m-0 font-weight-bold text-primary">Accesos Rápidos</h6>
+    <!-- Sección Principal: Acciones y Estadísticas -->
+    <div class="row g-4">
+        <!-- Acciones Rápidas -->
+        <div class="col-12 col-lg-8">
+            <div class="card card-actions h-100">
+                <div class="card-header bg-transparent border-0 pb-2">
+                    <h5 class="card-title mb-0 text-dark">
+                        <i class="fas fa-bolt text-warning me-2"></i>
+                        Acciones Rápidas
+                    </h5>
                 </div>
                 <div class="card-body">
-                    <a href="<?php echo BASE_URL; ?>/contratos/crear_contrato.php" class="btn btn-success btn-lg btn-icon-split m-2">
-                        <span class="icon text-white-50"><i class="fas fa-file-signature"></i></span>
-                        <span class="text">Nuevo Contrato</span>
-                    </a>
-                    <a href="<?php echo BASE_URL; ?>/planillas/cargar_selector.php" class="btn btn-primary btn-lg btn-icon-split m-2">
-                        <span class="icon text-white-50"><i class="fas fa-cogs"></i></span>
-                        <span class="text">Generar Planilla</span>
-                    </a>
-                    <a href="<?php echo BASE_URL; ?>/reportes/reportes_selector.php" class="btn btn-info btn-lg btn-icon-split m-2">
-                        <span class="icon text-white-50"><i class="fas fa-file-pdf"></i></span>
-                        <span class="text">Ver Reportes</span>
-                    </a>
+                    <div class="row g-3">
+                        <!-- Nuevo Contrato -->
+                        <div class="col-12 col-md-6 col-lg-4">
+                            <a href="<?php echo BASE_URL; ?>/contratos/crear_contrato.php" class="action-card">
+                                <div class="action-icon bg-success">
+                                    <i class="fas fa-file-signature"></i>
+                                </div>
+                                <div class="action-content">
+                                    <h6 class="text-dark">Nuevo Contrato</h6>
+                                    <p class="text-muted">Crear nuevo contrato laboral</p>
+                                </div>
+                                <div class="action-arrow">
+                                    <i class="fas fa-chevron-right text-muted"></i>
+                                </div>
+                            </a>
+                        </div>
+
+                        <!-- Generar Planilla -->
+                        <div class="col-12 col-md-6 col-lg-4">
+                            <a href="<?php echo BASE_URL; ?>/planillas/cargar_selector.php" class="action-card">
+                                <div class="action-icon bg-primary">
+                                    <i class="fas fa-cogs"></i>
+                                </div>
+                                <div class="action-content">
+                                    <h6 class="text-dark">Generar Planilla</h6>
+                                    <p class="text-muted">Procesar planillas mensuales</p>
+                                </div>
+                                <div class="action-arrow">
+                                    <i class="fas fa-chevron-right text-muted"></i>
+                                </div>
+                            </a>
+                        </div>
+
+                        <!-- Ver Reportes -->
+                        <div class="col-12 col-md-6 col-lg-4">
+                            <a href="<?php echo BASE_URL; ?>/reportes/reportes_selector.php" class="action-card">
+                                <div class="action-icon bg-info">
+                                    <i class="fas fa-file-pdf"></i>
+                                </div>
+                                <div class="action-content">
+                                    <h6 class="text-dark">Ver Reportes</h6>
+                                    <p class="text-muted">Reportes y documentos PDF</p>
+                                </div>
+                                <div class="action-arrow">
+                                    <i class="fas fa-chevron-right text-muted"></i>
+                                </div>
+                            </a>
+                        </div>
+
+                        <!-- Gestión Empleadores -->
+                        <div class="col-12 col-md-6 col-lg-4">
+                            <a href="<?php echo BASE_URL; ?>/maestros/gestionar_empleadores.php" class="action-card">
+                                <div class="action-icon bg-warning">
+                                    <i class="fas fa-building"></i>
+                                </div>
+                                <div class="action-content">
+                                    <h6 class="text-dark">Gestión Empleadores</h6>
+                                    <p class="text-muted">Administrar empresas</p>
+                                </div>
+                                <div class="action-arrow">
+                                    <i class="fas fa-chevron-right text-muted"></i>
+                                </div>
+                            </a>
+                        </div>
+
+                        <!-- Gestión Trabajadores -->
+                        <div class="col-12 col-md-6 col-lg-4">
+                            <a href="<?php echo BASE_URL; ?>/maestros/gestionar_trabajadores.php" class="action-card">
+                                <div class="action-icon bg-purple">
+                                    <i class="fas fa-users-cog"></i>
+                                </div>
+                                <div class="action-content">
+                                    <h6 class="text-dark">Gestión Trabajadores</h6>
+                                    <p class="text-muted">Administrar personal</p>
+                                </div>
+                                <div class="action-arrow">
+                                    <i class="fas fa-chevron-right text-muted"></i>
+                                </div>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Estadísticas Rápidas -->
+        <div class="col-12 col-lg-4">
+            <div class="card card-stats h-100">
+                <div class="card-header bg-transparent border-0 pb-2">
+                    <h5 class="card-title mb-0 text-dark">
+                        <i class="fas fa-chart-bar text-primary me-2"></i>
+                        Resumen Mensual
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="stats-list">
+                        <div class="stat-item">
+                            <div class="stat-icon">
+                                <i class="fas fa-calendar text-primary"></i>
+                            </div>
+                            <div class="stat-content">
+                                <span class="stat-label text-muted">Planillas del Mes</span>
+                                <span class="stat-value text-dark"><?php echo $kpi_planillas_mes_actual; ?></span>
+                            </div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-icon">
+                                <i class="fas fa-user-plus text-success"></i>
+                            </div>
+                            <div class="stat-content">
+                                <span class="stat-label text-muted">Contratos Activos</span>
+                                <span class="stat-value text-dark"><?php echo $kpi_contratos_vigentes; ?></span>
+                            </div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-icon">
+                                <i class="fas fa-building text-info"></i>
+                            </div>
+                            <div class="stat-content">
+                                <span class="stat-label text-muted">Empleadores Activos</span>
+                                <span class="stat-value text-dark"><?php echo $kpi_empleadores; ?></span>
+                            </div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-icon">
+                                <i class="fas fa-users text-warning"></i>
+                            </div>
+                            <div class="stat-content">
+                                <span class="stat-label text-muted">Trabajadores Total</span>
+                                <span class="stat-value text-dark"><?php echo $kpi_trabajadores; ?></span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
 </div>
+
 <?php
 // 4. Cargar el Footer (Cierre de Layout y JS)
 require_once __DIR__ . '/app/includes/footer.php';

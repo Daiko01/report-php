@@ -18,7 +18,13 @@ try {
 require_once dirname(__DIR__) . '/app/includes/header.php';
 ?>
 <div class="container-fluid">
-    <h1 class="h3 mb-4 text-gray-800">Historial de Comisiones: <?php echo htmlspecialchars($afp['nombre']); ?></h1>
+    <!-- MODIFICACIÓN: Contenedor flex para título y botón -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0 text-gray-800">Historial de Comisiones: <?php echo htmlspecialchars($afp['nombre']); ?></h1>
+        <a href="gestionar_afps.php" class="btn btn-secondary">
+            <i class="fas fa-arrow-left me-2"></i> Volver a Lista de AFPs
+        </a>
+    </div>
 
     <div class="card shadow mb-4">
         <div class="card-header py-3">
@@ -29,12 +35,27 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
                 <input type="hidden" name="afp_id" value="<?php echo $afp_id; ?>">
                 <div class="col-md-4">
                     <label class="form-label">Mes de Inicio</label>
-                    <select name="mes_inicio" class="form-select">
-                        <?php for ($m = 1; $m <= 12; $m++): ?>
-                            <option value="<?php echo $m; ?>" <?php echo ($m == date('n')) ? 'selected' : ''; ?>>
-                                <?php echo strftime('%B', mktime(0, 0, 0, $m, 1)); ?>
+                    <select class="form-select" id="mes" name="mes" required>
+                        <?php
+                        $meses = [
+                            1 => 'Enero',
+                            2 => 'Febrero',
+                            3 => 'Marzo',
+                            4 => 'Abril',
+                            5 => 'Mayo',
+                            6 => 'Junio',
+                            7 => 'Julio',
+                            8 => 'Agosto',
+                            9 => 'Septiembre',
+                            10 => 'Octubre',
+                            11 => 'Noviembre',
+                            12 => 'Diciembre'
+                        ];
+                        foreach ($meses as $num => $nombre): ?>
+                            <option value="<?php echo $num; ?>" <?php echo ($num == date('n')) ? 'selected' : ''; ?>>
+                                <?php echo $nombre; ?>
                             </option>
-                        <?php endfor; ?>
+                        <?php endforeach; ?>
                     </select>
                 </div>
                 <div class="col-md-4">

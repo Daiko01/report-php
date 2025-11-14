@@ -12,7 +12,7 @@
             <div class="info-col">
                 <p><span class="label">Empleador:</span> <?= htmlspecialchars($empleador['nombre']) ?></p>
                 <p><span class="label">RUT:</span> <?= format_rut($empleador['rut']) ?></p>
-                <p><span class="label">Sucursal:</span> <?= htmlspecialchars($empleador['sucursal'] ?: 'N/A') ?></p>
+
             </div>
             <div class="info-col">
                 <p><span class="label">C. Compensación:</span> <?= htmlspecialchars($empleador['caja_compensacion_nombre'] ?: 'N/A') ?></p>
@@ -46,6 +46,9 @@
                         <td><?= format_rut($r['trabajador_rut']) ?></td>
                         <td class="nombre-trabajador">
                             <?php if ($r['tipo_contrato'] == 'Fijo'): ?><span class="fixed-marker">F</span><?php endif; ?>
+
+                            <?php if (isset($r['es_part_time']) && $r['es_part_time'] == 1): ?><span class="fixed-marker" style="color: #007bff;">P</span><?php endif; ?>
+
                             <?= htmlspecialchars($r['trabajador_nombre']) ?>
                         </td>
                         <td style="text-align: center;"><?= $r['dias_trabajados'] ?></td>

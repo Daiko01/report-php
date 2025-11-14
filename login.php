@@ -6,6 +6,7 @@ require_once __DIR__ . '/app/includes/session_check.php';
 ?>
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -16,26 +17,28 @@ require_once __DIR__ . '/app/includes/session_check.php';
         body {
             background-color: #f8f9fa;
         }
+
         .login-container {
             max-width: 400px;
             margin: 10vh auto;
             padding: 2rem;
             background-color: #fff;
             border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
         }
     </style>
 </head>
+
 <body>
     <div class="container">
         <div class="login-container">
             <h3 class="text-center mb-4">Sistema de Reportes</h3>
             <p class="text-center text-muted mb-4">Acceso al sistema</p>
-            
+
             <form action="app/core/login_process.php" method="POST">
                 <div class="mb-3">
                     <label for="username" class="form-label">Usuario (RUT)</label>
-                    <input type="text" class="form-control" id="username" name="username" required autofocus>
+                    <input type="text" class="form-control" id="username" name="username" maxlength="12" placeholder="12.345.678-9" required autofocus>
                 </div>
                 <div class="mb-3">
                     <label for="password" class="form-label">Contraseña</label>
@@ -56,7 +59,7 @@ require_once __DIR__ . '/app/includes/session_check.php';
         $flash = $_SESSION['flash_message'];
         $type = $flash['type']; // 'success', 'error', 'warning'
         $message = $flash['message'];
-        
+
         // Limpiar el mensaje para que no se muestre de nuevo
         unset($_SESSION['flash_message']);
 
@@ -71,5 +74,29 @@ require_once __DIR__ . '/app/includes/session_check.php';
         </script>";
     }
     ?>
+
+    <script>
+        document.getElementById('username').addEventListener('input', function(e) {
+            let valor = e.target.value.replace(/[^0-9kK]/g, ''); // Eliminar todo lo que no sea número o K
+
+            // Manejo del cuerpo y dígito verificador
+            let cuerpo = valor.slice(0, -1);
+            let dv = valor.slice(-1).toUpperCase();
+
+            // Si está vacío o es muy corto, devolver limpio
+            if (valor.length < 2) {
+                e.target.value = valor.toUpperCase();
+                return;
+            }
+
+            // Formatear con puntos
+            // Invertimos, ponemos puntos cada 3, y volvemos a invertir
+            cuerpo = cuerpo.split('').reverse().join('').replace(/(\d{3})(?=\d)/g, '$1.').split('').reverse().join('');
+
+            // Resultado final con guión
+            e.target.value = cuerpo + '-' + dv;
+        });
+    </script>
 </body>
+
 </html>

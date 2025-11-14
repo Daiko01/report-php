@@ -30,7 +30,13 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
 ?>
 
 <div class="container-fluid">
-    <h1 class="h3 mb-4 text-gray-800">Reportes para <?php echo "$mes / $ano"; ?></h1>
+    <!-- MODIFICACIÓN: Contenedor flex para título y botón -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0 text-gray-800">Reportes para <?php echo "$mes / $ano"; ?></h1>
+        <a href="reportes_selector.php" class="btn btn-outline-secondary btn-sm">
+            <i class="fas fa-arrow-left me-1"></i> Volver al Selector
+        </a>
+    </div>
 
     <div class="card shadow mb-4">
         <div class="card-header py-3 d-flex justify-content-between align-items-center">
