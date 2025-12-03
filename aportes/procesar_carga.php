@@ -128,7 +128,7 @@ try {
                 // ERROR: Sin contrato vigente -> Excedente
                 $lista_excedentes[] = [
                     'rut' => $rut_crudo, 'nombre' => $nombre_conductor, 'maquina' => $maquina,
-                    'monto' => $monto, 'empresa' => $empresa_sistema, 'motivo' => 'Sin contrato vigente con dueño del bus'
+                    'monto' => $monto, 'empresa' => $empresa_sistema, 'motivo' => 'Sin contrato vigente'
                 ];
             }
         }

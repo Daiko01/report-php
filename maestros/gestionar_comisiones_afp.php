@@ -32,10 +32,11 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
         </div>
         <div class="card-body">
             <form action="agregar_comision_process.php" method="POST" class="row g-3">
+                <?php csrf_field(); ?>
                 <input type="hidden" name="afp_id" value="<?php echo $afp_id; ?>">
                 <div class="col-md-4">
                     <label class="form-label">Mes de Inicio</label>
-                    <select class="form-select" id="mes" name="mes" required>
+                    <select class="form-select" id="mes" name="mes_inicio" required>
                         <?php
                         $meses = [
                             1 => 'Enero',
@@ -133,7 +134,8 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
                                 'Content-Type': 'application/json'
                             },
                             body: JSON.stringify({
-                                id: id
+                                id: id,
+                                csrf_token: $('input[name="csrf_token"]').val()
                             })
                         })
                         .then(response => response.json())
