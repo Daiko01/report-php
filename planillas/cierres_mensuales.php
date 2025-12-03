@@ -33,12 +33,9 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
     <h1 class="h3 mb-4 text-gray-800">Gestión de Cierre Mensual</h1>
 
     <div class="card shadow mb-4">
-        <div class="card-header py-3">
-            <h6 class="m-0 font-weight-bold text-primary">Lista de Períodos Generados</h6>
-        </div>
         <div class="card-body">
             <div class="table-responsive">
-                <table class="table table-bordered datatable-es" width="100%">
+                <table class="table table-bordered table-striped datatable-es" id="tablaCierres" width="100%">
                     <thead>
                         <tr>
                             <th>Empleador</th>
@@ -51,6 +48,8 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
                     <tbody>
                         <?php foreach ($periodos as $p):
                             $esta_cerrado = ($p['esta_cerrado'] == 1);
+                            $estado_texto = $esta_cerrado ? 'Cerrado' : 'Abierto';
+                            $badge = $esta_cerrado ? 'bg-danger' : 'bg-success';
                             $texto_accion = $esta_cerrado ? 'Reabrir' : 'Cerrar';
                             $icono_accion = $esta_cerrado ? 'fa-lock-open' : 'fa-lock';
                             $color_accion = $esta_cerrado ? 'btn-success' : 'btn-danger';
@@ -59,13 +58,7 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
                             <tr>
                                 <td><?php echo htmlspecialchars($p['empleador_nombre']); ?></td>
                                 <td><?php echo $p['mes'] . ' / ' . $p['ano']; ?></td>
-                                <td>
-                                    <?php if ($esta_cerrado): ?>
-                                        <span class="badge bg-danger">Cerrado</span>
-                                    <?php else: ?>
-                                        <span class="badge bg-success">Abierto</span>
-                                    <?php endif; ?>
-                                </td>
+                                <td><span class="badge <?php echo $badge; ?>"><?php echo $estado_texto; ?></span></td>
                                 <td>
                                     <button class="btn <?php echo $color_accion; ?> btn-sm btn-toggle-cierre"
                                         data-empleador-id="<?php echo $p['empleador_id']; ?>"
@@ -102,8 +95,60 @@ require_once dirname(__DIR__) . '/app/includes/footer.php';
 <script>
     $(document).ready(function() {
 
-        // 1. Botón de Cerrar/Reabrir (Sin cambios)
-        $('.datatable-es').on('click', '.btn-toggle-cierre', function() {
+        // --- 1. LÓGICA DE FILTROS EN ENCABEZADO ---
+        $('#tablaCierres thead tr').clone(true).addClass('filters').appendTo('#tablaCierres thead');
+
+        var table = $('#tablaCierres').DataTable({
+            language: {
+                url: '<?php echo BASE_URL; ?>/public/assets/vendor/datatables/Spanish.json'
+            },
+            responsive: true,
+            orderCellsTop: true,
+            fixedHeader: true,
+
+            initComplete: function() {
+                var api = this.api();
+
+                api.columns([0, 1, 2]).every(function() {
+                    var column = this;
+                    var cell = $('.filters th').eq($(column.header()).index());
+                    var title = $(column.header()).text().trim();
+
+                    // Filtro de Select para "Estado"
+                    if ([2].includes(column.index())) {
+                        var select = $('<select class="form-select form-select-sm"><option value="">Todos</option></select>')
+                            .appendTo(cell.empty())
+                            .on('change', function() {
+                                var val = $.fn.dataTable.util.escapeRegex($(this).val());
+                                column.search(val ? '^' + val + '$' : '', true, false).draw();
+                            });
+
+                        column.data().unique().sort().each(function(d, j) {
+                            var cleanData = $(d).text().trim() || d;
+                            if (cleanData && !select.find('option[value="' + cleanData + '"]').length) {
+                                select.append('<option value="' + cleanData + '">' + cleanData + '</option>');
+                            }
+                        });
+                    }
+                    // Filtro de Texto para "Empleador" y "Período"
+                    else if ([0, 1].includes(column.index())) {
+                        $(cell).html('<input type="text" class="form-control form-control-sm" placeholder="Buscar..." />');
+                        $('input', cell).on('keyup change clear', function() {
+                            if (column.search() !== this.value) {
+                                column.search(this.value).draw();
+                            }
+                        });
+                    }
+                });
+
+                // Limpiar celdas de filtro para Acciones
+                $('.filters th').eq(3).html('');
+                $('.filters th').eq(4).html('');
+            }
+        });
+
+        // --- 2. LÓGICA DE SWEETALERT (CERRAR/REABRIR) ---
+        $('#tablaCierres').on('click', '.btn-toggle-cierre', function() {
             var $btn = $(this);
             var accion = $btn.data('accion-texto');
 
@@ -142,8 +187,8 @@ require_once dirname(__DIR__) . '/app/includes/footer.php';
             });
         });
 
-        // 2. Botón de Eliminar Planilla (NUEVA LÓGICA)
-        $('.datatable-es').on('click', '.btn-eliminar-planilla', function() {
+        // --- 3. LÓGICA DE SWEETALERT (ELIMINAR PLANILLA) ---
+        $('#tablaCierres').on('click', '.btn-eliminar-planilla', function() {
             var $btn = $(this);
             var nombre = $btn.data('nombre');
             var mes = $btn.data('mes');
@@ -159,7 +204,6 @@ require_once dirname(__DIR__) . '/app/includes/footer.php';
                 cancelButtonText: 'Cancelar'
             }).then((result) => {
                 if (result.isConfirmed) {
-                    // CAMBIO: Llamar al nuevo script
                     fetch('<?php echo BASE_URL; ?>/ajax/eliminar_planilla_ajax.php', {
                             method: 'POST',
                             headers: {
@@ -174,7 +218,7 @@ require_once dirname(__DIR__) . '/app/includes/footer.php';
                         .then(response => response.json())
                         .then(data => {
                             if (data.success) {
-                                location.reload(); // Recargar para que la fila desaparezca
+                                location.reload();
                             } else {
                                 Swal.fire('Error', data.message, 'error');
                             }
@@ -182,6 +226,5 @@ require_once dirname(__DIR__) . '/app/includes/footer.php';
                 }
             });
         });
-
     });
 </script>

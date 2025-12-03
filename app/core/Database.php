@@ -1,12 +1,22 @@
 <?php
-class Database {
-    private $host = 'localhost';
-    private $db_name = 'reportes';
-    private $username = 'root'; // Usuario por defecto de XAMPP
-    private $password = '';     // Password por defecto de XAMPP
+class Database
+{
+    private $host;
+    private $db_name;
+    private $username;
+    private $password;
     private $conn;
 
-    public function connect() {
+    public function __construct() {
+        $this->host = 'localhost';
+        $this->db_name = 'reportes';
+        $this->username = 'root';
+        $this->password = '';
+    }
+
+
+    public function connect()
+    {
         $this->conn = null;
 
         try {
@@ -14,12 +24,12 @@ class Database {
             $this->conn = new PDO($dsn, $this->username, $this->password);
             $this->conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
             $this->conn->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
-        } catch(PDOException $e) {
-            echo 'Connection Error: ' . $e->getMessage();
-            exit; // Detener la aplicación si no se puede conectar
+        } catch (PDOException $e) {
+            error_log('Database Connection Error: ' . $e->getMessage());
+            // En producción, no mostrar el mensaje detallado
+            die('Lo sentimos, estamos experimentando problemas técnicos. Por favor, intente más tarde.');
         }
 
         return $this->conn;
     }
 }
-?>

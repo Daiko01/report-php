@@ -42,43 +42,6 @@ require_once __DIR__ . '/app/includes/header.php';
                     </ul>
                 </div>
 
-                <div class="card-body">
-                    <div class="tab-content" id="perfilTabsContent">
-
-                        <div class="tab-pane fade show active" id="datos" role="tabpanel" aria-labelledby="datos-tab">
-                            <h5 class="card-title mb-3">Información Personal</h5>
-                            
-                            <form action="perfil_datos_process.php" method="POST" class="needs-validation" novalidate>
-                                <div class="mb-3">
-                                    <label class="form-label">Usuario (RUT)</label>
-                                    <input type="text" class="form-control" value="<?php echo htmlspecialchars($user['username']); ?>" readonly disabled>
-                                    <div class="form-text">Tu usuario (RUT) no puede ser modificado.</div>
-                                </div>
-                                <div class="mb-3">
-                                    <label for="nombre_completo" class="form-label">Nombre Completo</label>
-                                    <input type="text" class="form-control" id="nombre_completo" name="nombre_completo" value="<?php echo htmlspecialchars($user['nombre_completo']); ?>" required>
-                                    <div class="invalid-feedback">Tu nombre es obligatorio.</div>
-                                </div>
-                                <div class="mb-3">
-                                    <label for="email" class="form-label">Email</label>
-                                    <input type="email" class="form-control" id="email" name="email" value="<?php echo htmlspecialchars($user['email']); ?>" required>
-                                    <div class="invalid-feedback">Ingresa un email válido.</div>
-                                </div>
-                                <hr>
-                                <button type="submit" class="btn btn-primary">Guardar Cambios</button>
-                            </form>
-                        </div>
-
-                        <div class="tab-pane fade" id="pass" role="tabpanel" aria-labelledby="pass-tab">
-                            <h5 class="card-title mb-3">Seguridad</h5>
-                            
-                            <form action="perfil_pass_process.php" method="POST" class="needs-validation" novalidate>
-                                <div class="mb-3">
-                                    <label for="current_password" class="form-label">Contraseña Actual</label>
-                                    <input type="password" class="form-control" id="current_password" name="current_password" required>
-                                    <div class="invalid-feedback">Ingresa tu contraseña actual.</div>
-                                </div>
-                                <hr>
                                 <div class="mb-3">
                                     <label for="new_password" class="form-label">Nueva Contraseña</label>
                                     <input type="password" class="form-control" id="new_password" name="new_password" required>

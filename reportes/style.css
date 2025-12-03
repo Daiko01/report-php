@@ -1,187 +1,187 @@
-/* style.css - Corregido para mPDF */
-
-/* REGLA @page ELIMINADA. 
-   Se controla desde el constructor de mPDF en PHP.
-*/
-
-body {
-    font-family: 'Helvetica', 'Arial', sans-serif;
-    font-size: 8pt;
-    color: #333;
-}
-
-/* REGLAS 'header' y 'h1' ELIMINADAS.
-   Se definirán en el PHP.
-*/
-
-.info-header {
-    width: 100%;
-    font-size: 9pt;
-}
-
-.info-header .info-izq {
-    width: 50%;
-    float: left;
-    text-align: left;
-}
-
-.info-header .info-der {
-    width: 50%;
-    float: right;
-    text-align: right;
-}
-
-.info-header .label {
-    font-weight: bold;
-}
-
-.info-header .data {
-    font-weight: bold;
-    font-size: 10pt;
-}
-
-/* REGLA 'main' ELIMINADA.
-   Ya no se necesita el padding-top.
-*/
-
-/* --- Bloque de info del Empleador --- */
-.info-empleador {
-    width: 100%;
-    margin-bottom: 15px;
-    padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-    background-color: #f9f9f9;
-}
-
-.info-empleador .info-col {
-    width: 50%;
-    float: left;
-}
-
-.info-empleador p {
-    margin: 2px 0;
-    font-size: 9pt;
-}
-
-.info-empleador .label {
-    font-weight: bold;
-    display: inline-block;
-    width: 120px;
-}
-
-/* --- Tabla Principal --- */
-.tabla-principal {
-    width: 100%;
-    border-collapse: collapse;
-    margin-bottom: 20px;
-    page-break-inside: auto;
-}
-
-.tabla-principal tbody tr {
-    page-break-inside: avoid;
-}
-
-.tabla-principal th,
-.tabla-principal td {
-    border: 1px solid #ccc;
-    padding: 4px;
-    text-align: right;
-}
-
-.tabla-principal th {
-    background-color: #e9ecef;
-    font-size: 7pt;
-    white-space: nowrap;
-    padding: 5px 3px;
-    text-align: center;
-    /* Centrado */
-}
-
-.tabla-principal td:nth-child(1),
-/* RUT */
-.tabla-principal td:nth-child(2) {
-    /* Nombre */
-    text-align: left;
-    white-space: nowrap;
-}
-
-.tabla-principal tbody td {
-    background-color: #fff;
-}
-
-.tabla-principal tbody tr:nth-child(even) td {
-    background-color: #f8f9fa;
-}
-
-.tabla-principal tfoot th {
-    background-color: #e9ecef;
-    font-weight: bold;
-    text-align: right;
-}
-
-.tabla-principal tfoot th:nth-child(1),
-.tabla-principal tfoot th:nth-child(2) {
-    text-align: left;
-}
-
-.tabla-principal .total {
-    font-weight: bold;
-    background-color: #f0f0f0;
-}
-
-.tabla-principal tfoot .total {
-    background-color: #e9ecef;
-}
-
-.nombre-trabajador {
-    text-align: left;
-    white-space: nowrap;
-}
-
-.fixed-marker {
-    font-weight: bold;
-    font-style: italic;
-    color: #333;
-    margin-right: 4px;
-}
-
-/* --- Tabla Resumen (al final) --- */
-.tabla-resumen {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 20px;
-    font-size: 9pt;
-    page-break-inside: avoid;
-}
-
-.tabla-resumen th,
-.tabla-resumen td {
-    border: 1px solid #ccc;
-    padding: 5px;
-}
-
-.tabla-resumen th {
-    background-color: #e9ecef;
-    text-align: left;
-}
-
-.tabla-resumen td.numero {
-    text-align: right;
-}
-
-.tabla-resumen .total td {
-    font-weight: bold;
-    border-top: 2px solid #aaa;
-}
-
-.tabla-resumen .total-final td {
-    font-weight: bold;
-    font-size: 10pt;
-    background-color: #e9ecef;
-    border-top: 2px solid #000;
-}
-
-/* REGLA 'footer' ELIMINADA.
-   Se definirá en el PHP.
+/* style.css - Corregido para mPDF */
+
+/* REGLA @page ELIMINADA. 
+   Se controla desde el constructor de mPDF en PHP.
+*/
+
+body {
+    font-family: 'Helvetica', 'Arial', sans-serif;
+    font-size: 8pt;
+    color: #333;
+}
+
+/* REGLAS 'header' y 'h1' ELIMINADAS.
+   Se definirán en el PHP.
+*/
+
+.info-header {
+    width: 100%;
+    font-size: 9pt;
+}
+
+.info-header .info-izq {
+    width: 50%;
+    float: left;
+    text-align: left;
+}
+
+.info-header .info-der {
+    width: 50%;
+    float: right;
+    text-align: right;
+}
+
+.info-header .label {
+    font-weight: bold;
+}
+
+.info-header .data {
+    font-weight: bold;
+    font-size: 10pt;
+}
+
+/* REGLA 'main' ELIMINADA.
+   Ya no se necesita el padding-top.
+*/
+
+/* --- Bloque de info del Empleador --- */
+.info-empleador {
+    width: 100%;
+    margin-bottom: 15px;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    background-color: #f9f9f9;
+}
+
+.info-empleador .info-col {
+    width: 50%;
+    float: left;
+}
+
+.info-empleador p {
+    margin: 2px 0;
+    font-size: 9pt;
+}
+
+.info-empleador .label {
+    font-weight: bold;
+    display: inline-block;
+    width: 120px;
+}
+
+/* --- Tabla Principal --- */
+.tabla-principal {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+    page-break-inside: auto;
+}
+
+.tabla-principal tbody tr {
+    page-break-inside: avoid;
+}
+
+.tabla-principal th,
+.tabla-principal td {
+    border: 1px solid #ccc;
+    padding: 4px;
+    text-align: right;
+}
+
+.tabla-principal th {
+    background-color: #e9ecef;
+    font-size: 7pt;
+    white-space: nowrap;
+    padding: 5px 3px;
+    text-align: center;
+    /* Centrado */
+}
+
+.tabla-principal td:nth-child(1),
+/* RUT */
+.tabla-principal td:nth-child(2) {
+    /* Nombre */
+    text-align: left;
+    white-space: nowrap;
+}
+
+.tabla-principal tbody td {
+    background-color: #fff;
+}
+
+.tabla-principal tbody tr:nth-child(even) td {
+    background-color: #f8f9fa;
+}
+
+.tabla-principal tfoot th {
+    background-color: #e9ecef;
+    font-weight: bold;
+    text-align: right;
+}
+
+.tabla-principal tfoot th:nth-child(1),
+.tabla-principal tfoot th:nth-child(2) {
+    text-align: left;
+}
+
+.tabla-principal .total {
+    font-weight: bold;
+    background-color: #f0f0f0;
+}
+
+.tabla-principal tfoot .total {
+    background-color: #e9ecef;
+}
+
+.nombre-trabajador {
+    text-align: left;
+    white-space: nowrap;
+}
+
+.fixed-marker {
+    font-weight: bold;
+    font-style: italic;
+    color: #333;
+    margin-right: 4px;
+}
+
+/* --- Tabla Resumen (al final) --- */
+.tabla-resumen {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+    font-size: 9pt;
+    page-break-inside: avoid;
+}
+
+.tabla-resumen th,
+.tabla-resumen td {
+    border: 1px solid #ccc;
+    padding: 5px;
+}
+
+.tabla-resumen th {
+    background-color: #e9ecef;
+    text-align: left;
+}
+
+.tabla-resumen td.numero {
+    text-align: right;
+}
+
+.tabla-resumen .total td {
+    font-weight: bold;
+    border-top: 2px solid #aaa;
+}
+
+.tabla-resumen .total-final td {
+    font-weight: bold;
+    font-size: 10pt;
+    background-color: #e9ecef;
+    border-top: 2px solid #000;
+}
+
+/* REGLA 'footer' ELIMINADA.
+   Se definirá en el PHP.
 */

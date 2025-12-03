@@ -61,7 +61,7 @@ require_once __DIR__ . '/app/includes/header.php';
                             <div class="kpi-value"><?php echo $kpi_empleadores; ?></div>
                             <div class="kpi-trend text-success">
                                 <i class="fas fa-chart-line me-1"></i>
-                                <span>Activos</span>
+                                <span>Registrados</span>
                             </div>
                         </div>
                         <div class="kpi-icon">

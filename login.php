@@ -3,6 +3,8 @@
 require_once __DIR__ . '/app/core/bootstrap.php';
 // Ejecutar el chequeo de sesión (redirige a index.php si ya está logueado)
 require_once __DIR__ . '/app/includes/session_check.php';
+// Cargar CSRF helper
+require_once __DIR__ . '/app/includes/csrf.php';
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -36,6 +38,7 @@ require_once __DIR__ . '/app/includes/session_check.php';
             <p class="text-center text-muted mb-4">Acceso al sistema</p>
 
             <form action="app/core/login_process.php" method="POST">
+                <?php csrf_field(); ?>
                 <div class="mb-3">
                     <label for="username" class="form-label">Usuario (RUT)</label>
                     <input type="text" class="form-control" id="username" name="username" maxlength="12" placeholder="12.345.678-9" required autofocus>
@@ -63,10 +66,14 @@ require_once __DIR__ . '/app/includes/session_check.php';
         // Limpiar el mensaje para que no se muestre de nuevo
         unset($_SESSION['flash_message']);
 
+        // Codificar variables para uso seguro en JS
+        $typeSafe = json_encode($type);
+        $messageSafe = json_encode($message);
+
         echo "<script>
             Swal.fire({
-                icon: '{$type}',
-                title: '{$message}',
+                icon: {$typeSafe},
+                title: {$messageSafe},
                 toast: false,
                 position: 'center',
                 showConfirmButton: true

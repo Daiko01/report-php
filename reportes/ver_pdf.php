@@ -1,5 +1,5 @@
 <?php
-// Reporte de Cotizaciones - ver_pdf.php (AFP Nombres + PartTime + Lógica Corregida)
+// Reporte de Cotizaciones - ver_pdf.php (INP INCLUIDO EN CESANTÍA)
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
@@ -12,20 +12,15 @@ date_default_timezone_set('America/Santiago');
 setlocale(LC_TIME, 'es_ES.UTF-8', 'Spanish_Spain', 'Spanish');
 
 if (!isset($_GET['id']) || !isset($_GET['mes']) || !isset($_GET['ano'])) {
-    die("Error: Faltan parámetros para generar el reporte.");
+    die("Error: Faltan parámetros.");
 }
 $empleador_id = (int)$_GET['id'];
 $mes = (int)$_GET['mes'];
 $ano = (int)$_GET['ano'];
 
-// Formato de Fecha
 $fecha = DateTime::createFromFormat('!Y-n-d', "$ano-$mes-01");
 $formatter = new IntlDateFormatter('es_ES', IntlDateFormatter::LONG, IntlDateFormatter::NONE, null, null, 'LLLL');
 $mes_nombre = mb_strtoupper($formatter->format($fecha));
-
-// ===================================================================
-// 4. CARGA DE DATOS REALES (DE LA BD)
-// ===================================================================
 
 try {
     // A. Empleador
@@ -37,15 +32,16 @@ try {
               WHERE e.id = ?";
     $stmt_e = $pdo->prepare($sql_e);
     $stmt_e->execute([$empleador_id]);
-    $empleador = $stmt_e->fetch();
-    $empleador['sucursal'] = 'N/A';
+    $empleador = $stmt_e->fetch(PDO::FETCH_ASSOC);
 
-    // B. Registros de Planilla (SQL Actualizado con AFP Nombre y Part-Time)
+
+    // B. Registros
     $sql_p = "SELECT 
                 t.rut as trabajador_rut, 
                 t.nombre as trabajador_nombre, 
                 t.estado_previsional as trabajador_estado_previsional, 
-                a.nombre as afp_nombre, -- <-- TRAEMOS EL NOMBRE DE LA AFP
+                t.sistema_previsional,
+                a.nombre as afp_nombre,
                 p.dias_trabajados,
                 p.tipo_contrato, 
                 p.sueldo_imponible, 
@@ -60,34 +56,26 @@ try {
                 p.cotiza_cesantia_pensionado,
                 (p.descuento_afp + p.descuento_salud + p.adicional_salud_apv + p.seguro_cesantia + p.sindicato + p.cesantia_licencia_medica) as total_descuentos,
                 (p.aportes + p.asignacion_familiar_calculada) - (p.descuento_afp + p.descuento_salud + p.adicional_salud_apv + p.seguro_cesantia + p.sindicato + p.cesantia_licencia_medica) as saldo,
-                
-                -- Subconsulta para Part-Time
                 (SELECT es_part_time FROM contratos c 
                  WHERE c.trabajador_id = t.id 
                  AND c.empleador_id = p.empleador_id
                  AND c.fecha_inicio <= LAST_DAY(CONCAT(p.ano, '-', p.mes, '-01'))
                  ORDER BY c.fecha_inicio DESC LIMIT 1) as es_part_time
-
               FROM planillas_mensuales p
               JOIN trabajadores t ON p.trabajador_id = t.id
-              LEFT JOIN afps a ON t.afp_id = a.id -- <-- JOIN PARA NOMBRE AFP
+              LEFT JOIN afps a ON t.afp_id = a.id
               WHERE p.empleador_id = ? AND p.mes = ? AND p.ano = ?
               ORDER BY t.nombre ASC";
 
     $stmt_p = $pdo->prepare($sql_p);
     $stmt_p->execute([$empleador_id, $mes, $ano]);
-    $registros = $stmt_p->fetchAll();
+    $registros = $stmt_p->fetchAll(PDO::FETCH_ASSOC);
 
-    if (empty($registros)) {
-        die("No se encontraron datos de planilla para este período.");
-    }
+    if (empty($registros)) die("No se encontraron datos.");
 } catch (Exception $e) {
-    die("Error al cargar datos de la BD: " . "<pre>" . $e->getMessage() . "</pre>");
+    die("Error BD: " . $e->getMessage());
 }
 
-// ===================================================================
-// 5. FUNCIONES HELPER
-// ===================================================================
 function format_numero($num)
 {
     if ($num === null || $num === 0) return "0";
@@ -105,60 +93,65 @@ function format_rut($rut_str)
     return $cuerpo_formateado . '-' . $verificador;
 }
 
-// ===================================================================
-// 6. LÓGICA DE CÁLCULO
-// ===================================================================
-
-// A. Cálculo de totales_tabla
+// --- CÁLCULOS ---
 $totales_tabla = ['sueldo_imponible' => 0, 'descuento_afp' => 0, 'descuento_salud' => 0, 'adicional_salud_apv' => 0, 'seguro_cesantia' => 0, 'sindicato' => 0, 'cesantia_licencia_medica' => 0, 'total_descuentos' => 0, 'aportes' => 0, 'asignacion_familiar_calculada' => 0, 'saldo' => 0];
 foreach ($registros as $r) {
-    foreach ($totales_tabla as $key => $value) {
-        if (isset($r[$key])) $totales_tabla[$key] += $r[$key];
-    }
+    foreach ($totales_tabla as $key => $value) if (isset($r[$key])) $totales_tabla[$key] += $r[$key];
 }
 
-// B. Cálculo de calculos_pie
 $stmt_sis = $pdo->prepare("SELECT tasa_sis_decimal FROM sis_historico WHERE (ano_inicio < :ano OR (ano_inicio = :ano AND mes_inicio <= :mes)) ORDER BY ano_inicio DESC, mes_inicio DESC LIMIT 1");
 $stmt_sis->execute(['ano' => $ano, 'mes' => $mes]);
 $sis_data = $stmt_sis->fetch();
 $TASA_SIS_ACTUAL = $sis_data ? (float)$sis_data['tasa_sis_decimal'] : 0.0;
 
-// Constantes
 define('TASA_CAP_IND_CONST', 0.001);
 define('TASA_EXP_VIDA_CONST', 0.009);
 
+// 1. Calcular Base Imponible SIS (Solo AFP y Activos)
 $total_imponible_sis = 0;
-foreach ($registros as $r) if ($r['trabajador_estado_previsional'] != 'Pensionado') $total_imponible_sis += $r['sueldo_imponible'];
-
-$tasa_mutual_actual = $empleador['tasa_mutual_decimal'];
-$calc_aporte_patronal = floor($totales_tabla['sueldo_imponible'] * $tasa_mutual_actual);
-
-// --- CÁLCULO SEGURO CESANTÍA PATRONAL (Lógica Corregida) ---
-$calc_seguro_cesantia_patronal = 0;
 foreach ($registros as $r) {
-    if ($r['tipo_contrato'] == 'Fijo') {
-        // Fijo: 3.0%
-        $calc_seguro_cesantia_patronal += floor($r['sueldo_imponible'] * 0.03);
-    } else {
-        // Indefinido
-        if ($r['trabajador_estado_previsional'] == 'Activo') {
-            // Activo: 2.4%
-            $calc_seguro_cesantia_patronal += floor($r['sueldo_imponible'] * 0.024);
-        } elseif (isset($r['cotiza_cesantia_pensionado']) && $r['cotiza_cesantia_pensionado'] == 1) {
-            // Pensionado con Toggle ON: 2.4%
-            $calc_seguro_cesantia_patronal += floor($r['sueldo_imponible'] * 0.024);
-        }
-        // Pensionado Toggle OFF: 0%
+    if ($r['sistema_previsional'] == 'AFP' && $r['trabajador_estado_previsional'] != 'Pensionado') {
+        $total_imponible_sis += $r['sueldo_imponible'];
     }
 }
-// --- FIN CÁLCULO ---
+
+$tasa_mutual_actual = (float)$empleador['tasa_mutual_decimal'];
+$calc_aporte_patronal = floor($totales_tabla['sueldo_imponible'] * $tasa_mutual_actual);
+
+// 2. Calcular Seguro Cesantía Patronal (CORREGIDO: Verifica Activo o Pensionado con AFC)
+$calc_seguro_cesantia_patronal = 0;
+foreach ($registros as $r) {
+    // Determinar si debe pagar cesantía patronal
+    $debe_pagar_patronal = false;
+
+    if ($r['trabajador_estado_previsional'] == 'Activo') {
+        $debe_pagar_patronal = true;
+    } elseif (isset($r['cotiza_cesantia_pensionado']) && $r['cotiza_cesantia_pensionado'] == 1) {
+        // Pensionado con AFC (caso especial)
+        $debe_pagar_patronal = true;
+    }
+
+    // Solo calcular si debe pagar (excluye pensionados estándar)
+    if ($debe_pagar_patronal) {
+        if ($r['tipo_contrato'] == 'Fijo') {
+            // Plazo Fijo: 3.0% Patronal
+            $calc_seguro_cesantia_patronal += floor($r['sueldo_imponible'] * 0.03);
+        } else {
+            // Indefinido: 2.4% Patronal
+            $calc_seguro_cesantia_patronal += floor($r['sueldo_imponible'] * 0.024);
+        }
+    }
+    // Si es pensionado estándar (sin AFC), no paga cesantía patronal (0%)
+}
 
 $calc_sis = floor($total_imponible_sis * $TASA_SIS_ACTUAL);
 $calc_capitalizacion_individual = floor($total_imponible_sis * TASA_CAP_IND_CONST);
 $calc_expectativa_vida = floor($total_imponible_sis * TASA_EXP_VIDA_CONST);
 
 $sub_total_desc_tabla = $totales_tabla['total_descuentos'];
-$sub_total_desc_final = $sub_total_desc_tabla + $calc_aporte_patronal + $calc_sis + $calc_seguro_cesantia_patronal + $calc_capitalizacion_individual + $calc_expectativa_vida;
+$sub_total_desc_final = $sub_total_desc_tabla + $calc_aporte_patronal + $calc_sis +
+    $calc_seguro_cesantia_patronal + $calc_capitalizacion_individual + $calc_expectativa_vida;
+
 $aportes_conductor = $totales_tabla['aportes'];
 $saldos_positivos = 0;
 foreach ($registros as $r) if ($r['saldo'] > 0) $saldos_positivos += $r['saldo'];
@@ -185,18 +178,11 @@ $calculos_pie = [
     'tasa_mutual_aplicada_porc' => $tasa_mutual_actual * 100
 ];
 
-// ===================================================================
-// 7. GENERAR PDF
-// ===================================================================
+// --- GENERAR PDF ---
 try {
     $css = file_get_contents(__DIR__ . '/style.css');
-
-    // INICIO DEL TEMPLATE
     ob_start();
-    // NOTA: Incluimos el contenido aquí directamente o vía include, 
-    // pero modificaré la parte de la tabla para mostrar el Nombre de la AFP.
 ?>
-
     <!DOCTYPE html>
     <html lang="es">
 
@@ -206,7 +192,8 @@ try {
                 <div class="info-col">
                     <p><span class="label">Empleador:</span> <?= htmlspecialchars($empleador['nombre']) ?></p>
                     <p><span class="label">RUT:</span> <?= format_rut($empleador['rut']) ?></p>
-                    <p><span class="label">Sucursal:</span> <?= htmlspecialchars($empleador['sucursal'] ?: 'N/A') ?></p>
+                    <p><span class="label">F: Plazo Fijo</p>
+                    <p><span class="label">P: Partime</p>
                 </div>
                 <div class="info-col">
                     <p><span class="label">C. Compensación:</span> <?= htmlspecialchars($empleador['caja_compensacion_nombre'] ?: 'N/A') ?></p>
@@ -214,15 +201,14 @@ try {
                     <p><span class="label">Tasa Mutual:</span> <?= sprintf("%.2f", $calculos_pie['tasa_mutual_aplicada_porc']) ?>%</p>
                 </div>
             </div>
-
             <table class="tabla-principal">
                 <thead>
                     <tr>
                         <th>RUT</th>
                         <th>Nombre</th>
-                        <th style="width: 30px;">Días</th>
+                        <th style="width:30px;">Días</th>
                         <th>Sueldo Imp.</th>
-                        <th>AFP</th>
+                        <th>AFP/INP</th>
                         <th>Salud</th>
                         <th>APV</th>
                         <th>Seg. Cesantía</th>
@@ -235,28 +221,15 @@ try {
                     </tr>
                 </thead>
                 <tbody>
-                    <?php foreach ($registros as $r): ?>
-                        <tr>
+                    <?php foreach ($registros as $r): ?><tr>
                             <td><?= format_rut($r['trabajador_rut']) ?></td>
-                            <td class="nombre-trabajador">
-                                <?php if ($r['tipo_contrato'] == 'Fijo'): ?><span class="fixed-marker">F</span><?php endif; ?>
-                                <?php if (isset($r['es_part_time']) && $r['es_part_time'] == 1): ?><span class="fixed-marker" style="color: #007bff;">P</span><?php endif; ?>
-                                <?= htmlspecialchars($r['trabajador_nombre']) ?>
-                            </td>
-                            <td style="text-align: center;"><?= $r['dias_trabajados'] ?></td>
+                            <td class="nombre-trabajador"><?php if ($r['tipo_contrato'] == 'Fijo'): ?><span class="fixed-marker">F</span><?php endif; ?><?php if (isset($r['es_part_time']) && $r['es_part_time'] == 1): ?><span class="fixed-marker" style="color: #007bff;">P</span><?php endif; ?><?= htmlspecialchars($r['trabajador_nombre']) ?></td>
+                            <td style="text-align:center;"><?= $r['dias_trabajados'] ?></td>
                             <td><?= format_numero($r['sueldo_imponible']) ?></td>
-
-                            <td>
-                                <?php
-                                if ($r['trabajador_estado_previsional'] == 'Pensionado') {
-                                    echo '<div style="font-size: 7px; font-weight: bold; color: #555;">PENSIONADO</div>';
-                                } elseif ($r['afp_nombre']) {
-                                    echo '<div style="font-size: 7px; font-weight: bold; color: #555;">' . mb_strtoupper($r['afp_nombre']) . '</div>';
-                                }
-                                echo format_numero($r['descuento_afp']);
-                                ?>
-                            </td>
-
+                            <td><?php if ($r['trabajador_estado_previsional'] == 'Pensionado') echo '<div style="font-size:7px;font-weight:bold;color:#555;">PENSIONADO</div>';
+                                elseif ($r['sistema_previsional'] == 'INP') echo '<div style="font-size:7px;font-weight:bold;color:#555;">INP</div>';
+                                elseif (!empty($r['afp_nombre'])) echo '<div style="font-size:7px;font-weight:bold;color:#555;">' . mb_strtoupper($r['afp_nombre']) . '</div>';
+                                echo format_numero($r['descuento_afp']); ?></td>
                             <td><?= format_numero($r['descuento_salud']) ?></td>
                             <td><?= format_numero($r['adicional_salud_apv']) ?></td>
                             <td><?= format_numero($r['seguro_cesantia']) ?></td>
@@ -266,8 +239,7 @@ try {
                             <td><?= format_numero($r['aportes']) ?></td>
                             <td><?= format_numero($r['asignacion_familiar_calculada']) ?></td>
                             <td class="total"><?= format_numero($r['saldo']) ?></td>
-                        </tr>
-                    <?php endforeach; ?>
+                        </tr><?php endforeach; ?>
                 </tbody>
                 <tfoot>
                     <tr>
@@ -287,7 +259,6 @@ try {
                     </tr>
                 </tfoot>
             </table>
-
             <table class="tabla-resumen">
                 <thead>
                     <tr>
@@ -304,19 +275,19 @@ try {
                         <td class="numero"><?= format_numero($calculos_pie['aporte_patronal']) ?></td>
                     </tr>
                     <tr>
-                        <td>(+) SIS (Tasa Histórica)</td>
+                        <td>(+) Seguro Invalidez y Sob (SIS)</td>
                         <td class="numero"><?= format_numero($calculos_pie['sis']) ?></td>
                     </tr>
                     <tr>
-                        <td>(+) Seguro Cesantía Patronal</td>
+                        <td>(+) Seguro Cesantía</td>
                         <td class="numero"><?= format_numero($calculos_pie['seguro_cesantia_patronal']) ?></td>
                     </tr>
                     <tr>
-                        <td>(+) Capitalización Individual (SIS)</td>
+                        <td>(+) 0,1 Capitalización Individual</td>
                         <td class="numero"><?= format_numero($calculos_pie['capitalizacion_individual']) ?></td>
                     </tr>
                     <tr>
-                        <td>(+) Expectativa de Vida (SIS)</td>
+                        <td>(+) 0,9 Expectativa de Vida</td>
                         <td class="numero"><?= format_numero($calculos_pie['expectativa_vida']) ?></td>
                     </tr>
                     <tr class="total">
@@ -328,7 +299,7 @@ try {
                         <td class="numero"><?= format_numero($calculos_pie['aportes_conductor']) ?></td>
                     </tr>
                     <tr>
-                        <td>(+) Saldos Positivos</td>
+                        <td>(+) Saldos Positivo(s) Conductor(es)</td>
                         <td class="numero"><?= format_numero($calculos_pie['saldos_positivos']) ?></td>
                     </tr>
                     <tr class="total-final">
@@ -338,7 +309,7 @@ try {
                 </tbody>
                 <tfoot>
                     <tr>
-                        <td>Total Asignación Familiar</td>
+                        <td>Asignación Familiar</td>
                         <td class="numero"><?= format_numero($calculos_pie['asignacion_familiar']) ?></td>
                     </tr>
                     <tr>
@@ -346,7 +317,7 @@ try {
                         <td class="numero"><?= format_numero($calculos_pie['sindicato']) ?></td>
                     </tr>
                     <tr class="total-final">
-                        <td>Total Leyes Sociales (Empleado + Empleador)</td>
+                        <td>Total Leyes Sociales</td>
                         <td class="numero"><?= format_numero($calculos_pie['total_leyes_sociales']) ?></td>
                     </tr>
                 </tfoot>
@@ -355,17 +326,12 @@ try {
     </body>
 
     </html>
-
 <?php
     $html_body = ob_get_clean();
 
     $mpdf = new Mpdf(['mode' => 'utf-8', 'format' => 'A4-L', 'margin_left' => 15, 'margin_right' => 15, 'margin_top' => 35, 'margin_bottom' => 20]);
-    $mpdf->SetTitle("Planilla $mes-$ano - " . $empleador['nombre']);
-    $mpdf->SetAuthor("Sistema de Reportes Daiko");
-
     $header_html = '<div class="info-header"><div class="info-izq"><span class="label">PERÍODO:</span><span class="data">' . $mes_nombre . ' / ' . $ano . '</span></div><div class="info-der"><h1 style="font-size: 16pt; margin:0; padding:0;">Planilla de Cotizaciones Previsionales</h1><span class="label">Emisión:</span> ' . date('d/m/Y - H:i') . '</div></div><div style="border-bottom: 2px solid #000; margin-top: 10px;"></div>';
     $mpdf->SetHTMLHeader($header_html);
-
     $footer_html = '<table width="100%" style="font-size: 8pt; color: #888;"><tr><td width="50%">Reporte generado por Sistema de Reportes Daiko.</td><td width="50%" style="text-align: right;">Página {PAGENO} de {nbpg}</td></tr></table>';
     $mpdf->SetHTMLFooter($footer_html);
 
