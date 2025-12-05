@@ -14,6 +14,26 @@ if (!isset($_FILES['archivo_aportes']) || $_FILES['archivo_aportes']['error'] !=
 }
 
 $tmp_name = $_FILES['archivo_aportes']['tmp_name'];
+$file_name = $_FILES['archivo_aportes']['name'];
+
+// 1. Validar Extensión
+$ext = strtolower(pathinfo($file_name, PATHINFO_EXTENSION));
+if ($ext != 'csv') {
+    $_SESSION['flash_message'] = ['type' => 'error', 'message' => 'Solo se permiten archivos CSV.'];
+    header('Location: cargar_aportes.php'); exit;
+}
+
+// 2. Validar Tipo MIME (Mejor seguridad)
+$finfo = finfo_open(FILEINFO_MIME_TYPE);
+$mime_type = finfo_file($finfo, $tmp_name);
+finfo_close($finfo);
+
+$allowed_mimes = ['text/plain', 'text/csv', 'application/vnd.ms-excel', 'text/x-csv'];
+
+if (!in_array($mime_type, $allowed_mimes)) {
+    $_SESSION['flash_message'] = ['type' => 'error', 'message' => 'El archivo no parece ser un CSV válido (MIME: ' . $mime_type . ').'];
+    header('Location: cargar_aportes.php'); exit;
+}
 
 // Arrays para consolidación
 $aportes_validos = []; // [rut => [monto => x, empresa => y]]
