@@ -41,7 +41,10 @@ try {
                 t.nombre as trabajador_nombre, 
                 t.estado_previsional as trabajador_estado_previsional, 
                 t.sistema_previsional,
-                a.nombre as afp_nombre,
+                t.tramo_asignacion_manual,
+                t.numero_cargas,
+                t.numero_cargas,
+                p.afp_historico_nombre,
                 p.dias_trabajados,
                 p.tipo_contrato, 
                 p.sueldo_imponible, 
@@ -63,7 +66,6 @@ try {
                  ORDER BY c.fecha_inicio DESC LIMIT 1) as es_part_time
               FROM planillas_mensuales p
               JOIN trabajadores t ON p.trabajador_id = t.id
-              LEFT JOIN afps a ON t.afp_id = a.id
               WHERE p.empleador_id = ? AND p.mes = ? AND p.ano = ?
               ORDER BY t.nombre ASC";
 
@@ -72,6 +74,35 @@ try {
     $registros = $stmt_p->fetchAll(PDO::FETCH_ASSOC);
 
     if (empty($registros)) die("No se encontraron datos.");
+    
+    // C. Cargar Tramos Históricos Vigentes para el Mes
+    // Buscamos el set de tramos cuya fecha_inicio sea <= al primer día del mes del reporte
+    // Ordenamos por fecha_inicio DESC para obtener el más reciente vigente
+    $fecha_reporte = "$ano-" . str_pad($mes, 2, "0", STR_PAD_LEFT) . "-01";
+    
+    $sql_tramos = "SELECT tramo, renta_maxima, monto_por_carga 
+                   FROM cargas_tramos_historicos 
+                   WHERE fecha_inicio <= :fecha
+                   ORDER BY fecha_inicio DESC, monto_por_carga DESC"; // Ordenar para procesar grupos (aunque tabla suele tener 4 filas por fecha)
+                   
+    // Nota: La consulta anterior podría traer tramos de fechas muy antiguas si no filtramos bien el "grupo".
+    // Lo ideal es buscar la fecha maxima <= fecha_reporte y luego filtrar por esa fecha.
+    
+    $sql_fecha_tramo = "SELECT MAX(fecha_inicio) as fecha_vigs FROM cargas_tramos_historicos WHERE fecha_inicio <= :fecha";
+    $stmt_ft = $pdo->prepare($sql_fecha_tramo);
+    $stmt_ft->execute([':fecha' => $fecha_reporte]);
+    $fecha_vigente = $stmt_ft->fetchColumn();
+    
+    $tramos_del_periodo = [];
+    if($fecha_vigente) {
+        $sql_tramos_final = "SELECT tramo, renta_maxima, monto_por_carga 
+                             FROM cargas_tramos_historicos 
+                             WHERE fecha_inicio = :fecha";
+        $stmt_tf = $pdo->prepare($sql_tramos_final);
+        $stmt_tf->execute([':fecha' => $fecha_vigente]);
+        $tramos_del_periodo = $stmt_tf->fetchAll(PDO::FETCH_ASSOC);
+    }
+
 } catch (Exception $e) {
     die("Error BD: " . $e->getMessage());
 }
@@ -94,10 +125,110 @@ function format_rut($rut_str)
 }
 
 // --- CÁLCULOS ---
+// Reiniciar totales que dependen de la iteración (se recalcularán)
 $totales_tabla = ['sueldo_imponible' => 0, 'descuento_afp' => 0, 'descuento_salud' => 0, 'adicional_salud_apv' => 0, 'seguro_cesantia' => 0, 'sindicato' => 0, 'cesantia_licencia_medica' => 0, 'total_descuentos' => 0, 'aportes' => 0, 'asignacion_familiar_calculada' => 0, 'saldo' => 0];
-foreach ($registros as $r) {
-    foreach ($totales_tabla as $key => $value) if (isset($r[$key])) $totales_tabla[$key] += $r[$key];
+
+// Helper para encontrar tramo automático
+function getTramoAutomatico($sueldo, $tramos) {
+    // Los tramos suelen ser: A (menor sueldo, mayor monto) ... D (mayor sueldo, 0 monto o poco)
+    // PERO la tabla suele tener 'renta_maxima'. 
+    // Ejemplo: Tramo A <= X, Tramo B <= Y, etc.
+    // Ordenar tramos por renta_maxima ASC
+    usort($tramos, function($a, $b) {
+        return $a['renta_maxima'] <=> $b['renta_maxima'];
+    });
+
+    foreach ($tramos as $t) {
+        // En DB, renta_maxima suele ser el límite SUPERIOR del tramo.
+        // Si sueldo <= tope, es este tramo.
+        // OJO con el último tramo (D) que a veces tiene tope muy alto o 0 (si es 0 asumimos infinito o manejo especial).
+        // Asumiendo datos estandar: tramos excluyentes.
+        if ($sueldo <= $t['renta_maxima']) {
+            return $t; // Retorna array con tramo, monto, etc.
+        }
+    }
+    // Si supera todos (ej. Tramo D a veces tiene tope muy alto, pero si no, retorna el último o D)
+    // Retornamos el último (usualmente D)
+    return end($tramos);
 }
+
+// Helper para obtener datos de un tramo específico (Manual)
+function getTramoManual($letra, $tramos) {
+    foreach ($tramos as $t) {
+        if ($t['tramo'] == $letra) return $t;
+    }
+    return null;
+}
+
+// PROCESAMIENTO DE REGISTROS (Lógica de Tramos)
+foreach ($registros as &$r) {
+    $tramo_data = null;
+    $origen_tramo = 'auto'; // debug
+
+    // 1. Determinar Tramo Automático (basado en sueldo)
+    $tramo_auto = getTramoAutomatico($r['sueldo_imponible'], $tramos_del_periodo);
+    
+    // 2. Revisar si hay Manual
+    if (!empty($r['tramo_asignacion_manual'])) {
+        $tramo_manual = getTramoManual($r['tramo_asignacion_manual'], $tramos_del_periodo);
+        if ($tramo_manual) {
+            $tramo_data = $tramo_manual;
+            $origen_tramo = 'manual';
+        } else {
+            // Fallback si la letra manual no existe en los tramos del mes (raro)
+            $tramo_data = $tramo_auto;
+        }
+    } else {
+        $tramo_data = $tramo_auto;
+    }
+
+    // 3. Calcular Monto y Asignar Letra
+    $r['tramo_letra'] = $tramo_data['tramo'] ?? ''; // Para mostrar en PDF
+    
+    // Si sueldo es 0 (ej licencia completa), a veces tramo A aplica, a veces no. Asumimos lógica normal.
+    // CÁLCULO:
+    // Si es MANUAL, RECALCULAMOS FUERZADO: monto * cargas del maestro trabajadores
+    if ($origen_tramo == 'manual') {
+        $monto_unitario = (int)$tramo_data['monto_por_carga'];
+        $num_cargas = (int)$r['numero_cargas'];
+        $r['asignacion_familiar_calculada'] = $monto_unitario * $num_cargas;
+    } else {
+        // Si es AUTO, mantemos el valor de la BD (que ya fue calculado por generar_planilla), 
+        // O lo recalculamos para consistencia?
+        // El usuario dijo "ver_pdf.php calculate automatically...". 
+        // Generar_planilla ya lo hizo. Lo dejamos, PERO nos aseguramos que la LETRA corresponda.
+        // EXCEPCION: Si generar_planilla lo hizo mal o si queremos asegurar consistencia visual,
+        // recalculamos igual. Dado que cargamos 'tramos_del_periodo', es mas seguro recalcularlo aquí
+        // para que coincida con la letra mostrada.
+        // ADEMAS: Si el trabajador editó cargas durante el mes, 'planillas' podría tener valor viejo.
+        // Pero reporte histórico debe respetar histórico.
+        // DECISIÓN: Respetar valor DB para Automático (histórico seguro). 
+        // Solo recalculamos Manual (que es un override explícito pedido).
+        
+        // Pero... necesitamos la letra correcta correspondiente al monto DB?
+        // A veces el sueldo cambia. Usaremos la letra calculada $tramo_auto.
+    }
+
+    // --- CORRECCIÓN FINAL: Si monto es 0, ocultar letra tramo ---
+    if ($r['asignacion_familiar_calculada'] == 0) {
+        $r['tramo_letra'] = '';
+    }
+
+    // 4. Recalcular SALDO (Importante por si cambió la asignación manual)
+    // saldo = (aportes + asig_fam) - total_descuentos
+    // total_descuentos incluye descuentos legales + sindicato + otros
+    // Pero total_descuentos NO cambia por el tramo. Asig Familiar es un HABER (Ingreso no imponible).
+    // Saldo = lo que recibe liquido aprox (en este contexto simplificado de la tabla).
+    
+    // Recalculo saldo de la fila
+    $r['saldo'] = ($r['aportes'] + $r['asignacion_familiar_calculada']) - $r['total_descuentos'];
+
+    // 5. Acumular Totales
+    foreach ($totales_tabla as $key => $val) {
+        if (isset($r[$key])) $totales_tabla[$key] += $r[$key];
+    }
+}
+unset($r); // romper referencia
 
 $stmt_sis = $pdo->prepare("SELECT tasa_sis_decimal FROM sis_historico WHERE (ano_inicio < :ano OR (ano_inicio = :ano AND mes_inicio <= :mes)) ORDER BY ano_inicio DESC, mes_inicio DESC LIMIT 1");
 $stmt_sis->execute(['ano' => $ano, 'mes' => $mes]);
@@ -228,7 +359,20 @@ try {
                             <td><?= format_numero($r['sueldo_imponible']) ?></td>
                             <td><?php if ($r['trabajador_estado_previsional'] == 'Pensionado') echo '<div style="font-size:7px;font-weight:bold;color:#555;">PENSIONADO</div>';
                                 elseif ($r['sistema_previsional'] == 'INP') echo '<div style="font-size:7px;font-weight:bold;color:#555;">INP</div>';
-                                elseif (!empty($r['afp_nombre'])) echo '<div style="font-size:7px;font-weight:bold;color:#555;">' . mb_strtoupper($r['afp_nombre']) . '</div>';
+                                else {
+                                    $nombre_afp_mostrar = $r['afp_historico_nombre'];
+                                    if (empty($nombre_afp_mostrar)) {
+                                        // Fallback: Buscar AFP actual (compatibilidad antigua)
+                                        // OJO: Esto se ejecuta N veces. Idealmente deberia ser eager loaded si hay muchos vacios, pero es un caso borde.
+                                        // Hacemos una query rapida.
+                                        $stmt_afp_fb = $pdo->prepare("SELECT a.nombre FROM trabajadores t LEFT JOIN afps a ON t.afp_id = a.id WHERE t.rut = ? LIMIT 1");
+                                        $stmt_afp_fb->execute([$r['trabajador_rut']]); // Usamos RUT o ID si estuviera disponible facil (r['trabajador_id'] no está en select * explicito arriba pero t.id sí en join?)
+                                        // Arriba en SQL no seleccione t.id, pero p.trabajador_id esta implicito? SELECT es explicito.
+                                        // Mejor usemos el RUT que sí está seleccionado.
+                                        $nombre_afp_mostrar = $stmt_afp_fb->fetchColumn();
+                                    }
+                                    if (!empty($nombre_afp_mostrar)) echo '<div style="font-size:7px;font-weight:bold;color:#555;">' . mb_strtoupper($nombre_afp_mostrar) . '</div>';
+                                }
                                 echo format_numero($r['descuento_afp']); ?></td>
                             <td><?= format_numero($r['descuento_salud']) ?></td>
                             <td><?= format_numero($r['adicional_salud_apv']) ?></td>
@@ -237,7 +381,12 @@ try {
                             <td><?= format_numero($r['cesantia_licencia_medica']) ?></td>
                             <td class="total"><?= format_numero($r['total_descuentos']) ?></td>
                             <td><?= format_numero($r['aportes']) ?></td>
-                            <td><?= format_numero($r['asignacion_familiar_calculada']) ?></td>
+                            <td>
+                                <?= format_numero($r['asignacion_familiar_calculada']) ?>
+                                <?php if(!empty($r['tramo_letra'])): ?>
+                                    <br><span style="font-size:8px; color:#555;">(Tramo <?= $r['tramo_letra'] ?>)</span>
+                                <?php endif; ?>
+                            </td>
                             <td class="total"><?= format_numero($r['saldo']) ?></td>
                         </tr><?php endforeach; ?>
                 </tbody>

@@ -157,21 +157,99 @@ elseif ($tipo_reporte == 'excedentes') {
 // ==========================================
 elseif ($tipo_reporte == 'asignacion') {
     
-    $sql = "SELECT e.nombre as empleador, t.nombre as conductor, p.asignacion_familiar_calculada as monto
+    // 1. Obtener Datos: Incluimos datos para recálculo (sueldo, cargas, manual)
+    $sql = "SELECT e.nombre as empleador, t.nombre as conductor, 
+                   p.asignacion_familiar_calculada as monto,
+                   p.sueldo_imponible, t.numero_cargas, t.tramo_asignacion_manual
             FROM planillas_mensuales p
             JOIN trabajadores t ON p.trabajador_id = t.id
             JOIN empleadores e ON p.empleador_id = e.id
-            WHERE p.mes = ? AND p.ano = ? AND e.empresa_sistema = ? AND p.asignacion_familiar_calculada > 0
+            WHERE p.mes = ? AND p.ano = ? AND e.empresa_sistema = ?
             ORDER BY e.nombre, t.nombre";
             
     $stmt = $pdo->prepare($sql);
     $stmt->execute([$mes, $ano, $empresa]);
-    $filas = $stmt->fetchAll();
+    $filas_raw = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    if (empty($filas)) die("No hay asignaciones familiares para este período.");
+    if (empty($filas_raw)) die("No hay datos para este período.");
 
+    // 2. Cargar Tramos Históricos Vigentes (Lógica calc manual)
+    $fecha_reporte = "$ano-" . str_pad($mes, 2, "0", STR_PAD_LEFT) . "-01";
+    $sql_fecha_tramo = "SELECT MAX(fecha_inicio) as fecha_vigs FROM cargas_tramos_historicos WHERE fecha_inicio <= :fecha";
+    $stmt_ft = $pdo->prepare($sql_fecha_tramo);
+    $stmt_ft->execute([':fecha' => $fecha_reporte]);
+    $fecha_vigente = $stmt_ft->fetchColumn();
+    
+    $tramos_del_periodo = [];
+    if($fecha_vigente) {
+        $sql_tramos_final = "SELECT tramo, renta_maxima, monto_por_carga 
+                             FROM cargas_tramos_historicos 
+                             WHERE fecha_inicio = :fecha";
+        $stmt_tf = $pdo->prepare($sql_tramos_final);
+        $stmt_tf->execute([':fecha' => $fecha_vigente]);
+        $tramos_del_periodo = $stmt_tf->fetchAll(PDO::FETCH_ASSOC);
+    }
+    
+    // Helpers Logic (Closures)
+    $getTramoAutomatico = function($sueldo, $tramos) {
+        usort($tramos, function($a, $b) { return $a['renta_maxima'] <=> $b['renta_maxima']; });
+        foreach ($tramos as $t) {
+            if ($sueldo <= $t['renta_maxima']) return $t;
+        }
+        return end($tramos);
+    };
+
+    $getTramoManual = function($letra, $tramos) {
+        foreach ($tramos as $t) if ($t['tramo'] == $letra) return $t;
+        return null;
+    };
+
+    // 3. Procesar y Filtrar (Solo > 0)
+    $filas_finales = [];
     $total_asig = 0;
 
+    foreach ($filas_raw as $f) {
+        // Lógica de cálculo (idéntica a ver_pdf.php)
+        $tramo_data = null;
+        $origen_tramo = 'auto';
+        $tramo_auto = $getTramoAutomatico($f['sueldo_imponible'], $tramos_del_periodo);
+        
+        if (!empty($f['tramo_asignacion_manual'])) {
+            $tramo_manual = $getTramoManual($f['tramo_asignacion_manual'], $tramos_del_periodo);
+            if ($tramo_manual) {
+                $tramo_data = $tramo_manual;
+                $origen_tramo = 'manual';
+            } else {
+                $tramo_data = $tramo_auto;
+            }
+        } else {
+            $tramo_data = $tramo_auto;
+        }
+
+        $f['tramo_letra'] = $tramo_data['tramo'] ?? '';
+        
+        // Recálculo si es manual
+        if ($origen_tramo == 'manual') {
+            $monto_unitario = (int)$tramo_data['monto_por_carga'];
+            $num_cargas = (int)$f['numero_cargas'];
+            $f['monto'] = $monto_unitario * $num_cargas;
+        }
+        
+        // Limpiar letra si monto es 0
+        if ($f['monto'] == 0) {
+            $f['tramo_letra'] = '';
+            continue; // OJO: Si pedían "no muestre el tramo", puede que NO debamos mostrar la fila si es 0?
+                      // La consulta original tenía `WHERE p.asignacion_familiar_calculada > 0`
+                      // Aquí debemos filtrar si el NUEVO monto es > 0.
+        }
+
+        $filas_finales[] = $f;
+        $total_asig += $f['monto'];
+    }
+
+    if (empty($filas_finales)) die("No hay asignaciones familiares con monto mayor a 0 para este período (tras recálculo).");
+
+    // 4. Generar HTML
     $html = '
     <div style="text-align:center; margin-bottom:20px;">
         <h2>Reporte de Asignación Familiar</h2>
@@ -186,13 +264,17 @@ elseif ($tipo_reporte == 'asignacion') {
             <th style="border:1px solid #ccc; padding:5px; width:150px;">Firma Conductor</th>
         </tr>';
 
-    foreach ($filas as $f) {
-        $total_asig += $f['monto'];
+    foreach ($filas_finales as $f) {
+        $tramo_html = !empty($f['tramo_letra']) ? '<br><span style="font-size:10px; color:#555;">(Tramo ' . $f['tramo_letra'] . ')</span>' : '';
+        
         $html .= '
         <tr>
             <td style="border:1px solid #ccc; padding:5px;">' . htmlspecialchars($f['empleador']) . '</td>
             <td style="border:1px solid #ccc; padding:5px;">' . htmlspecialchars($f['conductor']) . '</td>
-            <td style="border:1px solid #ccc; padding:5px; text-align:right;">$' . format_money($f['monto']) . '</td>
+            <td style="border:1px solid #ccc; padding:5px; text-align:right;">
+                $' . format_money($f['monto']) . 
+                $tramo_html . '
+            </td>
             <td style="border:1px solid #ccc; padding:5px; vertical-align:bottom;">_______</td>
         </tr>';
     }

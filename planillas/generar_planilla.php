@@ -76,8 +76,8 @@ $pdo->beginTransaction();
 try {
     $pdo->prepare("DELETE FROM planillas_mensuales WHERE empleador_id = ? AND mes = ? AND ano = ?")->execute([$empleador_id, $mes, $ano]);
 
-    $sql_insert = "INSERT INTO planillas_mensuales (mes, ano, empleador_id, trabajador_id, sueldo_imponible, tipo_contrato, fecha_inicio, fecha_termino, dias_trabajados, aportes, adicional_salud_apv, cesantia_licencia_medica, cotiza_cesantia_pensionado, descuento_afp, descuento_salud, seguro_cesantia, sindicato, asignacion_familiar_calculada) 
-                   VALUES (:mes, :ano, :eid, :tid, :sueldo, :tipo, :f_inicio, :f_termino, :dias, :aportes, 0, 0, 0, :desc_afp, :desc_salud, :desc_cesantia, :desc_sindicato, :desc_asig_fam)";
+    $sql_insert = "INSERT INTO planillas_mensuales (mes, ano, empleador_id, trabajador_id, sueldo_imponible, tipo_contrato, fecha_inicio, fecha_termino, dias_trabajados, aportes, adicional_salud_apv, cesantia_licencia_medica, cotiza_cesantia_pensionado, descuento_afp, afp_historico_nombre, descuento_salud, seguro_cesantia, sindicato, asignacion_familiar_calculada) 
+                   VALUES (:mes, :ano, :eid, :tid, :sueldo, :tipo, :f_inicio, :f_termino, :dias, :aportes, 0, 0, 0, :desc_afp, :afp_hist, :desc_salud, :desc_cesantia, :desc_sindicato, :desc_asig_fam)";
     $stmt_insert = $pdo->prepare($sql_insert);
     
     foreach ($contratos_vigentes as $c) {
@@ -138,7 +138,9 @@ try {
             ':sueldo' => $sueldo_proporcional, ':tipo' => $c['tipo_contrato'], ':f_inicio' => $c['fecha_inicio'],
             ':f_termino' => $c['fecha_termino'], ':dias' => $dias_trabajados, 
             ':aportes' => $monto_aporte, // <-- AQUI ENTRA EL DINERO
-            ':desc_afp' => $calculos['descuento_afp'], ':desc_salud' => $calculos['descuento_salud'],
+            ':desc_afp' => $calculos['descuento_afp'], 
+            ':afp_hist' => $calculos['afp_historico_nombre'],
+            ':desc_salud' => $calculos['descuento_salud'],
             ':desc_cesantia' => $calculos['seguro_cesantia'], ':desc_sindicato' => $calculos['sindicato'],
             ':desc_asig_fam' => $calculos['asignacion_familiar_calculada']
         ]);

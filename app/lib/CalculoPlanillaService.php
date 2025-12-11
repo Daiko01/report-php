@@ -8,12 +8,20 @@ class CalculoPlanillaService
 
     private $tramos_af_cacheados = [];
 
+    // CACHE DATA
+    private $cache_afp_comisiones = [];
+    private $cache_sindicatos = [];
+    private $cache_cargado = false;
+
     // Constantes
     const TOPE_IMPONIBLE_AFP = 2656956;
     const TOPE_IMPONIBLE_SALUD = 2656956;
     const TOPE_IMPONIBLE_CESANTIA = 4006198;
     const COTIZACION_SALUD_MINIMA = 0.07;
     const COTIZACION_AFP_OBLIGATORIA = 0.10;
+    
+    // Tope Gratificacion (4.75 IMM - Ajustar segun año)
+    const TOPE_GRATIFICACION_MENSUAL = 203125; 
 
     public function __construct(PDO $pdo)
     {
@@ -49,6 +57,33 @@ class CalculoPlanillaService
         ");
     }
 
+    /**
+     * Carga masiva de datos para evitar consultas N+1
+     */
+    public function cargarDatosGlobales($mes, $ano) {
+        // 1. Cargar todas las comisiones vigentes de AFP para este mes
+        // (Logica simplificada: traer todas y filtrar en memoria)
+        $stmt = $this->pdo->query("SELECT * FROM afp_comisiones_historicas ORDER BY ano_inicio ASC, mes_inicio ASC");
+        $todas = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Organizar por AFP y encontrar la vigente
+        $mapa = [];
+        foreach ($todas as $reg) {
+            // Si la fecha es menor o igual al periodo
+            if ($reg['ano_inicio'] < $ano || ($reg['ano_inicio'] == $ano && $reg['mes_inicio'] <= $mes)) {
+                $mapa[$reg['afp_id']] = (float)$reg['comision_decimal'];
+            }
+        }
+        $this->cache_afp_comisiones = $mapa;
+
+        // 2. Cargar todos los sindicatos
+        $stmt_s = $this->pdo->query("SELECT id, descuento FROM sindicatos");
+        $sindicatos = $stmt_s->fetchAll(PDO::FETCH_KEY_PAIR); // [id => descuento]
+        $this->cache_sindicatos = $sindicatos;
+
+        $this->cache_cargado = true;
+    }
+
     private function getTramosAF($fecha_reporte)
     {
         if (isset($this->tramos_af_cacheados[$fecha_reporte])) {
@@ -66,10 +101,20 @@ class CalculoPlanillaService
         return $this->tramos_af_cacheados[$fecha_reporte];
     }
 
-    public function calcularFila($fila_planilla, $mes, $ano)
+    /**
+     * @param array $fila_planilla Datos de la fila de la planilla
+     * @param int $mes
+     * @param int $ano
+     * @param array|null $trabajador_inyectado (Opcional) Datos del trabajador ya cargados para evitar query
+     */
+    public function calcularFila($fila_planilla, $mes, $ano, $trabajador_inyectado = null)
     {
-        $this->stmt_trab->execute([$fila_planilla['trabajador_id']]);
-        $trabajador = $this->stmt_trab->fetch(PDO::FETCH_ASSOC);
+        if ($trabajador_inyectado) {
+            $trabajador = $trabajador_inyectado;
+        } else {
+            $this->stmt_trab->execute([$fila_planilla['trabajador_id']]);
+            $trabajador = $this->stmt_trab->fetch(PDO::FETCH_ASSOC);
+        }
 
         // Si no encuentra trabajador (caso raro), evitar error fatal
         if (!$trabajador) {
@@ -101,18 +146,37 @@ class CalculoPlanillaService
             } else {
                 // === CASO AFP ===
                 if ($trabajador['afp_id']) {
-                    $this->stmt_afp_comision->execute([
-                        'afp_id' => $trabajador['afp_id'],
-                        'ano' => $ano,
-                        'mes' => $mes
-                    ]);
-                    $comision_data = $this->stmt_afp_comision->fetch(PDO::FETCH_ASSOC);
+                    $comision_afp = 0.0;
+                    $nombre_afp_snapshot = '';
 
-                    $comision_afp = $comision_data ? (float)$comision_data['comision_decimal'] : 0.0;
+                    // Obtener nombre de la AFP (Snapshot)
+                    $stmt_nombre_afp = $this->pdo->prepare("SELECT nombre FROM afps WHERE id = ?");
+                    $stmt_nombre_afp->execute([$trabajador['afp_id']]);
+                    $nombre_afp_snapshot = $stmt_nombre_afp->fetchColumn(); 
+                    
+                    if ($this->cache_cargado && isset($this->cache_afp_comisiones[$trabajador['afp_id']])) {
+                        // Usar CACHE
+                        $comision_afp = $this->cache_afp_comisiones[$trabajador['afp_id']];
+                    } else {
+                        // Fallback a SQL estándar
+                        $this->stmt_afp_comision->execute([
+                            'afp_id' => $trabajador['afp_id'],
+                            'ano' => $ano,
+                            'mes' => $mes
+                        ]);
+                        $comision_data = $this->stmt_afp_comision->fetch(PDO::FETCH_ASSOC);
+                        $comision_afp = $comision_data ? (float)$comision_data['comision_decimal'] : 0.0;
+                    }
+
                     // 10% Obligatorio + Comisión AFP
                     $descuento_prevision = round($base_afp * (self::COTIZACION_AFP_OBLIGATORIA + $comision_afp));
                 }
             }
+        }
+
+        // Si no es AFP o no tiene, el nombre es NULL
+        if (!isset($nombre_afp_snapshot)) {
+            $nombre_afp_snapshot = null;
         }
 
         // --- 2. Descuento Salud (7%) ---
@@ -144,9 +208,13 @@ class CalculoPlanillaService
         // --- 4. Sindicato ---
         $descuento_sindicato = 0;
         if ($trabajador['sindicato_id']) {
-            $this->stmt_sind->execute([$trabajador['sindicato_id']]);
-            $sindicato = $this->stmt_sind->fetch(PDO::FETCH_ASSOC);
-            $descuento_sindicato = $sindicato ? (int)$sindicato['descuento'] : 0;
+            if ($this->cache_cargado && isset($this->cache_sindicatos[$trabajador['sindicato_id']])) {
+                $descuento_sindicato = (int)$this->cache_sindicatos[$trabajador['sindicato_id']];
+            } else {
+                $this->stmt_sind->execute([$trabajador['sindicato_id']]);
+                $sindicato = $this->stmt_sind->fetch(PDO::FETCH_ASSOC);
+                $descuento_sindicato = $sindicato ? (int)$sindicato['descuento'] : 0;
+            }
         }
 
         // --- 5. Asignación Familiar ---
@@ -172,7 +240,8 @@ class CalculoPlanillaService
             'descuento_salud' => $descuento_salud_7pct,
             'seguro_cesantia' => $seguro_cesantia_trabajador,
             'sindicato' => $descuento_sindicato,
-            'asignacion_familiar_calculada' => $asignacion_familiar_calculada
+            'asignacion_familiar_calculada' => $asignacion_familiar_calculada,
+            'afp_historico_nombre' => $nombre_afp_snapshot ?? null
         ];
     }
 }

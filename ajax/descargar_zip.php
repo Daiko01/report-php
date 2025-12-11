@@ -61,14 +61,87 @@ try {
         $stmt_e->execute([$empleador_id]);
         $empleador = $stmt_e->fetch();
 
-        $sql_p = "SELECT t.rut as trabajador_rut, t.nombre as trabajador_nombre, t.estado_previsional as trabajador_estado_previsional, t.sistema_previsional, a.nombre as afp_nombre, p.dias_trabajados, p.tipo_contrato, p.sueldo_imponible, p.descuento_afp, p.descuento_salud, p.adicional_salud_apv, p.seguro_cesantia, p.sindicato, p.cesantia_licencia_medica, p.aportes, p.asignacion_familiar_calculada, p.cotiza_cesantia_pensionado, (p.descuento_afp + p.descuento_salud + p.adicional_salud_apv + p.seguro_cesantia + p.sindicato + p.cesantia_licencia_medica) as total_descuentos, (p.aportes + p.asignacion_familiar_calculada) - (p.descuento_afp + p.descuento_salud + p.adicional_salud_apv + p.seguro_cesantia + p.sindicato + p.cesantia_licencia_medica) as saldo, 
+        $sql_p = "SELECT t.rut as trabajador_rut, t.nombre as trabajador_nombre, t.estado_previsional as trabajador_estado_previsional, t.sistema_previsional, t.tramo_asignacion_manual, t.numero_cargas, a.nombre as afp_nombre, p.dias_trabajados, p.tipo_contrato, p.sueldo_imponible, p.descuento_afp, p.descuento_salud, p.adicional_salud_apv, p.seguro_cesantia, p.sindicato, p.cesantia_licencia_medica, p.aportes, p.asignacion_familiar_calculada, p.cotiza_cesantia_pensionado, (p.descuento_afp + p.descuento_salud + p.adicional_salud_apv + p.seguro_cesantia + p.sindicato + p.cesantia_licencia_medica) as total_descuentos, (p.aportes + p.asignacion_familiar_calculada) - (p.descuento_afp + p.descuento_salud + p.adicional_salud_apv + p.seguro_cesantia + p.sindicato + p.cesantia_licencia_medica) as saldo, 
                   (SELECT es_part_time FROM contratos c WHERE c.trabajador_id = t.id AND c.empleador_id = p.empleador_id AND c.fecha_inicio <= LAST_DAY(CONCAT(p.ano, '-', p.mes, '-01')) ORDER BY c.fecha_inicio DESC LIMIT 1) as es_part_time
                   FROM planillas_mensuales p JOIN trabajadores t ON p.trabajador_id = t.id LEFT JOIN afps a ON t.afp_id = a.id WHERE p.empleador_id = ? AND p.mes = ? AND p.ano = ? ORDER BY t.nombre ASC";
         $stmt_p = $pdo->prepare($sql_p);
         $stmt_p->execute([$empleador_id, $mes, $ano]);
-        $registros = $stmt_p->fetchAll();
+        $registros = $stmt_p->fetchAll(PDO::FETCH_ASSOC);
 
         if (empty($registros)) continue;
+
+        // --- LÓGICA TRAMOS MANUAL (Copiada de ver_pdf.php) ---
+        $fecha_reporte = "$ano-" . str_pad($mes, 2, "0", STR_PAD_LEFT) . "-01";
+        
+        // Buscar fecha vigente más reciente
+        $sql_fecha_tramo = "SELECT MAX(fecha_inicio) as fecha_vigs FROM cargas_tramos_historicos WHERE fecha_inicio <= :fecha";
+        $stmt_ft = $pdo->prepare($sql_fecha_tramo);
+        $stmt_ft->execute([':fecha' => $fecha_reporte]);
+        $fecha_vigente = $stmt_ft->fetchColumn();
+        
+        $tramos_del_periodo = [];
+        if($fecha_vigente) {
+             $sql_tramos_final = "SELECT tramo, renta_maxima, monto_por_carga 
+                                 FROM cargas_tramos_historicos 
+                                 WHERE fecha_inicio = :fecha";
+            $stmt_tf = $pdo->prepare($sql_tramos_final);
+            $stmt_tf->execute([':fecha' => $fecha_vigente]);
+            $tramos_del_periodo = $stmt_tf->fetchAll(PDO::FETCH_ASSOC);
+        }
+
+        // Definir funciones helper dentro del loop (o fuera si se prefiere, pero PHP permite re-definir si no son globales o usar closure)
+        // Para evitar error "Cannot redeclare", verificamos si existe o usamos closure.
+        // Dado que estamos dentro de un loop (foreach reportes), definirlas aqui daría error.
+        // Las moveremos afuera del loop o las renombramos. Lo mejor es moverlas al inicio del archivo o usar closures.
+        // Usaré closures asignadas a variables para evitar conflictos.
+        
+        $getTramoAutomatico = function($sueldo, $tramos) {
+            usort($tramos, function($a, $b) { return $a['renta_maxima'] <=> $b['renta_maxima']; });
+            foreach ($tramos as $t) {
+                if ($sueldo <= $t['renta_maxima']) return $t;
+            }
+            return end($tramos);
+        };
+
+        $getTramoManual = function($letra, $tramos) {
+            foreach ($tramos as $t) if ($t['tramo'] == $letra) return $t;
+            return null;
+        };
+
+        // Procesar Registros con nueva lógica
+        foreach ($registros as &$r) {
+            $tramo_data = null;
+            $origen_tramo = 'auto';
+            $tramo_auto = $getTramoAutomatico($r['sueldo_imponible'], $tramos_del_periodo);
+            
+            if (!empty($r['tramo_asignacion_manual'])) {
+                $tramo_manual = $getTramoManual($r['tramo_asignacion_manual'], $tramos_del_periodo);
+                if ($tramo_manual) {
+                    $tramo_data = $tramo_manual;
+                    $origen_tramo = 'manual';
+                } else {
+                    $tramo_data = $tramo_auto;
+                }
+            } else {
+                $tramo_data = $tramo_auto;
+            }
+
+            $r['tramo_letra'] = $tramo_data['tramo'] ?? '';
+            
+            if ($origen_tramo == 'manual') {
+                $monto_unitario = (int)$tramo_data['monto_por_carga'];
+                $num_cargas = (int)$r['numero_cargas'];
+                $r['asignacion_familiar_calculada'] = $monto_unitario * $num_cargas;
+                // Recalcular saldo
+                $r['saldo'] = ($r['aportes'] + $r['asignacion_familiar_calculada']) - $r['total_descuentos'];
+            }
+            
+            // --- CORRECCIÓN FINAL: Si monto es 0, ocultar letra tramo ---
+            if ($r['asignacion_familiar_calculada'] == 0) {
+                $r['tramo_letra'] = '';
+            }
+        }
+        unset($r); // romper referencia
 
         $totales_tabla = ['sueldo_imponible' => 0, 'descuento_afp' => 0, 'descuento_salud' => 0, 'adicional_salud_apv' => 0, 'seguro_cesantia' => 0, 'sindicato' => 0, 'cesantia_licencia_medica' => 0, 'total_descuentos' => 0, 'aportes' => 0, 'asignacion_familiar_calculada' => 0, 'saldo' => 0];
         foreach ($registros as $reg) foreach ($totales_tabla as $key => $value) if (isset($reg[$key])) $totales_tabla[$key] += $reg[$key];
@@ -200,7 +273,12 @@ try {
                                 <td><?= format_numero($r['cesantia_licencia_medica']) ?></td>
                                 <td class="total"><?= format_numero($r['total_descuentos']) ?></td>
                                 <td><?= format_numero($r['aportes']) ?></td>
-                                <td><?= format_numero($r['asignacion_familiar_calculada']) ?></td>
+                                <td>
+                                    <?= format_numero($r['asignacion_familiar_calculada']) ?>
+                                    <?php if(!empty($r['tramo_letra'])): ?>
+                                        <br><span style="font-size:8px; color:#555;">(Tramo <?= $r['tramo_letra'] ?>)</span>
+                                    <?php endif; ?>
+                                </td>
                                 <td class="total"><?= format_numero($r['saldo']) ?></td>
                             </tr><?php endforeach; ?></tbody>
                     <tfoot>

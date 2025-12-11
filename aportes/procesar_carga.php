@@ -16,34 +16,34 @@ if (!isset($_FILES['archivo_aportes']) || $_FILES['archivo_aportes']['error'] !=
 $tmp_name = $_FILES['archivo_aportes']['tmp_name'];
 $file_name = $_FILES['archivo_aportes']['name'];
 
-// 1. Validar Extensión
+// 1. Validaciones
 $ext = strtolower(pathinfo($file_name, PATHINFO_EXTENSION));
 if ($ext != 'csv') {
     $_SESSION['flash_message'] = ['type' => 'error', 'message' => 'Solo se permiten archivos CSV.'];
     header('Location: cargar_aportes.php'); exit;
 }
 
-// 2. Validar Tipo MIME (Mejor seguridad)
-$finfo = finfo_open(FILEINFO_MIME_TYPE);
-$mime_type = finfo_file($finfo, $tmp_name);
-finfo_close($finfo);
+$aportes_validos = []; 
+$lista_excedentes = []; 
 
-$allowed_mimes = ['text/plain', 'text/csv', 'application/vnd.ms-excel', 'text/x-csv'];
+// 2. PREPARAR CONSULTAS NUEVAS (FASE 4: JOIN CON EMPRESAS_SISTEMA)
 
-if (!in_array($mime_type, $allowed_mimes)) {
-    $_SESSION['flash_message'] = ['type' => 'error', 'message' => 'El archivo no parece ser un CSV válido (MIME: ' . $mime_type . ').'];
-    header('Location: cargar_aportes.php'); exit;
-}
+// A. Buscar dueño del bus y nombre OFICIAL de la empresa
+// Usamos LEFT JOIN con empresas_sistema para traer el nombre limpio.
+// Si no tiene asignada, hacemos fallback al campo antiguo 'empresa_sistema' (por seguridad)
+$stmt_bus = $pdo->prepare("
+    SELECT 
+        b.empleador_id, 
+        e.nombre as nombre_empleador, 
+        COALESCE(es.nombre, e.empresa_sistema) as nombre_empresa_madre
+    FROM buses b 
+    JOIN empleadores e ON b.empleador_id = e.id 
+    LEFT JOIN empresas_sistema es ON e.empresa_sistema_id = es.id
+    WHERE b.numero_maquina = ? 
+    LIMIT 1
+");
 
-// Arrays para consolidación
-$aportes_validos = []; // [rut => [monto => x, empresa => y]]
-$lista_excedentes = []; // Para insertar en BD
-
-// Preparar consultas
-// 1. Buscar dueño del bus
-$stmt_bus = $pdo->prepare("SELECT b.empleador_id, e.empresa_sistema FROM buses b JOIN empleadores e ON b.empleador_id = e.id WHERE b.numero_maquina = ? LIMIT 1");
-
-// 2. Verificar contrato vigente en el periodo
+// B. Verificar contrato
 $fecha_inicio_mes = "$ano-$mes-01";
 $fecha_fin_mes = date('Y-m-t', strtotime($fecha_inicio_mes));
 
@@ -58,57 +58,54 @@ $stmt_contrato = $pdo->prepare("
     LIMIT 1
 ");
 
+// C. Detective
+$stmt_detective = $pdo->prepare("
+    SELECT e.nombre 
+    FROM contratos c 
+    JOIN trabajadores t ON c.trabajador_id = t.id
+    JOIN empleadores e ON c.empleador_id = e.id
+    WHERE t.rut = :rut
+    AND c.fecha_inicio <= :fin_mes
+    AND (c.esta_finiquitado = 0 OR c.fecha_finiquito >= :inicio_mes)
+    AND (c.fecha_termino IS NULL OR c.fecha_termino >= :inicio_mes)
+    LIMIT 1
+");
+
 $pdo->beginTransaction();
 try {
-    // Limpiar excedentes antiguos de este mes (opcional, para no duplicar si recargan)
     $pdo->prepare("DELETE FROM excedentes_aportes WHERE mes = ? AND ano = ?")->execute([$mes, $ano]);
-    
-    // Nota: No borramos 'aportes_externos' aun, lo hacemos al final para reemplazar solo lo que venga nuevo o sumar. 
-    // Para mantenerlo simple: Borramos todo lo de este mes en aportes_externos para recargar limpio.
     $pdo->prepare("DELETE FROM aportes_externos WHERE mes = ? AND ano = ?")->execute([$mes, $ano]);
 
     if (($handle = fopen($tmp_name, "r")) !== FALSE) {
         
-        // Detectar delimitador (mirar primera línea)
         $firstLine = fgets($handle);
-        rewind($handle); // Volver al inicio
-        
-        if ($firstLine === false || empty(trim($firstLine))) {
-            // Archivo vacío o error
-            $delimiter = ','; // Default
-        } else {
-            $cntSemi = substr_count($firstLine, ';');
-            $cntComma = substr_count($firstLine, ',');
-            $delimiter = ($cntSemi > $cntComma) ? ';' : ',';
-        }
+        rewind($handle);
+        $delimiter = (substr_count($firstLine ?? '', ';') > substr_count($firstLine ?? '', ',')) ? ';' : ',';
 
         while (($data = fgetcsv($handle, 1000, $delimiter)) !== FALSE) {
-            // Validar columnas mínimas (0:Maquina, 1:RUT, 2:Nombre, 3:Monto)
             if (count($data) < 4) continue;
 
-            $maquina = trim($data[0]);
+            $maquina = trim($data[0]); 
             $rut_crudo = trim($data[1]);
-            
-            // Limpiar RUT de puntos y guiones para tener el "raw" y convertir a MAYUSCULAS (k -> K)
-            $rut_limpio = strtoupper(preg_replace('/[^0-9kK]/', '', $rut_crudo));
-            
             $nombre_conductor = trim($data[2]);
-            // Convertir a UTF-8 si es necesario (simple fix para acentos básicos de Excel)
+            
+            $rut_limpio = strtoupper(preg_replace('/[^0-9kK]/', '', $rut_crudo)); 
+            
             if (!mb_check_encoding($nombre_conductor, 'UTF-8')) {
                 $nombre_conductor = mb_convert_encoding($nombre_conductor, 'UTF-8', 'ISO-8859-1');
             }
 
-            // Monto: Eliminar $, puntos y comas. Asumimos enteros.
-            $monto = (int)preg_replace('/[^0-9]/', '', $data[3]);
+            $monto = (int)preg_replace('/[^0-9]/', '', $data[3]); 
 
             if (empty($rut_limpio) || $monto <= 0) continue;
 
-            // 1. Identificar Empleador por Máquina
+            // --- LÓGICA DE BUSES FASE 4 ---
+
+            // 1. Identificar Empleador
             $stmt_bus->execute([$maquina]);
             $info_bus = $stmt_bus->fetch();
 
             if (!$info_bus) {
-                // ERROR: Máquina no existe -> Excedente
                 $lista_excedentes[] = [
                     'rut' => $rut_crudo, 'nombre' => $nombre_conductor, 'maquina' => $maquina,
                     'monto' => $monto, 'empresa' => 'DESCONOCIDA', 'motivo' => 'Máquina no registrada'
@@ -116,28 +113,27 @@ try {
                 continue;
             }
 
-            $empleador_id = $info_bus['empleador_id'];
-            $empresa_sistema = $info_bus['empresa_sistema'];
+            $empleador_id_bus = $info_bus['empleador_id'];
+            $nombre_empleador_bus = $info_bus['nombre_empleador'];
+            $empresa_sistema = $info_bus['nombre_empresa_madre']; // Nombre limpio desde la nueva tabla
 
-            // 2. Verificar Contrato con ESE empleador
-            // Usar formatearRUT para asegurar coincidencia con BD (ej: 12.345.678-9)
-            $rut_bd = formatearRUT($rut_limpio);
+            // 2. Verificar Contrato
+            $rut_bd = number_format(substr($rut_limpio, 0, -1), 0, ',', '.') . '-' . substr($rut_limpio, -1);
             
             $stmt_contrato->execute([
                 ':rut' => $rut_bd,
-                ':eid' => $empleador_id,
+                ':eid' => $empleador_id_bus,
                 ':inicio_mes' => $fecha_inicio_mes,
                 ':fin_mes' => $fecha_fin_mes
             ]);
 
             if ($stmt_contrato->fetch()) {
-                // ES VALIDO: Sumar a consolidados
-                // Clave compuesta para diferenciar si un chofer trabaja en BP y SOL el mismo mes (raro, pero posible)
+                // VALIDO
                 $key = $rut_limpio . '_' . $empresa_sistema; 
                 
                 if (!isset($aportes_validos[$key])) {
                     $aportes_validos[$key] = [
-                        'rut' => $rut_bd, // Guardar RUT FORMATEADO (12.345.678-9)
+                        'rut' => $rut_limpio, // Guardamos limpio
                         'monto' => 0,
                         'empresa' => $empresa_sistema
                     ];
@@ -145,22 +141,30 @@ try {
                 $aportes_validos[$key]['monto'] += $monto;
 
             } else {
-                // ERROR: Sin contrato vigente -> Excedente
+                // EXCEDENTE
+                $stmt_detective->execute([':rut' => $rut_bd, ':inicio_mes' => $fecha_inicio_mes, ':fin_mes' => $fecha_fin_mes]);
+                $otro_empleador = $stmt_detective->fetchColumn();
+
+                if ($otro_empleador) {
+                    $motivo = "CONFLICTO: Bus de $nombre_empleador_bus, pero Chofer es de $otro_empleador";
+                } else {
+                    $motivo = "Sin contrato vigente en el sistema";
+                }
+
                 $lista_excedentes[] = [
                     'rut' => $rut_crudo, 'nombre' => $nombre_conductor, 'maquina' => $maquina,
-                    'monto' => $monto, 'empresa' => $empresa_sistema, 'motivo' => 'Sin contrato vigente'
+                    'monto' => $monto, 'empresa' => $empresa_sistema, 'motivo' => $motivo
                 ];
             }
         }
         fclose($handle);
 
-        // 3. Insertar Válidos
+        // 3. Insertar
         $stmt_ins_val = $pdo->prepare("INSERT INTO aportes_externos (rut_trabajador, monto, mes, ano, empresa_origen) VALUES (?, ?, ?, ?, ?)");
         foreach ($aportes_validos as $av) {
             $stmt_ins_val->execute([$av['rut'], $av['monto'], $mes, $ano, $av['empresa']]);
         }
 
-        // 4. Insertar Excedentes
         $stmt_ins_exc = $pdo->prepare("INSERT INTO excedentes_aportes (mes, ano, rut_conductor, nombre_conductor, nro_maquina, monto, empresa_detectada, motivo) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
         foreach ($lista_excedentes as $ex) {
             $stmt_ins_exc->execute([$mes, $ano, $ex['rut'], $ex['nombre'], $ex['maquina'], $ex['monto'], $ex['empresa'], $ex['motivo']]);
@@ -170,16 +174,18 @@ try {
         
         $total_validos = count($aportes_validos);
         $total_excedentes = count($lista_excedentes);
-
-        $_SESSION['flash_message'] = [
-            'type' => $total_excedentes > 0 ? 'warning' : 'success',
-            'message' => "Proceso terminado. Aportes cargados: $total_validos. Excedentes detectados: $total_excedentes."
-        ];
         
-        // Si hay excedentes, ir a la vista de excedentes. Si no, volver.
         if ($total_excedentes > 0) {
-            header('Location: ver_excedentes.php?mes='.$mes.'&ano='.$ano);
+            session_start();
+            $_SESSION['reporte_excedentes'] = [
+                'empresa' => 'Múltiple (Automático)',
+                'mes' => $mes,
+                'ano' => $ano,
+                'data' => $lista_excedentes
+            ];
+            header('Location: resultado_carga.php?registrados=' . $total_validos . '&excedentes=' . $total_excedentes);
         } else {
+            $_SESSION['flash_message'] = ['type' => 'success', 'message' => "Carga exitosa. $total_validos aportes procesados."];
             header('Location: cargar_aportes.php');
         }
         exit;

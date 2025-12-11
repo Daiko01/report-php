@@ -102,7 +102,8 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
                         <thead>
                             <tr class="table-dark">
                                 <th>Trabajador</th>
-                                <th>Sueldo Imponible</th>
+                                <th>Sueldo Imponible</th>                                
+                                <th style="width: 120px;">Bonos Imp.</th>
                                 <th>Días Trab.</th>
                                 <th>Tipo Contrato</th>
                                 <th>Fecha Inicio</th>
@@ -125,6 +126,7 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
                                         <small><?php echo htmlspecialchars($p['rut_trabajador']); ?></small>
                                     </td>
                                     <td><input type="number" class="form-control" name="sueldo_imponible[]" value="<?php echo $p['sueldo_imponible']; ?>"></td>
+                                    <td><input type="number" class="form-control" name="bonos_imponibles[]" value="<?php echo $p['bonos_imponibles'] ?? 0; ?>"></td>
                                     <td><input type="number" class="form-control dias-trabajados" name="dias_trabajados[]" value="<?php echo $p['dias_trabajados']; ?>" max="30" min="0"></td>
                                     <td> <select class="form-select tipo-contrato" name="tipo_contrato[]">
                                             <option value="Indefinido" <?php echo $p['tipo_contrato'] == 'Indefinido' ? 'selected' : ''; ?>>Indefinido</option>
@@ -163,6 +165,7 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
     <tr id="plantilla-fila-trabajador">
         <td><input type="hidden" name="trabajador_id[]" value="{ID}">{NOMBRE}<br><small>{RUT}</small></td>
         <td><input type="number" class="form-control" name="sueldo_imponible[]" value="0"></td>
+        <td><input type="number" class="form-control" name="bonos_imponibles[]" value="0"></td>
         <td><input type="number" class="form-control dias-trabajados" name="dias_trabajados[]" value="30" max="30" min="0"></td>
         <td> <select class="form-select tipo-contrato" name="tipo_contrato[]">
                 <option value="Indefinido" selected>Indefinido</option>

@@ -2,6 +2,7 @@
 // Detectar página actual
 $pagina_actual = basename($_SERVER['PHP_SELF']);
 
+
 // --- DEFINICIÓN DE GRUPOS PARA "ACTIVE" ---
 
 // 1. Administración
@@ -32,6 +33,9 @@ $paginas_reportes = [
     'reportes_especiales.php', 
     'ver_excedentes.php'
 ];
+
+$paginas_liquidaciones = ['generar_liquidacion.php', 'listar_liquidaciones.php', 'ver_liquidacion_detalle.php'];
+
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -160,6 +164,7 @@ $paginas_reportes = [
                     <?php endif; ?>
                 </ul>
             </li>
+           
 
             <li class="<?php echo (in_array($pagina_actual, $paginas_reportes)) ? 'active' : ''; ?>">
                 <a href="#reportesMenu" data-bs-toggle="collapse" aria-expanded="<?php echo (in_array($pagina_actual, $paginas_reportes)) ? 'true' : 'false'; ?>" class="dropdown-toggle">
@@ -174,6 +179,19 @@ $paginas_reportes = [
                     </li>
                     <li class="<?php echo ($pagina_actual == 'ver_excedentes.php') ? 'active' : ''; ?>">
                         <a href="<?php echo BASE_URL; ?>/aportes/ver_excedentes.php">Historial Excedentes</a>
+                    </li>
+                </ul>
+            </li>
+             <li class="<?php echo (in_array($pagina_actual, $paginas_liquidaciones)) ? 'active' : ''; ?>">
+                <a href="#liquidacionesMenu" data-bs-toggle="collapse" aria-expanded="<?php echo (in_array($pagina_actual, $paginas_liquidaciones)) ? 'true' : 'false'; ?>" class="dropdown-toggle">
+                    <i class="fas fa-money-check-alt me-2"></i> Liquidaciones
+                </a>
+                <ul class="collapse list-unstyled <?php echo (in_array($pagina_actual, $paginas_liquidaciones)) ? 'show' : ''; ?>" id="liquidacionesMenu">
+                    <li class="<?php echo ($pagina_actual == 'generar_liquidacion.php') ? 'active' : ''; ?>">
+                        <a href="<?php echo BASE_URL; ?>/liquidaciones/generar_liquidacion.php">Generar Mensual</a>
+                    </li>
+                    <li class="<?php echo ($pagina_actual == 'listar_liquidaciones.php') ? 'active' : ''; ?>">
+                        <a href="<?php echo BASE_URL; ?>/liquidaciones/listar_liquidaciones.php">Ver Liquidaciones</a>
                     </li>
                 </ul>
             </li>

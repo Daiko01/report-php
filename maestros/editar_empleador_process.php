@@ -1,100 +1,76 @@
 <?php
-
-// 1. Cargar el núcleo
-
 require_once dirname(__DIR__) . '/app/core/bootstrap.php';
-
 require_once dirname(__DIR__) . '/app/includes/session_check.php';
-
-
-
-// 2. Verificar que sea un POST
+require_once dirname(__DIR__) . '/app/lib/utils.php';
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-
     
-
-    // 3. Recoger y limpiar datos
-
-    $id = $_POST['id'];
-$empresa_sistema = $_POST['empresa_sistema'];
+    $id = (int)$_POST['id'];
+    $rut = trim($_POST['rut']);
+    $nombre = trim($_POST['nombre']);
+    
+    // NUEVO: Recibimos ID
+    $empresa_sistema_id = (int)$_POST['empresa_sistema_id'];
+    
     $caja_id = !empty($_POST['caja_compensacion_id']) ? $_POST['caja_compensacion_id'] : null;
-
     $mutual_id = $_POST['mutual_seguridad_id'];
+    $tasa_mutual = (float)$_POST['tasa_mutual'] / 100;
 
-    $tasa_mutual_decimal = (float)$_POST['tasa_mutual'] / 100.0;
+    // Validación básica de RUT (si lo permites editar)
+    if (!validarRUT($rut)) {
+        $_SESSION['flash_message'] = ['type' => 'error', 'message' => 'RUT inválido.'];
+        header('Location: editar_empleador.php?id='.$id); exit;
+    }
+    $rut_formateado = formatearRUT($rut);
 
-    
-
-    // El RUT no se valida porque no se puede cambiar.
-
-    
-
-    // 4. Actualizar.
+    // Verificar duplicado de RUT (excluyendo al mismo ID)
+    $stmt_check = $pdo->prepare("SELECT id FROM empleadores WHERE rut = ? AND id != ?");
+    $stmt_check->execute([$rut_formateado, $id]);
+    if ($stmt_check->fetch()) {
+        $_SESSION['flash_message'] = ['type' => 'error', 'message' => 'El RUT ya está registrado por otro empleador.'];
+        header('Location: editar_empleador.php?id='.$id); exit;
+    }
 
     try {
+        // TRUCO DE SEGURIDAD Y COMPATIBILIDAD:
+        // Buscamos el nombre limpio correspondiente al ID seleccionado
+        $stmt_sys = $pdo->prepare("SELECT nombre FROM empresas_sistema WHERE id = ?");
+        $stmt_sys->execute([$empresa_sistema_id]);
+        $nombre_sistema = $stmt_sys->fetchColumn(); 
 
+        if (!$nombre_sistema) {
+            throw new Exception("Empresa Sistema no válida.");
+        }
+
+        // UPDATE ACTUALIZADO: Actualiza ID y TEXTO al mismo tiempo
         $sql = "UPDATE empleadores SET 
-                    empresa_sistema = :empresa,
-                    caja_compensacion_id = :caja_id, 
-                    mutual_seguridad_id = :mutual_id, 
+                    rut = :rut,
+                    nombre = :nombre,
+                    empresa_sistema = :sis_nombre,    -- Actualizamos texto (compatibilidad)
+                    empresa_sistema_id = :sis_id,     -- Actualizamos ID (lógica nueva)
+                    caja_compensacion_id = :caja,
+                    mutual_seguridad_id = :mutual,
                     tasa_mutual_decimal = :tasa
                 WHERE id = :id";
         
         $stmt = $pdo->prepare($sql);
-        
         $stmt->execute([
-            ':empresa' => $empresa_sistema, // <-- NUEVO
-            ':caja_id' => $caja_id,
-            ':mutual_id' => $mutual_id,
-            ':tasa' => $tasa_mutual_decimal,
+            ':rut' => $rut_formateado,
+            ':nombre' => $nombre,
+            ':sis_nombre' => $nombre_sistema,
+            ':sis_id' => $empresa_sistema_id,
+            ':caja' => $caja_id,
+            ':mutual' => $mutual_id,
+            ':tasa' => $tasa_mutual,
             ':id' => $id
         ]);
-
         
+        $_SESSION['flash_message'] = ['type' => 'success', 'message' => 'Empleador actualizado exitosamente.'];
+        header('Location: gestionar_empleadores.php'); exit;
 
-        // 5. Mensaje de Éxito (Tostada)
-
-        $_SESSION['flash_message'] = [
-
-            'type' => 'success',
-
-            'message' => '¡Empleador actualizado exitosamente!'
-
-        ];
-
-        header('Location: ' . BASE_URL . '/maestros/gestionar_empleadores.php');
-
-        exit;
-
-
-
-    } catch (PDOException $e) {
-
-        $_SESSION['flash_message'] = [
-
-            'type' => 'error',
-
-            'message' => 'Error de Base de Datos: ' . $e->getMessage()
-
-        ];
-
-        header('Location: ' . BASE_URL . '/maestros/editar_empleador.php?id=' . $id);
-
-        exit;
-
+    } catch (Exception $e) {
+        $_SESSION['flash_message'] = ['type' => 'error', 'message' => 'Error BD: ' . $e->getMessage()];
+        header('Location: editar_empleador.php?id='.$id); exit;
     }
-
-
-
-} else {
-
-    // Si no es POST, redirigir
-
-    header('Location: ' . BASE_URL . '/maestros/gestionar_empleadores.php');
-
-    exit;
-
 }
-
 ?>
