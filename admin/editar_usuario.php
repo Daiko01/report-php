@@ -11,7 +11,6 @@ if ($_SESSION['user_role'] != 'admin') {
     header('Location: ' . BASE_URL . '/index.php');
 
     exit;
-
 }
 
 
@@ -23,7 +22,6 @@ if (!isset($_GET['id'])) {
     header('Location: ' . BASE_URL . '/admin/gestionar_usuarios.php');
 
     exit;
-
 }
 
 $user_id = (int)$_GET['id'];
@@ -41,9 +39,7 @@ try {
     if (!$user) {
 
         throw new Exception("Usuario no encontrado.");
-
     }
-
 } catch (Exception $e) {
 
     $_SESSION['flash_message'] = ['type' => 'error', 'message' => $e->getMessage()];
@@ -51,7 +47,6 @@ try {
     header('Location: ' . BASE_URL . '/admin/gestionar_usuarios.php');
 
     exit;
-
 }
 
 
@@ -83,6 +78,7 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
 
 
             <form action="editar_usuario_process.php" method="POST">
+                <?php csrf_field(); ?>
 
                 <input type="hidden" name="id" value="<?php echo $user_id; ?>">
 

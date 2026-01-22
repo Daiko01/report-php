@@ -19,9 +19,9 @@ class CalculoPlanillaService
     const TOPE_IMPONIBLE_CESANTIA = 4006198;
     const COTIZACION_SALUD_MINIMA = 0.07;
     const COTIZACION_AFP_OBLIGATORIA = 0.10;
-    
+
     // Tope Gratificacion (4.75 IMM - Ajustar segun año)
-    const TOPE_GRATIFICACION_MENSUAL = 203125; 
+    const TOPE_GRATIFICACION_MENSUAL = 203125;
 
     public function __construct(PDO $pdo)
     {
@@ -40,7 +40,8 @@ class CalculoPlanillaService
                 sistema_previsional, 
                 tasa_inp_decimal, 
                 tiene_cargas, 
-                numero_cargas 
+                numero_cargas,
+                tramo_asignacion_manual
             FROM trabajadores 
             WHERE id = ?
         ");
@@ -60,12 +61,13 @@ class CalculoPlanillaService
     /**
      * Carga masiva de datos para evitar consultas N+1
      */
-    public function cargarDatosGlobales($mes, $ano) {
+    public function cargarDatosGlobales($mes, $ano)
+    {
         // 1. Cargar todas las comisiones vigentes de AFP para este mes
         // (Logica simplificada: traer todas y filtrar en memoria)
         $stmt = $this->pdo->query("SELECT * FROM afp_comisiones_historicas ORDER BY ano_inicio ASC, mes_inicio ASC");
         $todas = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        
+
         // Organizar por AFP y encontrar la vigente
         $mapa = [];
         foreach ($todas as $reg) {
@@ -152,8 +154,8 @@ class CalculoPlanillaService
                     // Obtener nombre de la AFP (Snapshot)
                     $stmt_nombre_afp = $this->pdo->prepare("SELECT nombre FROM afps WHERE id = ?");
                     $stmt_nombre_afp->execute([$trabajador['afp_id']]);
-                    $nombre_afp_snapshot = $stmt_nombre_afp->fetchColumn(); 
-                    
+                    $nombre_afp_snapshot = $stmt_nombre_afp->fetchColumn();
+
                     if ($this->cache_cargado && isset($this->cache_afp_comisiones[$trabajador['afp_id']])) {
                         // Usar CACHE
                         $comision_afp = $this->cache_afp_comisiones[$trabajador['afp_id']];
@@ -219,20 +221,49 @@ class CalculoPlanillaService
 
         // --- 5. Asignación Familiar ---
         $asignacion_familiar_calculada = 0;
+        $tipo_asignacion_familiar = 'AUTOMATICO';
+        $tramo_letra_aplicada = null;
+
         // Usamos el primer día del mes para buscar el tramo vigente
         $fecha_tramo = "$ano-$mes-01";
         $tramos_af = $this->getTramosAF($fecha_tramo);
 
-        if ($trabajador['tiene_cargas'] == 1 && $trabajador['numero_cargas'] > 0) {
-            $monto_por_carga = 0;
+        // A. Verificar si tiene cálculo manual (Override)
+        if (!empty($trabajador['tramo_asignacion_manual'])) {
+            $tipo_asignacion_familiar = 'MANUAL';
+            // Buscar el tramo específico manual
             foreach ($tramos_af as $tramo) {
-                if ($sueldo_imponible <= $tramo['renta_maxima']) {
+                if ($tramo['tramo'] == $trabajador['tramo_asignacion_manual']) {
                     $monto_por_carga = $tramo['monto_por_carga'];
+                    $tramo_letra_aplicada = $tramo['tramo'];
+                    $asignacion_familiar_calculada = $monto_por_carga * (int)$trabajador['numero_cargas'];
                     break;
                 }
             }
+        }
+        // B. Cálculo Automático
+        elseif ($trabajador['tiene_cargas'] == 1 && $trabajador['numero_cargas'] > 0) {
+            $monto_por_carga = 0;
+            foreach ($tramos_af as $tramo) {
+                // Tramos vienen ordenados por renta_maxima ASC
+                if ($sueldo_imponible <= $tramo['renta_maxima']) {
+                    $monto_por_carga = $tramo['monto_por_carga'];
+                    $tramo_letra_aplicada = $tramo['tramo'];
+                    break;
+                }
+            }
+            // Si supera todos, quizás es tramo D (0).
+            if ($tramo_letra_aplicada === null && !empty($tramos_af)) {
+                $ultimo_tramo = end($tramos_af);
+                $monto_por_carga = $ultimo_tramo['monto_por_carga'];
+                $tramo_letra_aplicada = $ultimo_tramo['tramo'];
+            }
+
             $asignacion_familiar_calculada = $monto_por_carga * (int)$trabajador['numero_cargas'];
         }
+
+        // Corrección: Si el monto es 0, no asignamos letra (o ponemos D?)
+        // Usualmente D es 0. Dejemos la letra si se detectó.
 
         // Retornamos los valores calculados
         return [
@@ -241,7 +272,9 @@ class CalculoPlanillaService
             'seguro_cesantia' => $seguro_cesantia_trabajador,
             'sindicato' => $descuento_sindicato,
             'asignacion_familiar_calculada' => $asignacion_familiar_calculada,
-            'afp_historico_nombre' => $nombre_afp_snapshot ?? null
+            'afp_historico_nombre' => $nombre_afp_snapshot ?? null,
+            'tipo_asignacion_familiar' => $tipo_asignacion_familiar,
+            'tramo_asignacion_familiar' => $tramo_letra_aplicada
         ];
     }
 }

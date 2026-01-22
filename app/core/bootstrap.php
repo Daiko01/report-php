@@ -11,7 +11,7 @@ if (session_status() == PHP_SESSION_NONE) {
 }
 
 // Definir la ruta base del proyecto para includes fáciles
-define('BASE_PATH', dirname(__DIR__, 2)); // Sube 2 niveles (de core -> app -> reportes)
+define('BASE_PATH', dirname(__DIR__, 2));
 
 $folder_name = basename(BASE_PATH);
 
@@ -23,10 +23,18 @@ if (!defined('BASE_URL')) {
 // Cargar la clase de la Base de Datos
 require_once BASE_PATH . '/app/core/Database.php';
 require_once BASE_PATH . '/app/includes/csrf.php';
+require_once BASE_PATH . '/app/includes/functions.php';
 
 // Crear instancia de la BD y conectar
 $database = new Database();
-$pdo = $database->connect(); // $pdo será nuestra variable global de conexión
+$pdo = $database->connect();
 
 // Configuración de zona horaria (Importante para fechas)
 date_default_timezone_set('America/Santiago');
+
+// =========================================================
+// --- IDENTIDAD DEL SISTEMA (BUSES BP) ---
+// =========================================================
+define('ID_EMPRESA_SISTEMA', 1); // ID de Buses BP en la tabla empresas_sistema
+define('NOMBRE_SISTEMA', 'TransReport - Buses BP');
+define('COLOR_SISTEMA', '#007bff'); // Azul corporativo

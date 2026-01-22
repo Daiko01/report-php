@@ -12,7 +12,11 @@ if (!in_array($_SESSION['user_role'], ['admin', 'contador'])) {
 
 $data = json_decode(file_get_contents('php://input'), true);
 
-if (!isset($data['empleador_id']) || !isset($data['mes']) || !isset($data['ano'])) {
+if (isset($data['items']) && is_array($data['items'])) {
+    $items = $data['items'];
+} elseif (isset($data['empleador_id']) && isset($data['mes']) && isset($data['ano'])) {
+    $items = [$data];
+} else {
     http_response_code(400);
     echo json_encode(['success' => false, 'message' => 'Datos incompletos para eliminar.']);
     exit;
@@ -26,22 +30,26 @@ try {
         "DELETE FROM planillas_mensuales 
          WHERE empleador_id = :eid AND mes = :mes AND ano = :ano"
     );
-    $stmt->execute([
-        ':eid' => $data['empleador_id'],
-        ':mes' => $data['mes'],
-        ':ano' => $data['ano']
-    ]);
+    foreach ($items as $item) {
+        // 3. Eliminar de 'planillas_mensuales'
+        $stmt->execute([
+            ':eid' => $item['empleador_id'],
+            ':mes' => $item['mes'],
+            ':ano' => $item['ano']
+        ]);
 
-    // 4. (Importante) Eliminar el registro de cierre si también existe
-    $stmt_cierre = $pdo->prepare(
-        "DELETE FROM cierres_mensuales 
-         WHERE empleador_id = :eid AND mes = :mes AND ano = :ano"
-    );
-    $stmt_cierre->execute([
-        ':eid' => $data['empleador_id'],
-        ':mes' => $data['mes'],
-        ':ano' => $data['ano']
-    ]);
+        // 4. (Importante) Eliminar el registro de cierre si también existe
+        $stmt_cierre = $pdo->prepare(
+            "DELETE FROM cierres_mensuales 
+             WHERE empleador_id = :eid AND mes = :mes AND ano = :ano"
+        );
+
+        $stmt_cierre->execute([
+            ':eid' => $item['empleador_id'],
+            ':mes' => $item['mes'],
+            ':ano' => $item['ano']
+        ]);
+    }
 
     $pdo->commit();
 

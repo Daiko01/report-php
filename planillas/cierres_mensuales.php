@@ -7,7 +7,38 @@ if (!in_array($_SESSION['user_role'], ['admin', 'contador'])) {
     exit;
 }
 
-// 2. Obtener la lista de todos los períodos con planillas
+// 2. Obtener lista de empleadores para filtro
+try {
+    $stmt_emp = $pdo->prepare("SELECT id, nombre FROM empleadores ORDER BY nombre ASC");
+    $stmt_emp->execute();
+    $empleadores_filtro = $stmt_emp->fetchAll(PDO::FETCH_ASSOC);
+
+    // Obtener años disponibles
+    // Obtener años disponibles
+    $stmt_ano = $pdo->query("SELECT DISTINCT ano FROM planillas_mensuales ORDER BY ano DESC");
+    $anos_filtro = $stmt_ano->fetchAll(PDO::FETCH_COLUMN);
+
+    $meses_nombres = [
+        1 => 'Enero',
+        2 => 'Febrero',
+        3 => 'Marzo',
+        4 => 'Abril',
+        5 => 'Mayo',
+        6 => 'Junio',
+        7 => 'Julio',
+        8 => 'Agosto',
+        9 => 'Septiembre',
+        10 => 'Octubre',
+        11 => 'Noviembre',
+        12 => 'Diciembre'
+    ];
+} catch (PDOException $e) {
+    $empleadores_filtro = [];
+    $anos_filtro = [date('Y')];
+}
+
+
+// 2.1 Obtener la lista de todos los períodos con planillas (para la tabla)
 try {
     $sql = "SELECT 
                 p.empleador_id, p.mes, p.ano, 
@@ -29,20 +60,112 @@ try {
 require_once dirname(__DIR__) . '/app/includes/header.php';
 ?>
 
+<style>
+    /* Estilos personalizados para la barra de acciones */
+    #massActionsToolbar {
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        pointer-events: none;
+        background-color: #e3e6f0;
+        border-bottom: 2px solid #4e73df;
+        padding: 10px 20px;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 15px;
+        border-radius: 5px;
+    }
+
+    #massActionsToolbar.visible {
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    .filter-section {
+        background-color: #f8f9fc;
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        border: 1px solid #e3e6f0;
+    }
+</style>
+
 <div class="container-fluid">
     <h1 class="h3 mb-4 text-gray-800">Gestión de Cierre Mensual</h1>
+
+    <!-- SECTION: Filtros Externos -->
+    <div class="filter-section shadow-sm">
+        <h6 class="font-weight-bold text-primary mb-3"><i class="fas fa-filter"></i> Filtros de Búsqueda</h6>
+        <div class="row g-2">
+            <div class="col-md-3">
+                <label class="small font-weight-bold">Empleador</label>
+                <select id="filterEmpleador" class="form-select form-select-sm">
+                    <option value="">Todos los Empleadores</option>
+                    <?php foreach ($empleadores_filtro as $emp): ?>
+                        <option value="<?= htmlspecialchars($emp['nombre']) ?>"><?= htmlspecialchars($emp['nombre']) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="small font-weight-bold">Mes</label>
+                <select id="filterMes" class="form-select form-select-sm">
+                    <option value="">Todos</option>
+                    <?php foreach ($meses_nombres as $num => $nombre): ?>
+                        <option value="<?= sprintf("%02d", $num) ?>"><?= $nombre ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="small font-weight-bold">Año</label>
+                <select id="filterAno" class="form-select form-select-sm">
+                    <option value="">Todos</option>
+                    <?php foreach ($anos_filtro as $y): ?>
+                        <option value="<?= $y ?>"><?= $y ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="small font-weight-bold">Estado</label>
+                <select id="filterEstado" class="form-select form-select-sm">
+                    <option value="">Todos</option>
+                    <option value="Abierto">Abierto</option>
+                    <option value="Cerrado">Cerrado</option>
+                </select>
+            </div>
+            <div class="col-md-3 d-flex align-items-end justify-content-end">
+                <button class="btn btn-sm btn-secondary" onclick="resetFilters()">
+                    <i class="fas fa-sync-alt"></i> Limpiar Filtros
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SECTION: Barra de Acciones Masivas -->
+    <div id="massActionsToolbar" class="shadow-sm">
+        <span class="font-weight-bold text-dark me-2">Seleccionados: <span id="selectedCount">0</span></span>
+        <div class="vr mx-2"></div>
+        <button class="btn btn-sm btn-success" id="btnMassClose"><i class="fas fa-lock"></i> Cerrar Masivamente</button>
+        <button class="btn btn-sm btn-warning" id="btnMassOpen"><i class="fas fa-lock-open"></i> Reabrir Masivamente</button>
+        <button class="btn btn-sm btn-danger ms-auto" id="btnMassDelete"><i class="fas fa-trash"></i> Eliminar Masivamente</button>
+    </div>
 
     <div class="card shadow mb-4">
         <div class="card-body">
             <div class="table-responsive">
-                <table class="table table-bordered table-striped datatable-es" id="tablaCierres" width="100%">
+                <table class="table table-bordered table-striped table-hover" id="tablaCierres" width="100%">
                     <thead>
                         <tr>
+                            <th class="text-center" style="width: 30px;">
+                                <input type="checkbox" id="selectAll">
+                            </th>
                             <th>Empleador</th>
                             <th>Período</th>
+                            <th>Año</th> <!-- Hidden column for filtering -->
                             <th>Estado</th>
-                            <th>Acción Cierre</th>
-                            <th>Acción Planilla</th>
+                            <th>Acción Individual</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -52,30 +175,25 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
                             $badge = $esta_cerrado ? 'bg-danger' : 'bg-success';
                             $texto_accion = $esta_cerrado ? 'Reabrir' : 'Cerrar';
                             $icono_accion = $esta_cerrado ? 'fa-lock-open' : 'fa-lock';
-                            $color_accion = $esta_cerrado ? 'btn-success' : 'btn-danger';
+                            $color_accion = $esta_cerrado ? 'btn-success' : 'btn-danger'; // Botón inverso al estado
                             $nuevo_estado = $esta_cerrado ? 0 : 1;
                         ?>
-                            <tr>
+                            <tr data-empleador-id="<?= $p['empleador_id'] ?>" data-mes="<?= $p['mes'] ?>" data-ano="<?= $p['ano'] ?>">
+                                <td class="text-center">
+                                    <input type="checkbox" class="row-checkbox" value="1">
+                                </td>
                                 <td><?php echo htmlspecialchars($p['empleador_nombre']); ?></td>
-                                <td><?php echo $p['mes'] . ' / ' . $p['ano']; ?></td>
+                                <td><?php echo sprintf("%02d", $p['mes']) . ' / ' . $p['ano']; ?></td>
+                                <td><?= $p['ano'] ?></td>
                                 <td><span class="badge <?php echo $badge; ?>"><?php echo $estado_texto; ?></span></td>
                                 <td>
                                     <button class="btn <?php echo $color_accion; ?> btn-sm btn-toggle-cierre"
-                                        data-empleador-id="<?php echo $p['empleador_id']; ?>"
-                                        data-mes="<?php echo $p['mes']; ?>"
-                                        data-ano="<?php echo $p['ano']; ?>"
-                                        data-nuevo-estado="<?php echo $nuevo_estado; ?>"
-                                        data-accion-texto="<?php echo $texto_accion; ?>">
-                                        <i class="fas <?php echo $icono_accion; ?>"></i> <?php echo $texto_accion; ?>
+                                        title="<?= $texto_accion ?>">
+                                        <i class="fas <?php echo $icono_accion; ?>"></i>
                                     </button>
-                                </td>
-                                <td>
-                                    <button class="btn btn-outline-danger btn-sm btn-eliminar-planilla"
-                                        data-empleador-id="<?php echo $p['empleador_id']; ?>"
-                                        data-mes="<?php echo $p['mes']; ?>"
-                                        data-ano="<?php echo $p['ano']; ?>"
-                                        data-nombre="<?php echo htmlspecialchars($p['empleador_nombre']); ?>">
-                                        <i class="fas fa-trash"></i> Eliminar Planilla
+                                    <button class="btn btn-outline-danger btn-sm btn-eliminar-planilla ms-1"
+                                        title="Eliminar Planilla">
+                                        <i class="fas fa-trash"></i>
                                     </button>
                                 </td>
                             </tr>
@@ -94,137 +212,269 @@ require_once dirname(__DIR__) . '/app/includes/footer.php';
 
 <script>
     $(document).ready(function() {
-
-        // --- 1. LÓGICA DE FILTROS EN ENCABEZADO ---
-        $('#tablaCierres thead tr').clone(true).addClass('filters').appendTo('#tablaCierres thead');
-
+        // --- 1. DATATABLES INIT ---
         var table = $('#tablaCierres').DataTable({
             language: {
                 url: '<?php echo BASE_URL; ?>/public/assets/vendor/datatables/Spanish.json'
             },
             responsive: true,
-            orderCellsTop: true,
-            fixedHeader: true,
+            order: [
+                [2, 'desc']
+            ], // Ordenar por periodo
+            columnDefs: [{
+                    orderable: false,
+                    targets: [0, 5]
+                }, // No ordenar por checks ni acciones
+                {
+                    visible: false,
+                    targets: [3]
+                } // Ocultar columna Año (usada para filtro)
+            ]
+        });
 
-            initComplete: function() {
-                var api = this.api();
+        // --- 2. LOGICA DE FILTROS EXTERNOS ---
+        $('#filterEmpleador').on('change', function() {
+            var val = $.fn.dataTable.util.escapeRegex($(this).val());
+            table.column(1).search(val ? '^' + val + '$' : '', true, false).draw();
+        });
 
-                api.columns([0, 1, 2]).every(function() {
-                    var column = this;
-                    var cell = $('.filters th').eq($(column.header()).index());
-                    var title = $(column.header()).text().trim();
+        $('#filterEmpleador').on('change', function() {
+            var val = $.fn.dataTable.util.escapeRegex($(this).val());
+            table.column(1).search(val ? '^' + val + '$' : '', true, false).draw();
+        });
 
-                    // Filtro de Select para "Estado"
-                    if ([2].includes(column.index())) {
-                        var select = $('<select class="form-select form-select-sm"><option value="">Todos</option></select>')
-                            .appendTo(cell.empty())
-                            .on('change', function() {
-                                var val = $.fn.dataTable.util.escapeRegex($(this).val());
-                                column.search(val ? '^' + val + '$' : '', true, false).draw();
-                            });
+        $('#filterMes').on('change', function() {
+            var val = $(this).val();
+            // Search in column 2 (Periodo: "MM / YYYY")
+            // Search for val at the start.
+            table.column(2).search(val ? '^' + val + ' /' : '', true, false).draw();
+        });
 
-                        column.data().unique().sort().each(function(d, j) {
-                            var cleanData = $(d).text().trim() || d;
-                            if (cleanData && !select.find('option[value="' + cleanData + '"]').length) {
-                                select.append('<option value="' + cleanData + '">' + cleanData + '</option>');
-                            }
-                        });
-                    }
-                    // Filtro de Texto para "Empleador" y "Período"
-                    else if ([0, 1].includes(column.index())) {
-                        $(cell).html('<input type="text" class="form-control form-control-sm" placeholder="Buscar..." />');
-                        $('input', cell).on('keyup change clear', function() {
-                            if (column.search() !== this.value) {
-                                column.search(this.value).draw();
-                            }
-                        });
-                    }
-                });
+        $('#filterAno').on('change', function() {
+            var val = $.fn.dataTable.util.escapeRegex($(this).val());
+            table.column(3).search(val ? '^' + val + '$' : '', true, false).draw();
+        });
 
-                // Limpiar celdas de filtro para Acciones
-                $('.filters th').eq(3).html('');
-                $('.filters th').eq(4).html('');
+        $('#filterEstado').on('change', function() {
+            var val = $.fn.dataTable.util.escapeRegex($(this).val());
+            table.column(4).search(val ? '^' + val + '$' : '', true, false).draw();
+        });
+
+        window.resetFilters = function() {
+            $('#filterEmpleador').val('').trigger('change');
+            $('#filterMes').val('').trigger('change');
+            $('#filterAno').val('').trigger('change');
+            $('#filterEstado').val('').trigger('change');
+        };
+
+        // --- 3. SELECCIÓN MASIVA ---
+        function updateToolbar() {
+            var count = $('.row-checkbox:checked').length;
+            $('#selectedCount').text(count);
+            if (count > 0) {
+                $('#massActionsToolbar').addClass('visible');
+            } else {
+                $('#massActionsToolbar').removeClass('visible');
+                $('#selectAll').prop('checked', false);
+            }
+        }
+
+        $('#selectAll').on('change', function() {
+            var checked = $(this).is(':checked');
+            // Seleccionar checks visibles en la pagina actual (o todos si se prefiere, pero datatables paginacion afecta)
+            // Para seleccionar globalmente, mejor usar API rows().
+            // Por simplicidad, seleccionamos los visibles del DOM
+            $('.row-checkbox').prop('checked', checked);
+            updateToolbar();
+        });
+
+        $('#tablaCierres').on('change', '.row-checkbox', function() {
+            updateToolbar();
+            // Si deselecciono uno, deseleccionar 'Todos'
+            if (!$(this).is(':checked')) {
+                $('#selectAll').prop('checked', false);
             }
         });
 
-        // --- 2. LÓGICA DE SWEETALERT (CERRAR/REABRIR) ---
-        $('#tablaCierres').on('click', '.btn-toggle-cierre', function() {
-            var $btn = $(this);
-            var accion = $btn.data('accion-texto');
+        // Helper para obtener items seleccionados
+        function getSelectedItems() {
+            var items = [];
+            $('.row-checkbox:checked').each(function() {
+                var $tr = $(this).closest('tr');
+                items.push({
+                    empleador_id: $tr.data('empleador-id'),
+                    mes: $tr.data('mes'),
+                    ano: $tr.data('ano')
+                });
+            });
+            return items;
+        }
+
+        // --- 4. ACCIONES MASIVAS ---
+        function performMassUpdate(nuevo_estado, accionNombre) {
+            var items = getSelectedItems();
+            if (items.length === 0) return;
+
+            // Prepare items with new state
+            var itemsToSend = items.map(function(item) {
+                return {
+                    ...item,
+                    nuevo_estado: nuevo_estado
+                };
+            });
 
             Swal.fire({
-                title: `¿Estás seguro?`,
-                text: `Vas a ${accion} este período.`,
+                title: '¿Confirmar Acción Masiva?',
+                text: `Vas a ${accionNombre} ${items.length} planilla(s).`,
                 icon: 'warning',
                 showCancelButton: true,
-                confirmButtonColor: (accion === 'Cerrar') ? '#d33' : '#28a745',
-                confirmButtonText: `Sí, ${accion}`,
-                cancelButtonText: 'Cancelar'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    fetch('<?php echo BASE_URL; ?>/ajax/gestionar_cierre.php', {
+                confirmButtonColor: '#4e73df',
+                confirmButtonText: 'Sí, Ejecutar',
+                showLoaderOnConfirm: true,
+                preConfirm: () => {
+                    return fetch('<?php echo BASE_URL; ?>/ajax/gestionar_cierre.php', {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json'
                             },
                             body: JSON.stringify({
-                                accion: 'actualizar',
-                                empleador_id: $btn.data('empleador-id'),
-                                mes: $btn.data('mes'),
-                                ano: $btn.data('ano'),
-                                nuevo_estado: $btn.data('nuevo-estado')
+                                accion: 'actualizar_masivo',
+                                items: itemsToSend
                             })
                         })
                         .then(response => response.json())
                         .then(data => {
-                            if (data.success) {
-                                location.reload();
-                            } else {
-                                Swal.fire('Error', data.message, 'error');
-                            }
+                            if (!data.success) throw new Error(data.message);
+                            return data;
+                        })
+                        .catch(error => {
+                            Swal.showValidationMessage(`Falló: ${error}`);
                         });
                 }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    Swal.fire('¡Éxito!', 'Operación completada.', 'success').then(() => location.reload());
+                }
             });
+        }
+
+        $('#btnMassClose').click(function() {
+            performMassUpdate(1, 'CERRAR');
+        });
+        $('#btnMassOpen').click(function() {
+            performMassUpdate(0, 'REABRIR');
         });
 
-        // --- 3. LÓGICA DE SWEETALERT (ELIMINAR PLANILLA) ---
-        $('#tablaCierres').on('click', '.btn-eliminar-planilla', function() {
-            var $btn = $(this);
-            var nombre = $btn.data('nombre');
-            var mes = $btn.data('mes');
-            var ano = $btn.data('ano');
+        $('#btnMassDelete').click(function() {
+            var items = getSelectedItems();
+            if (items.length === 0) return;
 
             Swal.fire({
-                title: '¿ELIMINAR PLANILLA?',
-                text: `¡CUIDADO! Vas a eliminar TODOS los datos de la planilla para ${nombre} del período ${mes}/${ano}. Esta acción no se puede deshacer.`,
+                title: '¿ELIMINAR MASIVAMENTE?',
+                text: `Vas a ELIMINAR PERMANENTEMENTE ${items.length} planillas. ¡Esta acción es irreversible!`,
                 icon: 'error',
                 showCancelButton: true,
                 confirmButtonColor: '#d33',
-                confirmButtonText: 'Sí, eliminar todo',
-                cancelButtonText: 'Cancelar'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    fetch('<?php echo BASE_URL; ?>/ajax/eliminar_planilla_ajax.php', {
+                confirmButtonText: 'Sí, ELIMINAR TODO',
+                showLoaderOnConfirm: true,
+                preConfirm: () => {
+                    return fetch('<?php echo BASE_URL; ?>/ajax/eliminar_planilla_ajax.php', {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json'
                             },
                             body: JSON.stringify({
-                                empleador_id: $btn.data('empleador-id'),
-                                mes: mes,
-                                ano: ano
+                                items: items
                             })
                         })
                         .then(response => response.json())
                         .then(data => {
-                            if (data.success) {
-                                location.reload();
-                            } else {
-                                Swal.fire('Error', data.message, 'error');
-                            }
+                            if (!data.success) throw new Error(data.message);
+                            return data;
+                        })
+                        .catch(error => {
+                            Swal.showValidationMessage(`Falló: ${error}`);
                         });
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    Swal.fire('¡Eliminado!', 'Las planillas seleccionadas han sido eliminadas.', 'success').then(() => location.reload());
                 }
             });
         });
+
+        // --- 5. ACCIONES INDIVIDUALES (Legacy Wrapper) ---
+        $('#tablaCierres').on('click', '.btn-toggle-cierre', function() {
+            var $btn = $(this);
+            var $tr = $btn.closest('tr');
+            var item = {
+                empleador_id: $tr.data('empleador-id'),
+                mes: $tr.data('mes'),
+                ano: $tr.data('ano')
+            };
+            // Determine current state visually or logic. 
+            // Better to assume we just want to toggle. But our mass logic maps `nuevo_estado`.
+            // Let's reuse legacy single logic or build a single-item mass array.
+            // Using backend legacy 'actualizar' is fine too, but let's be consistent.
+            // The button logic in HTML: closed -> Reopen(0), open -> Close(1).
+            var isClosed = $btn.find('i').hasClass('fa-lock-open'); // Reopen has lock-open icon
+            var newState = isClosed ? 0 : 1;
+            var actionText = isClosed ? 'REABRIR' : 'CERRAR';
+
+            Swal.fire({
+                title: `¿${actionText}?`,
+                text: `Vas a cambiar el estado de esta planilla.`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Sí',
+            }).then((res) => {
+                if (res.isConfirmed) {
+                    fetch('<?php echo BASE_URL; ?>/ajax/gestionar_cierre.php', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            accion: 'actualizar',
+                            empleador_id: item.empleador_id,
+                            mes: item.mes,
+                            ano: item.ano,
+                            nuevo_estado: newState
+                        })
+                    }).then(r => r.json()).then(d => {
+                        if (d.success) location.reload();
+                        else Swal.fire('Error', d.message, 'error');
+                    });
+                }
+            });
+        });
+
+        $('#tablaCierres').on('click', '.btn-eliminar-planilla', function() {
+            var $tr = $(this).closest('tr');
+            var item = {
+                empleador_id: $tr.data('empleador-id'),
+                mes: $tr.data('mes'),
+                ano: $tr.data('ano')
+            };
+            Swal.fire({
+                title: '¿Eliminar Planilla?',
+                text: 'Se borrarán todos los datos permanentemente.',
+                icon: 'error',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                confirmButtonText: 'Eliminar'
+            }).then((res) => {
+                if (res.isConfirmed) {
+                    fetch('<?php echo BASE_URL; ?>/ajax/eliminar_planilla_ajax.php', {
+                        method: 'POST',
+                        body: JSON.stringify(item)
+                    }).then(r => r.json()).then(d => {
+                        if (d.success) location.reload();
+                        else Swal.fire('Error', d.message, 'error');
+                    });
+                }
+            });
+        });
+
     });
 </script>

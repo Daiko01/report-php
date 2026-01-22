@@ -7,10 +7,14 @@ if (!isset($_GET['id'])) {
     exit;
 }
 $afp_id = (int)$_GET['id'];
-$afp = $pdo->query("SELECT * FROM afps WHERE id = $afp_id")->fetch();
+$stmt_afp = $pdo->prepare("SELECT * FROM afps WHERE id = ?");
+$stmt_afp->execute([$afp_id]);
+$afp = $stmt_afp->fetch();
 
 try {
-    $comisiones = $pdo->query("SELECT * FROM afp_comisiones_historicas WHERE afp_id = $afp_id ORDER BY ano_inicio DESC, mes_inicio DESC")->fetchAll();
+    $stmt_c = $pdo->prepare("SELECT * FROM afp_comisiones_historicas WHERE afp_id = ? ORDER BY ano_inicio DESC, mes_inicio DESC");
+    $stmt_c->execute([$afp_id]);
+    $comisiones = $stmt_c->fetchAll();
 } catch (PDOException $e) {
     $comisiones = [];
 }

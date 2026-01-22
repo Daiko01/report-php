@@ -57,6 +57,40 @@ try {
         exit;
     }
 
+    // Acción 3: Actualización Masiva
+    if ($accion == 'actualizar_masivo') {
+        if (!isset($data['items']) || !is_array($data['items'])) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'message' => 'Lista de items no válida.']);
+            exit;
+        }
+
+        try {
+            $pdo->beginTransaction();
+            $sql = "INSERT INTO cierres_mensuales (empleador_id, mes, ano, esta_cerrado)
+                    VALUES (:eid, :mes, :ano, :estado)
+                    ON DUPLICATE KEY UPDATE esta_cerrado = VALUES(esta_cerrado)";
+            $stmt = $pdo->prepare($sql);
+
+            foreach ($data['items'] as $item) {
+                $stmt->execute([
+                    ':eid' => $item['empleador_id'],
+                    ':mes' => $item['mes'],
+                    ':ano' => $item['ano'],
+                    ':estado' => $item['nuevo_estado']
+                ]);
+            }
+            $pdo->commit();
+            echo json_encode(['success' => true]);
+            exit;
+        } catch (PDOException $e) {
+            $pdo->rollBack();
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => 'Error al procesar masivamente: ' . $e->getMessage()]);
+            exit;
+        }
+    }
+
     // Si la acción no es válida
     http_response_code(400);
     echo json_encode(['success' => false, 'message' => 'Acción no válida.']);

@@ -2,26 +2,33 @@
 require_once dirname(__DIR__) . '/app/core/bootstrap.php';
 require_once dirname(__DIR__) . '/app/includes/session_check.php';
 
-if (!isset($_GET['id'])) { header('Location: gestionar_trabajadores.php'); exit; }
+if (!isset($_GET['id'])) {
+    header('Location: gestionar_trabajadores.php');
+    exit;
+}
 $id = $_GET['id'];
 
 try {
     $stmt = $pdo->prepare("SELECT * FROM trabajadores WHERE id = :id");
     $stmt->execute(['id' => $id]);
     $trabajador = $stmt->fetch();
-    if (!$trabajador) { header('Location: gestionar_trabajadores.php'); exit; }
+    if (!$trabajador) {
+        header('Location: gestionar_trabajadores.php');
+        exit;
+    }
 
     $afps = $pdo->query("SELECT id, nombre FROM afps ORDER BY nombre")->fetchAll();
     $sindicatos = $pdo->query("SELECT id, nombre FROM sindicatos ORDER BY nombre")->fetchAll();
-    
+
     // CARGAR TRAMOS PARA EL SELECTOR
     $sql_tramos = "SELECT tramo, monto_por_carga 
                    FROM cargas_tramos_historicos 
                    WHERE fecha_inicio = (SELECT MAX(fecha_inicio) FROM cargas_tramos_historicos)
                    ORDER BY tramo ASC";
     $tramos_bd = $pdo->query($sql_tramos)->fetchAll();
-
-} catch (PDOException $e) { die("Error de conexión."); }
+} catch (PDOException $e) {
+    die("Error de conexión.");
+}
 
 require_once dirname(__DIR__) . '/app/includes/header.php';
 ?>
@@ -85,13 +92,13 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="row">
                     <div class="col-md-4 mb-3">
                         <label for="sindicato_id" class="form-label">Sindicato</label>
                         <select class="form-select" id="sindicato_id" name="sindicato_id">
                             <option value="">Ninguno</option>
-                             <?php foreach ($sindicatos as $s): ?>
+                            <?php foreach ($sindicatos as $s): ?>
                                 <option value="<?php echo $s['id']; ?>" <?php echo ($s['id'] == $trabajador['sindicato_id']) ? 'selected' : ''; ?>><?php echo htmlspecialchars($s['nombre']); ?></option>
                             <?php endforeach; ?>
                         </select>
@@ -103,7 +110,7 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
                             <label class="form-check-label" for="tiene_cargas">¿Tiene Cargas?</label>
                         </div>
                     </div>
-                    
+
                     <div class="col-md-5 mb-3" id="cargas_details_wrapper" style="display: none;">
                         <div class="row">
                             <div class="col-5">
@@ -114,13 +121,13 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
                                 <label for="tramo_manual" class="form-label">Tramo (Opcional)</label>
                                 <select class="form-select" name="tramo_manual" id="tramo_manual">
                                     <option value="" <?php echo is_null($trabajador['tramo_asignacion_manual']) ? 'selected' : ''; ?>>Automático</option>
-                                    
+
                                     <?php foreach ($tramos_bd as $t): ?>
                                         <option value="<?php echo $t['tramo']; ?>" <?php echo ($trabajador['tramo_asignacion_manual'] == $t['tramo']) ? 'selected' : ''; ?>>
-                                            Tramo <?php echo $t['tramo']; ?> ($<?php echo number_format($t['monto_por_carga'],0,',','.'); ?>)
+                                            Tramo <?php echo $t['tramo']; ?> ($<?php echo number_format($t['monto_por_carga'], 0, ',', '.'); ?>)
                                         </option>
                                     <?php endforeach; ?>
-                                    
+
                                 </select>
                             </div>
                         </div>
@@ -138,70 +145,76 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
 <?php require_once dirname(__DIR__) . '/app/includes/footer.php'; ?>
 
 <script>
-$(document).ready(function() {
-    const $sistemaSelect = $('#sistema_previsional');
-    const $afpWrapper = $('#afp_wrapper');
-    const $inpWrapper = $('#inp_wrapper');
-    const $afpSelect = $('#afp_id');
-    const $inpInput = $('#tasa_inp');
-    const $estadoPrevisional = $('#estado_previsional');
-    const $tieneCargas = $('#tiene_cargas');
-    const $cargasWrapper = $('#cargas_details_wrapper');
-    const $numeroCargasInput = $('#numero_cargas');
-    const $tramoSelect = $('#tramo_manual');
+    $(document).ready(function() {
+        const $sistemaSelect = $('#sistema_previsional');
+        const $afpWrapper = $('#afp_wrapper');
+        const $inpWrapper = $('#inp_wrapper');
+        const $afpSelect = $('#afp_id');
+        const $inpInput = $('#tasa_inp');
+        const $estadoPrevisional = $('#estado_previsional');
+        const $tieneCargas = $('#tiene_cargas');
+        const $cargasWrapper = $('#cargas_details_wrapper');
+        const $numeroCargasInput = $('#numero_cargas');
+        const $tramoSelect = $('#tramo_manual');
 
-    function toggleSistema() {
-        if ($estadoPrevisional.val() === 'Pensionado') {
-            $afpSelect.prop('disabled', true).prop('required', false);
-            $inpInput.prop('disabled', true).prop('required', false);
-            return;
-        }
-        $afpSelect.prop('disabled', false);
-        $inpInput.prop('disabled', false);
-
-        if ($sistemaSelect.val() === 'INP') {
-            $afpWrapper.hide(); $inpWrapper.show();
-            $afpSelect.prop('required', false); $inpInput.prop('required', true);
-        } else {
-            $afpWrapper.show(); $inpWrapper.hide();
-            $afpSelect.prop('required', true); $inpInput.prop('required', false);
-        }
-    }
-
-    function toggleCargas() {
-        if ($tieneCargas.is(':checked')) {
-            $cargasWrapper.fadeIn();
-            $numeroCargasInput.prop('disabled', false);
-            $tramoSelect.prop('disabled', false);
-        } else {
-            $cargasWrapper.hide();
-            $numeroCargasInput.prop('disabled', true);
-            $tramoSelect.prop('disabled', true);
-        }
-    }
-
-    $sistemaSelect.on('change', toggleSistema);
-    $estadoPrevisional.on('change', toggleSistema);
-    $tieneCargas.on('change', toggleCargas);
-
-    toggleSistema();
-    toggleCargas();
-    
-    // Validación Bootstrap
-    (function () {
-      'use strict'
-      var forms = document.querySelectorAll('.needs-validation')
-      Array.prototype.slice.call(forms).forEach(function (form) {
-          form.addEventListener('submit', function (event) {
-            if ($afpWrapper.is(':visible') && !$afpSelect.val()) {
-                 event.preventDefault(); event.stopPropagation();
+        function toggleSistema() {
+            if ($estadoPrevisional.val() === 'Pensionado') {
+                $afpSelect.prop('disabled', true).prop('required', false);
+                $inpInput.prop('disabled', true).prop('required', false);
+                return;
             }
-            if (!form.checkValidity()) {
-              event.preventDefault(); event.stopPropagation();
+            $afpSelect.prop('disabled', false);
+            $inpInput.prop('disabled', false);
+
+            if ($sistemaSelect.val() === 'INP') {
+                $afpWrapper.hide();
+                $inpWrapper.show();
+                $afpSelect.prop('required', false);
+                $inpInput.prop('required', true);
+            } else {
+                $afpWrapper.show();
+                $inpWrapper.hide();
+                $afpSelect.prop('required', true);
+                $inpInput.prop('required', false);
             }
-            form.classList.add('was-validated')
-          }, false)
-        })
-    })()
-});
+        }
+
+        function toggleCargas() {
+            if ($tieneCargas.is(':checked')) {
+                $cargasWrapper.fadeIn();
+                $numeroCargasInput.prop('disabled', false);
+                $tramoSelect.prop('disabled', false);
+            } else {
+                $cargasWrapper.hide();
+                $numeroCargasInput.prop('disabled', true);
+                $tramoSelect.prop('disabled', true);
+            }
+        }
+
+        $sistemaSelect.on('change', toggleSistema);
+        $estadoPrevisional.on('change', toggleSistema);
+        $tieneCargas.on('change', toggleCargas);
+
+        toggleSistema();
+        toggleCargas();
+
+        // Validación Bootstrap
+        (function() {
+            'use strict'
+            var forms = document.querySelectorAll('.needs-validation')
+            Array.prototype.slice.call(forms).forEach(function(form) {
+                form.addEventListener('submit', function(event) {
+                    if ($afpWrapper.is(':visible') && !$afpSelect.prop('disabled') && !$afpSelect.val()) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                    }
+                    if (!form.checkValidity()) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                    }
+                    form.classList.add('was-validated')
+                }, false)
+            })
+        })()
+    });
 </script>

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Capa_2" data-name="Capa 2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1046.11 276.13">
+  <defs>
+    <style>
+      .cls-1 {
+        fill: #03baca;
+        stroke-width: 0px;
+      }
+
+      .cls-2 {
+        fill: #000;
+        font-family: MontserratRoman-Medium, Montserrat;
+        font-size: 124.65px;
+        font-variation-settings: 'wght' 500;
+        font-weight: 500;
+      }
+    </style>
+  </defs>
+  <g id="Capa_1-2" data-name="Capa 1">
+    <g>
+      <rect class="cls-1" width="93.85" height="93.85" rx="5.9" ry="5.9"/>
+      <rect class="cls-1" y="182.28" width="93.85" height="93.85" rx="5.9" ry="5.9"/>
+      <rect class="cls-1" x="117.09" y="91.14" width="93.85" height="93.85" rx="5.9" ry="5.9"/>
+    </g>
+    <text class="cls-2" transform="translate(266.2 174.9)"><tspan x="0" y="0">TransReport</tspan></text>
+  </g>
+</svg>

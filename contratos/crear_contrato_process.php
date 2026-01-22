@@ -5,9 +5,9 @@ require_once dirname(__DIR__) . '/app/includes/session_check.php';
 
 
 // Solo aceptar POST
-if ($_SERVER['REQUEST_METHOD'] != 'POST') { 
-    header('Location: gestionar_contratos.php'); 
-    exit; 
+if ($_SERVER['REQUEST_METHOD'] != 'POST') {
+    header('Location: gestionar_contratos.php');
+    exit;
 }
 
 // 1. Recoger datos del formulario
@@ -28,19 +28,21 @@ $es_part_time = isset($_POST['es_part_time']) ? 1 : 0;
 
 // Regla: Plazo Fijo
 if ($tipo_contrato == 'Fijo') {
-    if ($fecha_termino == null) { 
-        $_SESSION['flash_message'] = ['type' => 'error', 'message' => 'Error: Un contrato a Plazo Fijo DEBE tener una Fecha de Término.']; 
-        header('Location: crear_contrato.php'); exit; 
+    if ($fecha_termino == null) {
+        $_SESSION['flash_message'] = ['type' => 'error', 'message' => 'Error: Un contrato a Plazo Fijo DEBE tener una Fecha de Término.'];
+        header('Location: crear_contrato.php');
+        exit;
     }
-    if ($fecha_termino <= $fecha_inicio) { 
-        $_SESSION['flash_message'] = ['type' => 'error', 'message' => 'Error: La fecha de término debe ser posterior a la fecha de inicio.']; 
-        header('Location: crear_contrato.php'); exit; 
+    if ($fecha_termino <= $fecha_inicio) {
+        $_SESSION['flash_message'] = ['type' => 'error', 'message' => 'Error: La fecha de término debe ser posterior a la fecha de inicio.'];
+        header('Location: crear_contrato.php');
+        exit;
     }
 }
 
 // Regla: Indefinido (Forzar fecha nula)
 if ($tipo_contrato == 'Indefinido') {
-    $fecha_termino = null; 
+    $fecha_termino = null;
 }
 
 // Regla: Solapamiento
@@ -64,7 +66,7 @@ foreach ($contratos_existentes as $c) {
     // (StartA <= EndB) and (EndA >= StartB)
     // Manejo de NULLs:
     // Si Termino es NULL, se considera infinito.
-    
+
     $se_solapan = false;
 
     // Caso 1: Ambos tienen fecha de término definida
@@ -89,21 +91,22 @@ foreach ($contratos_existentes as $c) {
     }
     // Caso 4: Ambos son Indefinidos (NULL) -> Siempre se solapan (desde el inicio del último)
     elseif (is_null($fecha_termino) && is_null($termino_existente)) {
-        $se_solapan = true; 
+        $se_solapan = true;
     }
 
     if ($se_solapan) {
         // REGLA STRICTA: NINGÚN CONTRATO PUEDE SOLAPARSE.
         // Se debe respetar la secuencialidad.
-        
+
         $fecha_fin_msg = $termino_existente ? date('d-m-Y', strtotime($termino_existente)) : 'Indefinido';
         $fecha_inicio_msg = date('d-m-Y', strtotime($inicio_existente));
-        
+
         $_SESSION['flash_message'] = [
-            'type' => 'error', 
+            'type' => 'error',
             'message' => "Error: Las fechas se solapan con un contrato existente (Inicia: $fecha_inicio_msg, Termina: $fecha_fin_msg). El nuevo contrato debe comenzar después de la fecha de término del anterior."
         ];
-        header('Location: crear_contrato.php'); exit;
+        header('Location: crear_contrato.php');
+        exit;
     }
 }
 
@@ -122,7 +125,7 @@ try {
             ) VALUES (
                 :tid, :eid, :sueldo, :col, :mov, :tipo, :inicio, :termino, :part_time
             )";
-            
+
     $stmt = $pdo->prepare($sql);
     $stmt->execute([
         ':tid' => $trabajador_id,
@@ -135,14 +138,15 @@ try {
         ':termino' => $fecha_termino,
         ':part_time' => $es_part_time
     ]);
-    
+
+
+
+
     $_SESSION['flash_message'] = ['type' => 'success', 'message' => '¡Contrato creado exitosamente!'];
     header('Location: gestionar_contratos.php');
     exit;
-
 } catch (PDOException $e) {
     $_SESSION['flash_message'] = ['type' => 'error', 'message' => 'Error de Base de Datos: ' . $e->getMessage()];
     header('Location: crear_contrato.php');
     exit;
 }
-?>

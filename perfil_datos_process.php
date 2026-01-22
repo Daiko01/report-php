@@ -9,7 +9,8 @@ require_once __DIR__ . '/app/includes/session_check.php';
 require_once __DIR__ . '/app/lib/utils.php';
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    
+    verify_csrf_token();
+
     $nombre_completo = trim($_POST['nombre_completo']);
     $email = trim($_POST['email']);
     $user_id = $_SESSION['user_id'];
@@ -42,7 +43,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         ];
         header('Location: ' . BASE_URL . '/perfil.php');
         exit;
-
     } catch (PDOException $e) {
         $_SESSION['flash_message'] = [
             'type' => 'error',
@@ -51,9 +51,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         header('Location: ' . BASE_URL . '/perfil.php');
         exit;
     }
-
 } else {
     header('Location: ' . BASE_URL . '/perfil.php');
     exit;
 }
-?>

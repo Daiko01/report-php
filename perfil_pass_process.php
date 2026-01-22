@@ -6,6 +6,7 @@ require_once __DIR__ . '/app/core/bootstrap.php';
 require_once __DIR__ . '/app/includes/session_check.php';
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+    verify_csrf_token();
 
     $current_password = trim($_POST['current_password']);
     $new_password = trim($_POST['new_password']);
@@ -21,7 +22,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         header('Location: ' . BASE_URL . '/perfil.php');
         exit;
     }
-    
+
     // 5. Validación 2: Verificar la contraseña actual
     try {
         // Obtener el hash actual del usuario
@@ -41,7 +42,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
         // 6. Todo OK: Hashear la nueva clave y guardar
         $new_password_hash = password_hash($new_password, PASSWORD_DEFAULT);
-        
+
         $update_stmt = $pdo->prepare("UPDATE users SET password_hash = :pass WHERE id = :id");
         $update_stmt->execute([
             ':pass' => $new_password_hash,
@@ -54,7 +55,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         ];
         header('Location: ' . BASE_URL . '/perfil.php');
         exit;
-
     } catch (PDOException $e) {
         $_SESSION['flash_message'] = [
             'type' => 'error',
@@ -63,9 +63,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         header('Location: ' . BASE_URL . '/perfil.php');
         exit;
     }
-
 } else {
     header('Location: ' . BASE_URL . '/perfil.php');
     exit;
 }
-?>

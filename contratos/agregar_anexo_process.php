@@ -76,7 +76,10 @@ try {
     }
 
     // Ejecutar UPDATE solo si hay cambios
-    if (!empty($updates)) {
+    // Ejecutar UPDATE solo si hay cambios y la fecha del anexo es hoy o anterior
+    // RESTAURADO: Se debe actualizar el contrato base para que el sistema refleje el estado actual en listados y perfiles.
+    // La función obtener_datos_contrato_vigente se usa en calculos complejos, pero la UI depende de la tabla contratos.
+    if (!empty($updates) && $fecha_anexo <= date('Y-m-d')) {
         $params[] = $contrato_id; // ID para el WHERE
         $sql_update = "UPDATE contratos SET " . implode(', ', $updates) . " WHERE id = ?";
         $pdo->prepare($sql_update)->execute($params);

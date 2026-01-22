@@ -57,13 +57,14 @@ try {
                 p.aportes,
                 p.asignacion_familiar_calculada,
                 p.cotiza_cesantia_pensionado,
+                p.tasa_mutual_aplicada,
+                p.sis_aplicado,
+                p.tipo_asignacion_familiar,
+                p.tramo_asignacion_familiar,
                 (p.descuento_afp + p.descuento_salud + p.adicional_salud_apv + p.seguro_cesantia + p.sindicato + p.cesantia_licencia_medica) as total_descuentos,
                 (p.aportes + p.asignacion_familiar_calculada) - (p.descuento_afp + p.descuento_salud + p.adicional_salud_apv + p.seguro_cesantia + p.sindicato + p.cesantia_licencia_medica) as saldo,
-                (SELECT es_part_time FROM contratos c 
-                 WHERE c.trabajador_id = t.id 
-                 AND c.empleador_id = p.empleador_id
-                 AND c.fecha_inicio <= LAST_DAY(CONCAT(p.ano, '-', p.mes, '-01'))
-                 ORDER BY c.fecha_inicio DESC LIMIT 1) as es_part_time
+                p.es_part_time_snapshot as es_part_time,
+                p.sueldo_base_snapshot
               FROM planillas_mensuales p
               JOIN trabajadores t ON p.trabajador_id = t.id
               WHERE p.empleador_id = ? AND p.mes = ? AND p.ano = ?
@@ -74,139 +75,27 @@ try {
     $registros = $stmt_p->fetchAll(PDO::FETCH_ASSOC);
 
     if (empty($registros)) die("No se encontraron datos.");
-    
-    // C. Cargar Tramos Históricos Vigentes para el Mes
-    // Buscamos el set de tramos cuya fecha_inicio sea <= al primer día del mes del reporte
-    // Ordenamos por fecha_inicio DESC para obtener el más reciente vigente
-    $fecha_reporte = "$ano-" . str_pad($mes, 2, "0", STR_PAD_LEFT) . "-01";
-    
-    $sql_tramos = "SELECT tramo, renta_maxima, monto_por_carga 
-                   FROM cargas_tramos_historicos 
-                   WHERE fecha_inicio <= :fecha
-                   ORDER BY fecha_inicio DESC, monto_por_carga DESC"; // Ordenar para procesar grupos (aunque tabla suele tener 4 filas por fecha)
-                   
-    // Nota: La consulta anterior podría traer tramos de fechas muy antiguas si no filtramos bien el "grupo".
-    // Lo ideal es buscar la fecha maxima <= fecha_reporte y luego filtrar por esa fecha.
-    
-    $sql_fecha_tramo = "SELECT MAX(fecha_inicio) as fecha_vigs FROM cargas_tramos_historicos WHERE fecha_inicio <= :fecha";
-    $stmt_ft = $pdo->prepare($sql_fecha_tramo);
-    $stmt_ft->execute([':fecha' => $fecha_reporte]);
-    $fecha_vigente = $stmt_ft->fetchColumn();
-    
-    $tramos_del_periodo = [];
-    if($fecha_vigente) {
-        $sql_tramos_final = "SELECT tramo, renta_maxima, monto_por_carga 
-                             FROM cargas_tramos_historicos 
-                             WHERE fecha_inicio = :fecha";
-        $stmt_tf = $pdo->prepare($sql_tramos_final);
-        $stmt_tf->execute([':fecha' => $fecha_vigente]);
-        $tramos_del_periodo = $stmt_tf->fetchAll(PDO::FETCH_ASSOC);
-    }
-
 } catch (Exception $e) {
     die("Error BD: " . $e->getMessage());
 }
 
-function format_numero($num)
-{
-    if ($num === null || $num === 0) return "0";
-    return number_format(intval($num), 0, ',', '.');
-}
-function format_rut($rut_str)
-{
-    if (empty($rut_str)) return "";
-    $rut_str = str_replace('.', '', $rut_str);
-    $partes = explode('-', $rut_str);
-    if (count($partes) != 2) return $rut_str;
-    $cuerpo = $partes[0];
-    $verificador = $partes[1];
-    $cuerpo_formateado = number_format(intval($cuerpo), 0, ',', '.');
-    return $cuerpo_formateado . '-' . $verificador;
-}
+
 
 // --- CÁLCULOS ---
 // Reiniciar totales que dependen de la iteración (se recalcularán)
 $totales_tabla = ['sueldo_imponible' => 0, 'descuento_afp' => 0, 'descuento_salud' => 0, 'adicional_salud_apv' => 0, 'seguro_cesantia' => 0, 'sindicato' => 0, 'cesantia_licencia_medica' => 0, 'total_descuentos' => 0, 'aportes' => 0, 'asignacion_familiar_calculada' => 0, 'saldo' => 0];
 
-// Helper para encontrar tramo automático
-function getTramoAutomatico($sueldo, $tramos) {
-    // Los tramos suelen ser: A (menor sueldo, mayor monto) ... D (mayor sueldo, 0 monto o poco)
-    // PERO la tabla suele tener 'renta_maxima'. 
-    // Ejemplo: Tramo A <= X, Tramo B <= Y, etc.
-    // Ordenar tramos por renta_maxima ASC
-    usort($tramos, function($a, $b) {
-        return $a['renta_maxima'] <=> $b['renta_maxima'];
-    });
-
-    foreach ($tramos as $t) {
-        // En DB, renta_maxima suele ser el límite SUPERIOR del tramo.
-        // Si sueldo <= tope, es este tramo.
-        // OJO con el último tramo (D) que a veces tiene tope muy alto o 0 (si es 0 asumimos infinito o manejo especial).
-        // Asumiendo datos estandar: tramos excluyentes.
-        if ($sueldo <= $t['renta_maxima']) {
-            return $t; // Retorna array con tramo, monto, etc.
-        }
-    }
-    // Si supera todos (ej. Tramo D a veces tiene tope muy alto, pero si no, retorna el último o D)
-    // Retornamos el último (usualmente D)
-    return end($tramos);
-}
-
-// Helper para obtener datos de un tramo específico (Manual)
-function getTramoManual($letra, $tramos) {
-    foreach ($tramos as $t) {
-        if ($t['tramo'] == $letra) return $t;
-    }
-    return null;
-}
-
 // PROCESAMIENTO DE REGISTROS (Lógica de Tramos)
 foreach ($registros as &$r) {
-    $tramo_data = null;
-    $origen_tramo = 'auto'; // debug
-
-    // 1. Determinar Tramo Automático (basado en sueldo)
-    $tramo_auto = getTramoAutomatico($r['sueldo_imponible'], $tramos_del_periodo);
-    
-    // 2. Revisar si hay Manual
-    if (!empty($r['tramo_asignacion_manual'])) {
-        $tramo_manual = getTramoManual($r['tramo_asignacion_manual'], $tramos_del_periodo);
-        if ($tramo_manual) {
-            $tramo_data = $tramo_manual;
-            $origen_tramo = 'manual';
-        } else {
-            // Fallback si la letra manual no existe en los tramos del mes (raro)
-            $tramo_data = $tramo_auto;
-        }
+    // USAR SNAPSHOT DE TRAMO
+    // Si la columna existe (migración) y tiene dato, usarla.
+    if (!empty($r['tramo_asignacion_familiar'])) {
+        $r['tramo_letra'] = $r['tramo_asignacion_familiar'];
     } else {
-        $tramo_data = $tramo_auto;
-    }
-
-    // 3. Calcular Monto y Asignar Letra
-    $r['tramo_letra'] = $tramo_data['tramo'] ?? ''; // Para mostrar en PDF
-    
-    // Si sueldo es 0 (ej licencia completa), a veces tramo A aplica, a veces no. Asumimos lógica normal.
-    // CÁLCULO:
-    // Si es MANUAL, RECALCULAMOS FUERZADO: monto * cargas del maestro trabajadores
-    if ($origen_tramo == 'manual') {
-        $monto_unitario = (int)$tramo_data['monto_por_carga'];
-        $num_cargas = (int)$r['numero_cargas'];
-        $r['asignacion_familiar_calculada'] = $monto_unitario * $num_cargas;
-    } else {
-        // Si es AUTO, mantemos el valor de la BD (que ya fue calculado por generar_planilla), 
-        // O lo recalculamos para consistencia?
-        // El usuario dijo "ver_pdf.php calculate automatically...". 
-        // Generar_planilla ya lo hizo. Lo dejamos, PERO nos aseguramos que la LETRA corresponda.
-        // EXCEPCION: Si generar_planilla lo hizo mal o si queremos asegurar consistencia visual,
-        // recalculamos igual. Dado que cargamos 'tramos_del_periodo', es mas seguro recalcularlo aquí
-        // para que coincida con la letra mostrada.
-        // ADEMAS: Si el trabajador editó cargas durante el mes, 'planillas' podría tener valor viejo.
-        // Pero reporte histórico debe respetar histórico.
-        // DECISIÓN: Respetar valor DB para Automático (histórico seguro). 
-        // Solo recalculamos Manual (que es un override explícito pedido).
-        
-        // Pero... necesitamos la letra correcta correspondiente al monto DB?
-        // A veces el sueldo cambia. Usaremos la letra calculada $tramo_auto.
+        // FALLBACK (Solo si es antiguo y migración falló, o futuro sin dato)
+        // Por seguridad, dejamos vacío o calculamos. 
+        // Si la migración corrió, debería estar. Si está vacía, asumimos sin tramo.
+        $r['tramo_letra'] = '';
     }
 
     // --- CORRECCIÓN FINAL: Si monto es 0, ocultar letra tramo ---
@@ -214,13 +103,7 @@ foreach ($registros as &$r) {
         $r['tramo_letra'] = '';
     }
 
-    // 4. Recalcular SALDO (Importante por si cambió la asignación manual)
-    // saldo = (aportes + asig_fam) - total_descuentos
-    // total_descuentos incluye descuentos legales + sindicato + otros
-    // Pero total_descuentos NO cambia por el tramo. Asig Familiar es un HABER (Ingreso no imponible).
-    // Saldo = lo que recibe liquido aprox (en este contexto simplificado de la tabla).
-    
-    // Recalculo saldo de la fila
+    // 4. Recalcular SALDO 
     $r['saldo'] = ($r['aportes'] + $r['asignacion_familiar_calculada']) - $r['total_descuentos'];
 
     // 5. Acumular Totales
@@ -230,10 +113,14 @@ foreach ($registros as &$r) {
 }
 unset($r); // romper referencia
 
-$stmt_sis = $pdo->prepare("SELECT tasa_sis_decimal FROM sis_historico WHERE (ano_inicio < :ano OR (ano_inicio = :ano AND mes_inicio <= :mes)) ORDER BY ano_inicio DESC, mes_inicio DESC LIMIT 1");
-$stmt_sis->execute(['ano' => $ano, 'mes' => $mes]);
-$sis_data = $stmt_sis->fetch();
-$TASA_SIS_ACTUAL = $sis_data ? (float)$sis_data['tasa_sis_decimal'] : 0.0;
+// --- DATOS GLOBALES SNAPSHOT ---
+// Tomamos del primer registro (son iguales para el empleador/mes)
+$first_reg = $registros[0];
+// Si es 0.00, fallback a lo actual ?? No, snapshot es truth. 
+// Dividimos por 100 porque lo guardamos como porcentaje (ej 3.40) y aqui variable espera 0.034
+$TASA_SIS_ACTUAL = isset($first_reg['sis_aplicado']) ? ((float)$first_reg['sis_aplicado'] / 100) : 0.0;
+$tasa_mutual_actual = isset($first_reg['tasa_mutual_aplicada']) ? ((float)$first_reg['tasa_mutual_aplicada'] / 100) : 0.0;
+
 
 define('TASA_CAP_IND_CONST', 0.001);
 define('TASA_EXP_VIDA_CONST', 0.009);
@@ -246,38 +133,137 @@ foreach ($registros as $r) {
     }
 }
 
-$tasa_mutual_actual = (float)$empleador['tasa_mutual_decimal'];
-$calc_aporte_patronal = floor($totales_tabla['sueldo_imponible'] * $tasa_mutual_actual);
+// $tasa_mutual_actual YA FUE SETEADA ARRIBA DESDE SNAPSHOT
+// $tasa_mutual_actual YA FUE SETEADA ARRIBA DESDE SNAPSHOT
+$calc_aporte_patronal = calcular_mutual($totales_tabla['sueldo_imponible'], $tasa_mutual_actual);
 
 // 2. Calcular Seguro Cesantía Patronal (CORREGIDO: Verifica Activo o Pensionado con AFC)
 $calc_seguro_cesantia_patronal = 0;
 foreach ($registros as $r) {
-    // Determinar si debe pagar cesantía patronal
-    $debe_pagar_patronal = false;
+    $c = calcular_cesantia_patronal($r['sueldo_imponible'], $r['tipo_contrato'], $r['trabajador_estado_previsional'], $r['cotiza_cesantia_pensionado'] ?? 0);
+    $calc_seguro_cesantia_patronal += $c;
+}    // Si es pensionado estándar (sin AFC), no paga cesantía patronal (0%)
 
-    if ($r['trabajador_estado_previsional'] == 'Activo') {
-        $debe_pagar_patronal = true;
-    } elseif (isset($r['cotiza_cesantia_pensionado']) && $r['cotiza_cesantia_pensionado'] == 1) {
-        // Pensionado con AFC (caso especial)
-        $debe_pagar_patronal = true;
+
+// --- LOGICA SIS PARA LICENCIAS (INYECCIÓN DE COSTO) ---
+// --- LOGICA SIS PARA LICENCIAS (INYECCIÓN DE COSTO) ---
+$sis_extra_licencias = 0;
+$cap_ind_extra_licencias = 0;
+$exp_vida_extra_licencias = 0;
+
+// 1. Obtener Tasa SIS Histórica
+$stmt_sis_rate = $pdo->prepare("SELECT tasa_sis_decimal FROM sis_historico WHERE ano_inicio < ? OR (ano_inicio = ? AND mes_inicio <= ?) ORDER BY ano_inicio DESC, mes_inicio DESC LIMIT 1");
+$stmt_sis_rate->execute([$ano, $ano, $mes]);
+$rate_row = $stmt_sis_rate->fetch(PDO::FETCH_ASSOC);
+$TASA_SIS_HISTORICA = $rate_row ? (float)$rate_row['tasa_sis_decimal'] : 0.0149; // Fallback 1.49%
+
+// 2. Buscar trabajadores con licencia en este periodo
+// (Optimizacion: Traer solo licencias que intersecten con el mes)
+$fecha_inicio_mes = "$ano-$mes-01";
+$fecha_fin_mes = date("Y-m-t", strtotime($fecha_inicio_mes));
+
+$stmt_lic = $pdo->prepare("
+    SELECT trabajador_id, base_imponible_manual 
+    FROM trabajador_licencias 
+    WHERE (fecha_inicio <= ? AND fecha_fin >= ?) 
+");
+// Intersección: inicio_lic <= fin_mes AND fin_lic >= inicio_mes
+$stmt_lic->execute([$fecha_fin_mes, $fecha_inicio_mes]);
+$licencias_map = $stmt_lic->fetchAll(PDO::FETCH_GROUP | PDO::FETCH_UNIQUE | PDO::FETCH_ASSOC);
+
+// 3. Preparar datos del mes anterior (para fallback de base imponible)
+$mes_ant = $mes - 1;
+$ano_ant = $ano;
+if ($mes_ant == 0) {
+    $mes_ant = 12;
+    $ano_ant = $ano - 1;
+}
+$stmt_prev = $pdo->prepare("SELECT trabajador_id, sueldo_imponible FROM planillas_mensuales WHERE mes = ? AND ano = ? AND empleador_id = ?");
+$stmt_prev->execute([$mes_ant, $ano_ant, $empleador_id]);
+$prev_income_map = $stmt_prev->fetchAll(PDO::FETCH_KEY_PAIR);
+
+// 4. Calcular SIS Extra
+foreach ($registros as $r) {
+    // Solo si tiene licencia vigente en el periodo
+    if (isset($licencias_map[$r['trabajador_rut']])) {
+        // ERROR: licencias_map usa trabajador_id, pero registros no tiene ID limpio, 
+        // registros viene de planillas_mensuales JOIN trabajadores.
+        // Debemos buscar el ID del trabajador.
+        // En registros (line 39) no seleccionamos t.id explícitamente, pero p.trabajador_id debe estar en el join implícito o lo agregamos.
+        // Revisando SQL linea 39: SELECT t.rut... 
+        // No tenemos el ID directo en $r.
+        // Solucion: Usar RUT en licencias map o agregar t.id a la query principal. 
+        // MODIFICACION: Agregaré t.id a la query principal más abajo, pero como no puedo editar todo el archivo, 
+        // usaré una query auxiliar aqui o iteraré comparando RUT si fuera necesario.
+        // MEJOR OPCION: Asumir que licencias_map usa ID y tratar de mapear con lo que tengo.
+        // NO tengo ID en $r. 
+        // VOY A MODIFICAR ESTE BLOQUE PARA QUE HAGA UNA BÚSQUEDA DEL ID O USE EL RUT.
     }
+}
+// RE-STRATEGY: I need t.id in $registros.
+// I will fetch t.id in the main query first. 
+// Wait, I am replacing a block deep down. I cannot easily change the main query without a massive replace.
+// Alternative: Fetch licenses mapped by RUT.
+// Table `trabajador_licencias` has `trabajador_id`. 
+// I can join `trabajadores` in the license query below.
 
-    // Solo calcular si debe pagar (excluye pensionados estándar)
-    if ($debe_pagar_patronal) {
-        if ($r['tipo_contrato'] == 'Fijo') {
-            // Plazo Fijo: 3.0% Patronal
-            $calc_seguro_cesantia_patronal += floor($r['sueldo_imponible'] * 0.03);
-        } else {
-            // Indefinido: 2.4% Patronal
-            $calc_seguro_cesantia_patronal += floor($r['sueldo_imponible'] * 0.024);
+$stmt_lic_rut = $pdo->prepare("
+    SELECT t.rut, l.base_imponible_manual 
+    FROM trabajador_licencias l
+    JOIN trabajadores t ON l.trabajador_id = t.id
+    WHERE (l.fecha_inicio <= ? AND l.fecha_fin >= ?) 
+");
+$stmt_lic_rut->execute([$fecha_fin_mes, $fecha_inicio_mes]);
+$licencias_rut_map = $stmt_lic_rut->fetchAll(PDO::FETCH_KEY_PAIR);
+// Map: RUT => base_imponible_manual (or null)
+
+// Map Previous Income by RUT too (since planillas has trabajador_id, we need rut)
+// Actually planillas has trabajador_id. Current query $registros has rut.
+// Let's map prev income by RUT.
+$stmt_prev_rut = $pdo->prepare("
+    SELECT t.rut, p.sueldo_imponible 
+    FROM planillas_mensuales p
+    JOIN trabajadores t ON p.trabajador_id = t.id
+    WHERE p.mes = ? AND p.ano = ? AND p.empleador_id = ?
+");
+$stmt_prev_rut->execute([$mes_ant, $ano_ant, $empleador_id]);
+$prev_income_rut_map = $stmt_prev_rut->fetchAll(PDO::FETCH_KEY_PAIR);
+
+
+foreach ($registros as $r) {
+    $usu_rut = $r['trabajador_rut'];
+
+    if (array_key_exists($usu_rut, $licencias_rut_map)) {
+        // TIENE LICENCIA
+        $base_calculo = 0;
+        $base_manual = $licencias_rut_map[$usu_rut]; // puede ser null o valor
+
+        // PRIORIDAD 1: Manual
+        if ($base_manual !== null && $base_manual > 0) {
+            $base_calculo = $base_manual;
         }
+        // PRIORIDAD 2: Mes Anterior
+        elseif (isset($prev_income_rut_map[$usu_rut]) && $prev_income_rut_map[$usu_rut] > 0) {
+            $base_calculo = $prev_income_rut_map[$usu_rut];
+        }
+        // PRIORIDAD 3: Sueldo Base Contrato (Snapshot actual)
+        else {
+            $base_calculo = isset($r['sueldo_base_snapshot']) ? $r['sueldo_base_snapshot'] : 0;
+        }
+
+        // CALCULO
+        $costo_sis_licencia = floor($base_calculo * $TASA_SIS_HISTORICA);
+        $sis_extra_licencias += $costo_sis_licencia;
+
+        // CALCULO EXTRAS
+        $cap_ind_extra_licencias += floor($base_calculo * TASA_CAP_IND_CONST);
+        $exp_vida_extra_licencias += floor($base_calculo * TASA_EXP_VIDA_CONST);
     }
-    // Si es pensionado estándar (sin AFC), no paga cesantía patronal (0%)
 }
 
-$calc_sis = floor($total_imponible_sis * $TASA_SIS_ACTUAL);
-$calc_capitalizacion_individual = floor($total_imponible_sis * TASA_CAP_IND_CONST);
-$calc_expectativa_vida = floor($total_imponible_sis * TASA_EXP_VIDA_CONST);
+$calc_sis = floor($total_imponible_sis * $TASA_SIS_ACTUAL) + $sis_extra_licencias;
+$calc_capitalizacion_individual = floor($total_imponible_sis * TASA_CAP_IND_CONST) + $cap_ind_extra_licencias;
+$calc_expectativa_vida = floor($total_imponible_sis * TASA_EXP_VIDA_CONST) + $exp_vida_extra_licencias;
 
 $sub_total_desc_tabla = $totales_tabla['total_descuentos'];
 $sub_total_desc_final = $sub_total_desc_tabla + $calc_aporte_patronal + $calc_sis +
@@ -312,184 +298,54 @@ $calculos_pie = [
 // --- GENERAR PDF ---
 try {
     $css = file_get_contents(__DIR__ . '/style.css');
+
+    // Capturar HTML desde el template
     ob_start();
-?>
-    <!DOCTYPE html>
-    <html lang="es">
-
-    <body>
-        <main>
-            <div class="info-empleador">
-                <div class="info-col">
-                    <p><span class="label">Empleador:</span> <?= htmlspecialchars($empleador['nombre']) ?></p>
-                    <p><span class="label">RUT:</span> <?= format_rut($empleador['rut']) ?></p>
-                    <p><span class="label">F: Plazo Fijo</p>
-                    <p><span class="label">P: Partime</p>
-                </div>
-                <div class="info-col">
-                    <p><span class="label">C. Compensación:</span> <?= htmlspecialchars($empleador['caja_compensacion_nombre'] ?: 'N/A') ?></p>
-                    <p><span class="label">Mutual:</span> <?= htmlspecialchars($empleador['mutual_seguridad_nombre'] ?: 'ISL') ?></p>
-                    <p><span class="label">Tasa Mutual:</span> <?= sprintf("%.2f", $calculos_pie['tasa_mutual_aplicada_porc']) ?>%</p>
-                </div>
-            </div>
-            <table class="tabla-principal">
-                <thead>
-                    <tr>
-                        <th>RUT</th>
-                        <th>Nombre</th>
-                        <th style="width:30px;">Días</th>
-                        <th>Sueldo Imp.</th>
-                        <th>AFP/INP</th>
-                        <th>Salud</th>
-                        <th>APV</th>
-                        <th>Seg. Cesantía</th>
-                        <th>Sindicato</th>
-                        <th>Ces. Lic. Méd.</th>
-                        <th>Total Desc.</th>
-                        <th>Aportes</th>
-                        <th>Asig. Familiar</th>
-                        <th>Saldo</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($registros as $r): ?><tr>
-                            <td><?= format_rut($r['trabajador_rut']) ?></td>
-                            <td class="nombre-trabajador"><?php if ($r['tipo_contrato'] == 'Fijo'): ?><span class="fixed-marker">F</span><?php endif; ?><?php if (isset($r['es_part_time']) && $r['es_part_time'] == 1): ?><span class="fixed-marker" style="color: #007bff;">P</span><?php endif; ?><?= htmlspecialchars($r['trabajador_nombre']) ?></td>
-                            <td style="text-align:center;"><?= $r['dias_trabajados'] ?></td>
-                            <td><?= format_numero($r['sueldo_imponible']) ?></td>
-                            <td><?php if ($r['trabajador_estado_previsional'] == 'Pensionado') echo '<div style="font-size:7px;font-weight:bold;color:#555;">PENSIONADO</div>';
-                                elseif ($r['sistema_previsional'] == 'INP') echo '<div style="font-size:7px;font-weight:bold;color:#555;">INP</div>';
-                                else {
-                                    $nombre_afp_mostrar = $r['afp_historico_nombre'];
-                                    if (empty($nombre_afp_mostrar)) {
-                                        // Fallback: Buscar AFP actual (compatibilidad antigua)
-                                        // OJO: Esto se ejecuta N veces. Idealmente deberia ser eager loaded si hay muchos vacios, pero es un caso borde.
-                                        // Hacemos una query rapida.
-                                        $stmt_afp_fb = $pdo->prepare("SELECT a.nombre FROM trabajadores t LEFT JOIN afps a ON t.afp_id = a.id WHERE t.rut = ? LIMIT 1");
-                                        $stmt_afp_fb->execute([$r['trabajador_rut']]); // Usamos RUT o ID si estuviera disponible facil (r['trabajador_id'] no está en select * explicito arriba pero t.id sí en join?)
-                                        // Arriba en SQL no seleccione t.id, pero p.trabajador_id esta implicito? SELECT es explicito.
-                                        // Mejor usemos el RUT que sí está seleccionado.
-                                        $nombre_afp_mostrar = $stmt_afp_fb->fetchColumn();
-                                    }
-                                    if (!empty($nombre_afp_mostrar)) echo '<div style="font-size:7px;font-weight:bold;color:#555;">' . mb_strtoupper($nombre_afp_mostrar) . '</div>';
-                                }
-                                echo format_numero($r['descuento_afp']); ?></td>
-                            <td><?= format_numero($r['descuento_salud']) ?></td>
-                            <td><?= format_numero($r['adicional_salud_apv']) ?></td>
-                            <td><?= format_numero($r['seguro_cesantia']) ?></td>
-                            <td><?= format_numero($r['sindicato']) ?></td>
-                            <td><?= format_numero($r['cesantia_licencia_medica']) ?></td>
-                            <td class="total"><?= format_numero($r['total_descuentos']) ?></td>
-                            <td><?= format_numero($r['aportes']) ?></td>
-                            <td>
-                                <?= format_numero($r['asignacion_familiar_calculada']) ?>
-                                <?php if(!empty($r['tramo_letra'])): ?>
-                                    <br><span style="font-size:8px; color:#555;">(Tramo <?= $r['tramo_letra'] ?>)</span>
-                                <?php endif; ?>
-                            </td>
-                            <td class="total"><?= format_numero($r['saldo']) ?></td>
-                        </tr><?php endforeach; ?>
-                </tbody>
-                <tfoot>
-                    <tr>
-                        <th colspan="2">Totales</th>
-                        <th>-</th>
-                        <th><?= format_numero($totales_tabla['sueldo_imponible']) ?></th>
-                        <th><?= format_numero($totales_tabla['descuento_afp']) ?></th>
-                        <th><?= format_numero($totales_tabla['descuento_salud']) ?></th>
-                        <th><?= format_numero($totales_tabla['adicional_salud_apv']) ?></th>
-                        <th><?= format_numero($totales_tabla['seguro_cesantia']) ?></th>
-                        <th><?= format_numero($totales_tabla['sindicato']) ?></th>
-                        <th><?= format_numero($totales_tabla['cesantia_licencia_medica']) ?></th>
-                        <th class="total"><?= format_numero($totales_tabla['total_descuentos']) ?></th>
-                        <th><?= format_numero($totales_tabla['aportes']) ?></th>
-                        <th><?= format_numero($totales_tabla['asignacion_familiar_calculada']) ?></th>
-                        <th class="total"><?= format_numero($totales_tabla['saldo']) ?></th>
-                    </tr>
-                </tfoot>
-            </table>
-            <table class="tabla-resumen">
-                <thead>
-                    <tr>
-                        <th colspan="2">Resumen de Totales</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>Sub-Total Descuentos (Tabla)</td>
-                        <td class="numero"><?= format_numero($calculos_pie['sub_total_desc_tabla']) ?></td>
-                    </tr>
-                    <tr>
-                        <td>(+) Aporte Patronal (<?= sprintf("%.2f", $calculos_pie['tasa_mutual_aplicada_porc']) ?>%)</td>
-                        <td class="numero"><?= format_numero($calculos_pie['aporte_patronal']) ?></td>
-                    </tr>
-                    <tr>
-                        <td>(+) Seguro Invalidez y Sob (SIS)</td>
-                        <td class="numero"><?= format_numero($calculos_pie['sis']) ?></td>
-                    </tr>
-                    <tr>
-                        <td>(+) Seguro Cesantía</td>
-                        <td class="numero"><?= format_numero($calculos_pie['seguro_cesantia_patronal']) ?></td>
-                    </tr>
-                    <tr>
-                        <td>(+) 0,1 Capitalización Individual</td>
-                        <td class="numero"><?= format_numero($calculos_pie['capitalizacion_individual']) ?></td>
-                    </tr>
-                    <tr>
-                        <td>(+) 0,9 Expectativa de Vida</td>
-                        <td class="numero"><?= format_numero($calculos_pie['expectativa_vida']) ?></td>
-                    </tr>
-                    <tr class="total">
-                        <td>Sub-Total Descuentos</td>
-                        <td class="numero"><?= format_numero($calculos_pie['sub_total_desc_pie']) ?></td>
-                    </tr>
-                    <tr>
-                        <td>(-) Aportes Conductor</td>
-                        <td class="numero"><?= format_numero($calculos_pie['aportes_conductor']) ?></td>
-                    </tr>
-                    <tr>
-                        <td>(+) Saldos Positivo(s) Conductor(es)</td>
-                        <td class="numero"><?= format_numero($calculos_pie['saldos_positivos']) ?></td>
-                    </tr>
-                    <tr class="total-final">
-                        <td>Total Descuentos</td>
-                        <td class="numero"><?= format_numero($calculos_pie['total_descuentos_final']) ?></td>
-                    </tr>
-                </tbody>
-                <tfoot>
-                    <tr>
-                        <td>Asignación Familiar</td>
-                        <td class="numero"><?= format_numero($calculos_pie['asignacion_familiar']) ?></td>
-                    </tr>
-                    <tr>
-                        <td>Total Sindicato</td>
-                        <td class="numero"><?= format_numero($calculos_pie['sindicato']) ?></td>
-                    </tr>
-                    <tr class="total-final">
-                        <td>Total Leyes Sociales</td>
-                        <td class="numero"><?= format_numero($calculos_pie['total_leyes_sociales']) ?></td>
-                    </tr>
-                </tfoot>
-            </table>
-        </main>
-    </body>
-
-    </html>
-<?php
+    require __DIR__ . '/reporte_template.php';
     $html_body = ob_get_clean();
 
-    $mpdf = new Mpdf(['mode' => 'utf-8', 'format' => 'A4-L', 'margin_left' => 15, 'margin_right' => 15, 'margin_top' => 35, 'margin_bottom' => 20]);
-    $header_html = '<div class="info-header"><div class="info-izq"><span class="label">PERÍODO:</span><span class="data">' . $mes_nombre . ' / ' . $ano . '</span></div><div class="info-der"><h1 style="font-size: 16pt; margin:0; padding:0;">Planilla de Cotizaciones Previsionales</h1><span class="label">Emisión:</span> ' . date('d/m/Y - H:i') . '</div></div><div style="border-bottom: 2px solid #000; margin-top: 10px;"></div>';
+    $mpdf = new Mpdf(['mode' => 'utf-8', 'format' => 'A4-L', 'margin_left' => 5, 'margin_right' => 5, 'margin_top' => 20, 'margin_bottom' => 5]);
+    // --- Header Estético Moderno ---
+    $header_html = '
+    <div class="info-header">
+        <table class="header-table">
+            <tr>
+                <td class="header-logo">
+                    TRANSREPORT<br><span style="color:#718096; font-weight:normal; font-size: 8pt;">Software de Gestión</span>
+                </td>
+                <td class="header-title">
+                    <h1>Planilla de Cotizaciones Previsionales</h1>
+                </td>
+                <td class="header-meta">
+                    <div class="meta-box">
+                        <span class="periodo">' . $mes_nombre . ' ' . $ano . '</span>
+                        <span class="emision">EMISIÓN: ' . date('d/m/Y H:i') . '</span>
+                    </div>
+                </td>
+            </tr>
+        </table>
+    </div>';
     $mpdf->SetHTMLHeader($header_html);
-    $footer_html = '<table width="100%" style="font-size: 8pt; color: #888;"><tr><td width="50%">Reporte generado por Sistema de Reportes Daiko.</td><td width="50%" style="text-align: right;">Página {PAGENO} de {nbpg}</td></tr></table>';
+    $footer_html = '<table width="100%" style="font-size: 8pt; color: #888;"><tr><td width="50%">Reporte generado por Sistema de Reportes Transreport.</td><td width="50%" style="text-align: right;">Página {PAGENO} de {nbpg}</td></tr></table>';
     $mpdf->SetHTMLFooter($footer_html);
 
     $mpdf->WriteHTML($css, \Mpdf\HTMLParserMode::HEADER_CSS);
     $mpdf->WriteHTML($html_body, \Mpdf\HTMLParserMode::HTML_BODY);
-    $mpdf->Output('Reporte.pdf', 'I');
+
+    // Configurar Título del Documento (Pestaña del Navegador)
+    $titulo_pdf = "Planilla de Cotizaciones - " . $empleador['nombre'] . " - " . $mes_nombre . " " . $ano;
+    $mpdf->SetTitle($titulo_pdf);
+
+    // Nombre de archivo descriptivo para descarga (Sanitizado)
+    // Se permiten espacios en el título, pero para archivo usualmente se prefieren guiones bajos, 
+    // aunque los navegadores modernos manejan bien los espacios. 
+    // Usaremos guiones bajos para máxima compatibilidad como solicitado implícitamente en el "guardar como".
+    $nombre_file = preg_replace('/[^a-zA-Z0-9]/', '_', $empleador['nombre']);
+    $nombre_descarga = "Planilla_Cotizaciones_" . $nombre_file . "_" . $mes_nombre . "_" . $ano . ".pdf";
+
+    $mpdf->Output($nombre_descarga, 'I');
     exit;
 } catch (\Exception $e) {
     echo "<h1>Error al generar el PDF</h1>";
     echo "<pre>" . $e->getMessage() . "</pre>";
 }
-?>

@@ -1,6 +1,7 @@
 <?php
 require_once dirname(__DIR__) . '/app/core/bootstrap.php';
 require_once dirname(__DIR__) . '/app/includes/session_check.php';
+
 use Mpdf\Mpdf;
 
 if (!isset($_SESSION['reporte_excedentes'])) {
@@ -14,7 +15,7 @@ $mes_nombre = date('F', mktime(0, 0, 0, $data['mes'], 1)); // Puedes usar IntlDa
 
 try {
     $mpdf = new Mpdf(['mode' => 'utf-8', 'format' => 'A4']);
-    
+
     $html = '
     <div style="text-align:center; margin-bottom:20px;">
         <h2>Reporte de Excedentes (Trabajadores No Registrados)</h2>
@@ -28,9 +29,14 @@ try {
             <th style="border:1px solid #ccc; padding:8px;">Monto Aporte</th>
             <th style="border:1px solid #ccc; padding:8px; width:150px;">Firma</th>
         </tr>';
-    
+
     $total = 0;
     foreach ($lista as $item) {
+        // Excluir conflictos (cruce de choferes entre empresas del mismo holding)
+        if (isset($item['motivo']) && strpos($item['motivo'], 'CONFLICTO') !== false) {
+            continue;
+        }
+
         $total += $item['monto'];
         $html .= '
         <tr>
@@ -40,7 +46,7 @@ try {
             <td style="border:1px solid #ccc; padding:8px; vertical-align:bottom;">_______</td>
         </tr>';
     }
-    
+
     $html .= '
         <tr style="background:#eee; font-weight:bold;">
             <td colspan="2" style="border:1px solid #ccc; padding:8px; text-align:right;">Total:</td>
@@ -58,4 +64,3 @@ try {
 } catch (Exception $e) {
     echo "Error PDF: " . $e->getMessage();
 }
-?>

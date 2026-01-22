@@ -10,45 +10,66 @@ require_once __DIR__ . '/app/includes/session_check.php';
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Sistema de Reportes</title>
+    <title>Login - TransReport</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
-    <style>
-        body {
-            background-color: #f8f9fa;
-        }
-
-        .login-container {
-            max-width: 400px;
-            margin: 10vh auto;
-            padding: 2rem;
-            background-color: #fff;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-        }
-    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link href="public/assets/css/style.css?v=1.1" rel="stylesheet">
 </head>
 
-<body>
-    <div class="container">
-        <div class="login-container">
-            <h3 class="text-center mb-4">Sistema de Reportes</h3>
-            <p class="text-center text-muted mb-4">Acceso al sistema</p>
+<body class="login-page">
+    <div class="split-screen">
+        <!-- Columna Izquierda: Gráfico y Branding -->
+        <div class="left-pane">
+            <div class="left-content">
+                <div class="mb-4">
+                    <img src="public/assets/img/isotipo_transreport.svg" alt="Isotipo TransReport" style="height: 100px; width: auto;">
+                </div>
+                <h1 class="system-title">TransReport</h1>
+                <p class="system-subtitle">Control de Operaciones y Gestión de Reportes</p>
+            </div>
+        </div>
 
-            <form action="app/core/login_process.php" method="POST">
-                <?php csrf_field(); ?>
-                <div class="mb-3">
-                    <label for="username" class="form-label">Usuario (RUT)</label>
-                    <input type="text" class="form-control" id="username" name="username" maxlength="12" placeholder="12.345.678-9" required autofocus>
+        <!-- Columna Derecha: Formulario -->
+        <div class="right-pane">
+            <div class="login-box">
+                <div class="brand-logo-container">
+                    <!-- Placeholder para el logo -->
+                    <img src="public/assets/img/logo_transreport.svg" alt="Logo TransReport" class="brand-logo mb-3">
+                    <h2 class="welcome-text">Bienvenido de nuevo</h2>
+                    <p class="sub-text">Ingresa tus credenciales para acceder</p>
                 </div>
-                <div class="mb-3">
-                    <label for="password" class="form-label">Contraseña</label>
-                    <input type="password" class="form-control" id="password" name="password" required>
+
+                <form action="app/core/login_process.php" method="POST">
+                    <?php csrf_field(); ?>
+
+                    <div class="mb-4">
+                        <label for="username" class="form-label">Usuario (RUT)</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-white border-end-0 text-muted"><i class="fas fa-user"></i></span>
+                            <input type="text" class="form-control border-start-0 ps-0" id="username" name="username" maxlength="12" placeholder="12.345.678-9" required autofocus>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="password" class="form-label">Contraseña</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-white border-end-0 text-muted"><i class="fas fa-lock"></i></span>
+                            <input type="password" class="form-control border-start-0 ps-0" id="password" name="password" placeholder="••••••••" required>
+                        </div>
+                    </div>
+
+                    <div class="d-grid pt-2">
+                        <button type="submit" class="btn btn-custom">
+                            Ingresar <i class="fas fa-arrow-right ms-2"></i>
+                        </button>
+                    </div>
+                </form>
+
+                <div class="mt-5 text-center text-muted" style="font-size: 0.8rem;">
+                    &copy; <?php echo date('Y'); ?> <strong>DAIKO</strong>. Todos los derechos reservados.
                 </div>
-                <div class="d-grid">
-                    <button type="submit" class="btn btn-primary btn-lg">Ingresar</button>
-                </div>
-            </form>
+            </div>
         </div>
     </div>
 
@@ -74,7 +95,8 @@ require_once __DIR__ . '/app/includes/session_check.php';
                 title: {$messageSafe},
                 toast: false,
                 position: 'center',
-                showConfirmButton: true
+                showConfirmButton: true,
+                confirmButtonColor: '#0dcaf0'
             });
         </script>";
     }

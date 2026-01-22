@@ -3,7 +3,10 @@ require_once dirname(__DIR__) . '/app/core/bootstrap.php';
 require_once dirname(__DIR__) . '/app/includes/session_check.php';
 require_once dirname(__DIR__) . '/app/lib/LiquidacionService.php';
 
-if ($_SERVER['REQUEST_METHOD'] != 'POST') { header('Location: generar_liquidacion.php'); exit; }
+if ($_SERVER['REQUEST_METHOD'] != 'POST') {
+    header('Location: generar_liquidacion.php');
+    exit;
+}
 
 $seleccion_empleador = $_POST['empleador_id']; // Puede ser 'todos' o un número
 $mes = (int)$_POST['mes'];
@@ -36,15 +39,16 @@ $errores = [];
 
 // 2. Bucle Maestro: Procesar cada empleador
 foreach ($lista_empleadores as $empleador_id) {
-    
+
     // A. Verificar si tiene planilla para este mes
     $stmt_check = $pdo->prepare("SELECT id FROM planillas_mensuales WHERE empleador_id = ? AND mes = ? AND ano = ? LIMIT 1");
     $stmt_check->execute([$empleador_id, $mes, $ano]);
-    
+
     if (!$stmt_check->fetch()) {
         if ($seleccion_empleador !== 'todos') {
             $_SESSION['flash_message'] = ['type' => 'error', 'message' => "Error: No existe planilla para el empleador seleccionado en este período."];
-            header('Location: generar_liquidacion.php'); exit;
+            header('Location: generar_liquidacion.php');
+            exit;
         }
         continue; // Saltar al siguiente empleador
     }
@@ -85,10 +89,10 @@ foreach ($lista_empleadores as $empleador_id) {
     $stmt_ft = $pdo->prepare($sql_fecha_tramo);
     $stmt_ft->execute([':fecha' => $fecha_reporte]);
     $fecha_vigente = $stmt_ft->fetchColumn();
-    
+
     $tramos_del_periodo = [];
-    if($fecha_vigente) {
-         $sql_tramos_final = "SELECT tramo, renta_maxima, monto_por_carga 
+    if ($fecha_vigente) {
+        $sql_tramos_final = "SELECT tramo, renta_maxima, monto_por_carga 
                              FROM cargas_tramos_historicos 
                              WHERE fecha_inicio = :fecha";
         $stmt_tf = $pdo->prepare($sql_tramos_final);
@@ -96,7 +100,7 @@ foreach ($lista_empleadores as $empleador_id) {
         $tramos_del_periodo = $stmt_tf->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    $getTramoManual = function($letra, $tramos) {
+    $getTramoManual = function ($letra, $tramos) {
         foreach ($tramos as $t) if ($t['tramo'] == $letra) return $t;
         return null;
     };
@@ -150,10 +154,10 @@ foreach ($lista_empleadores as $empleador_id) {
             ];
 
             $resultado = $liquidacionService->calcularLiquidacion($contrato_data, $variables_mes, $mes, $ano);
-            
+
             // --- LOGICA OVERRIDE ASIG FAMILIAR ---
             $asig_familiar_final = $fila['asignacion_familiar_calculada']; // Valor por defecto de la planilla
-            
+
             if (!empty($fila['tr_tramo_manual'])) {
                 $tramo_manual_data = $getTramoManual($fila['tr_tramo_manual'], $tramos_del_periodo);
                 if ($tramo_manual_data) {
@@ -163,27 +167,38 @@ foreach ($lista_empleadores as $empleador_id) {
                 }
             }
             $resultado['asig_familiar'] = $asig_familiar_final;
-            
+
             // Recálculo final
             $resultado['total_no_imponible'] = $resultado['colacion'] + $resultado['movilizacion'] + $resultado['asig_familiar'];
             $resultado['total_haberes'] = $resultado['total_imponible'] + $resultado['total_no_imponible'];
-            $resultado['total_descuentos'] = $resultado['descuento_afp'] + $resultado['descuento_salud'] + $resultado['seguro_cesantia'] + 
-                                             $resultado['adicional_salud_apv'] + $resultado['impuesto_unico'] + $resultado['sindicato'] + 
-                                             $resultado['anticipos'];
+            $resultado['total_descuentos'] = $resultado['descuento_afp'] + $resultado['descuento_salud'] + $resultado['seguro_cesantia'] +
+                $resultado['adicional_salud_apv'] + $resultado['impuesto_unico'] + $resultado['sindicato'] +
+                $resultado['anticipos'];
             $resultado['sueldo_liquido'] = $resultado['total_haberes'] - $resultado['total_descuentos'];
 
             $stmt_save->execute([
-                ':eid' => $empleador_id, ':tid' => $fila['trabajador_id'], ':mes' => $mes, ':ano' => $ano,
-                ':base' => $resultado['sueldo_base'], ':grat' => $resultado['gratificacion_legal'],
+                ':eid' => $empleador_id,
+                ':tid' => $fila['trabajador_id'],
+                ':mes' => $mes,
+                ':ano' => $ano,
+                ':base' => $resultado['sueldo_base'],
+                ':grat' => $resultado['gratificacion_legal'],
                 ':bonos' => $resultado['bonos_imponibles'], // <--- NUEVO
-                ':tot_imp' => $resultado['total_imponible'], ':afp' => $resultado['descuento_afp'],
-                ':sal' => $resultado['descuento_salud'], ':ces' => $resultado['seguro_cesantia'],
+                ':tot_imp' => $resultado['total_imponible'],
+                ':afp' => $resultado['descuento_afp'],
+                ':sal' => $resultado['descuento_salud'],
+                ':ces' => $resultado['seguro_cesantia'],
                 ':apv' => $resultado['adicional_salud_apv'],
-                ':trib' => $resultado['base_tributable'], ':imp_u' => $resultado['impuesto_unico'],
-                ':col' => $resultado['colacion'], ':mov' => $resultado['movilizacion'],
-                ':asig' => $resultado['asig_familiar'], ':tot_noimp' => $resultado['total_no_imponible'],
-                ':ant' => $resultado['anticipos'], ':sind' => $resultado['sindicato'],
-                ':tot_desc' => $resultado['total_descuentos'], ':tot_hab' => $resultado['total_haberes'],
+                ':trib' => $resultado['base_tributable'],
+                ':imp_u' => $resultado['impuesto_unico'],
+                ':col' => $resultado['colacion'],
+                ':mov' => $resultado['movilizacion'],
+                ':asig' => $resultado['asig_familiar'],
+                ':tot_noimp' => $resultado['total_no_imponible'],
+                ':ant' => $resultado['anticipos'],
+                ':sind' => $resultado['sindicato'],
+                ':tot_desc' => $resultado['total_descuentos'],
+                ':tot_hab' => $resultado['total_haberes'],
                 ':liq' => $resultado['sueldo_liquido']
             ]);
             $total_generadas++;
@@ -191,7 +206,6 @@ foreach ($lista_empleadores as $empleador_id) {
 
         $pdo->commit();
         $empresas_procesadas++;
-
     } catch (Exception $e) {
         $pdo->rollBack();
         $errores[] = "Error en empleador ID $empleador_id: " . $e->getMessage();
@@ -200,6 +214,8 @@ foreach ($lista_empleadores as $empleador_id) {
 
 // Mensaje Final
 if ($total_generadas > 0) {
+
+
     $_SESSION['flash_message'] = ['type' => 'success', 'message' => "Proceso Masivo Completo. Se generaron $total_generadas liquidaciones de $empresas_procesadas empresas."];
 } else {
     $_SESSION['flash_message'] = ['type' => 'warning', 'message' => "No se generaron liquidaciones. Verifica que existan planillas guardadas para el mes seleccionado."];
@@ -210,6 +226,5 @@ if (!empty($errores)) {
     // O redirigir a una página de log.
 }
 
-header('Location: listar_liquidaciones.php?mes='.$mes.'&ano='.$ano);
+header('Location: listar_liquidaciones.php?mes=' . $mes . '&ano=' . $ano);
 exit;
-?>

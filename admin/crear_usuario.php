@@ -15,7 +15,6 @@ if ($_SESSION['user_role'] != 'admin') {
     header('Location: ../index.php');
 
     exit;
-
 }
 
 
@@ -44,9 +43,10 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
 
         <div class="card-body">
 
-            
+
 
             <form action="crear_usuario_process.php" method="POST" class="needs-validation" novalidate>
+                <?php csrf_field(); ?>
 
                 <div class="row">
 
@@ -64,7 +64,7 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
 
                     </div>
 
-                    
+
 
                     <div class="col-md-6 mb-3">
 
@@ -112,7 +112,7 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
 
                         <input type="password" class="form-control" id="password" name="password" required>
 
-                         <div class="invalid-feedback">
+                        <div class="invalid-feedback">
 
                             La contraseña es obligatoria.
 
@@ -169,35 +169,33 @@ require_once dirname(__DIR__) . '/app/includes/footer.php';
 
 
 <script>
+    // Example starter JavaScript for disabling form submissions if there are invalid fields
 
-// Example starter JavaScript for disabling form submissions if there are invalid fields
+    (function() {
 
-(function () {
+        'use strict'
 
-  'use strict'
+        var forms = document.querySelectorAll('.needs-validation')
 
-  var forms = document.querySelectorAll('.needs-validation')
+        Array.prototype.slice.call(forms)
 
-  Array.prototype.slice.call(forms)
+            .forEach(function(form) {
 
-    .forEach(function (form) {
+                form.addEventListener('submit', function(event) {
 
-      form.addEventListener('submit', function (event) {
+                    if (!form.checkValidity()) {
 
-        if (!form.checkValidity()) {
+                        event.preventDefault()
 
-          event.preventDefault()
+                        event.stopPropagation()
 
-          event.stopPropagation()
+                    }
 
-        }
+                    form.classList.add('was-validated')
 
-        form.classList.add('was-validated')
+                }, false)
 
-      }, false)
+            })
 
-    })
-
-})()
-
+    })()
 </script>

@@ -1,187 +1,228 @@
-/* style.css - Corregido para mPDF */
-
-/* REGLA @page ELIMINADA. 
-   Se controla desde el constructor de mPDF en PHP.
-*/
-
-body {
-    font-family: 'Helvetica', 'Arial', sans-serif;
-    font-size: 8pt;
-    color: #333;
-}
-
-/* REGLAS 'header' y 'h1' ELIMINADAS.
-   Se definirán en el PHP.
-*/
-
-.info-header {
-    width: 100%;
-    font-size: 9pt;
-}
-
-.info-header .info-izq {
-    width: 50%;
-    float: left;
-    text-align: left;
-}
-
-.info-header .info-der {
-    width: 50%;
-    float: right;
-    text-align: right;
-}
-
-.info-header .label {
-    font-weight: bold;
-}
-
-.info-header .data {
-    font-weight: bold;
-    font-size: 10pt;
-}
-
-/* REGLA 'main' ELIMINADA.
-   Ya no se necesita el padding-top.
-*/
-
-/* --- Bloque de info del Empleador --- */
-.info-empleador {
-    width: 100%;
-    margin-bottom: 15px;
-    padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-    background-color: #f9f9f9;
-}
-
-.info-empleador .info-col {
-    width: 50%;
-    float: left;
-}
-
-.info-empleador p {
-    margin: 2px 0;
-    font-size: 9pt;
-}
-
-.info-empleador .label {
-    font-weight: bold;
-    display: inline-block;
-    width: 120px;
-}
-
-/* --- Tabla Principal --- */
-.tabla-principal {
-    width: 100%;
-    border-collapse: collapse;
-    margin-bottom: 20px;
-    page-break-inside: auto;
-}
-
-.tabla-principal tbody tr {
-    page-break-inside: avoid;
-}
-
-.tabla-principal th,
-.tabla-principal td {
-    border: 1px solid #ccc;
-    padding: 4px;
-    text-align: right;
-}
-
-.tabla-principal th {
-    background-color: #e9ecef;
-    font-size: 7pt;
-    white-space: nowrap;
-    padding: 5px 3px;
-    text-align: center;
-    /* Centrado */
-}
-
-.tabla-principal td:nth-child(1),
-/* RUT */
-.tabla-principal td:nth-child(2) {
-    /* Nombre */
-    text-align: left;
-    white-space: nowrap;
-}
-
-.tabla-principal tbody td {
-    background-color: #fff;
-}
-
-.tabla-principal tbody tr:nth-child(even) td {
-    background-color: #f8f9fa;
-}
-
-.tabla-principal tfoot th {
-    background-color: #e9ecef;
-    font-weight: bold;
-    text-align: right;
-}
-
-.tabla-principal tfoot th:nth-child(1),
-.tabla-principal tfoot th:nth-child(2) {
-    text-align: left;
-}
-
-.tabla-principal .total {
-    font-weight: bold;
-    background-color: #f0f0f0;
-}
-
-.tabla-principal tfoot .total {
-    background-color: #e9ecef;
-}
-
-.nombre-trabajador {
-    text-align: left;
-    white-space: nowrap;
-}
-
-.fixed-marker {
-    font-weight: bold;
-    font-style: italic;
-    color: #333;
-    margin-right: 4px;
-}
-
-/* --- Tabla Resumen (al final) --- */
-.tabla-resumen {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 20px;
-    font-size: 9pt;
-    page-break-inside: avoid;
-}
-
-.tabla-resumen th,
-.tabla-resumen td {
-    border: 1px solid #ccc;
-    padding: 5px;
-}
-
-.tabla-resumen th {
-    background-color: #e9ecef;
-    text-align: left;
-}
-
-.tabla-resumen td.numero {
-    text-align: right;
-}
-
-.tabla-resumen .total td {
-    font-weight: bold;
-    border-top: 2px solid #aaa;
-}
-
-.tabla-resumen .total-final td {
-    font-weight: bold;
-    font-size: 10pt;
-    background-color: #e9ecef;
-    border-top: 2px solid #000;
-}
-
-/* REGLA 'footer' ELIMINADA.
-   Se definirá en el PHP.
-*/
+/* style.css - Diseño Clean Gray (Light Headers) */
+body {
+    font-family: 'Helvetica', 'Arial', sans-serif;
+    font-size: 7pt;
+    color: #495057; /* Gris corporativo oscuro */
+    line-height: 1.1;
+}
+
+/* --- CABECERA (Header) --- */
+.info-header {
+    width: 100%;
+    margin-bottom: 2mm;
+    border-bottom: 2px solid #dee2e6; /* Línea suave */
+    padding-bottom: 6px;
+    font-family: 'Helvetica', sans-serif;
+}
+.header-table { width: 100%; border-collapse: collapse; border: none; }
+.header-logo {
+    width: 25%;
+    vertical-align: middle;
+    color: #6c757d;
+    font-size: 10pt;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+.header-title {
+    width: 45%;
+    vertical-align: middle;
+    text-align: center;
+}
+.header-title h1 {
+    font-size: 14pt;
+    color: #343a40; /* Gris muy oscuro */
+    margin: 0;
+    padding: 0;
+    text-transform: uppercase;
+    font-weight: 800;
+}
+.header-title .sub-title {
+    font-size: 9pt;
+    color: #868e96;
+    letter-spacing: 0.5px;
+}
+.header-meta {
+    width: 30%;
+    text-align: right;
+    vertical-align: middle;
+}
+.meta-box {
+    background-color: #f8f9fa;
+    color: #495057;
+    padding: 6px 10px;
+    border-radius: 2px;
+    border: 1px solid #e9ecef;
+    display: inline-block;
+    text-align: right;
+}
+.meta-box .periodo {
+    font-size: 11pt;
+    font-weight: bold;
+    display: block;
+    color: #212529;
+}
+.meta-box .emision {
+    font-size: 6pt;
+    color: #adb5bd;
+    margin-top: 2px;
+    display: block;
+    text-transform: uppercase;
+}
+
+/* --- DATOS EMPLEADOR --- */
+.info-empleador {
+    width: 100%;
+    margin-bottom: 2mm;
+    padding: 5px 0;
+    background-color: #fff;
+    border-bottom: 1px solid #e9ecef;
+}
+.info-empleador .info-col { float: left; height: 35px; }
+.info-empleador .primera { width: 35%; }
+.info-empleador .segunda { width: 40%; padding-left: 10px; border-left: 1px solid #e9ecef; }
+.info-empleador .tercera { width: 20%; float: right; text-align: right; }
+
+.info-empleador p { margin: 1px 0; font-size: 7.5pt; color: #495057; }
+.info-empleador .label { font-weight: bold; color: #6c757d; width: 100px; display: inline-block; }
+
+/* --- TABLA PRINCIPAL --- */
+.tabla-principal {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 2mm;
+}
+
+/* ENCABEZADOS CLAROS (Solicitado) */
+.tabla-principal thead th {
+    background-color: #e9ecef; /* Tono solicitado */
+    color: #495057; /* Texto oscuro para contraste */
+    font-weight: bold;
+    font-size: 6.5pt;
+    text-transform: uppercase;
+    padding: 5px 2px;
+    border: 1px solid #dee2e6; /* Borde sutil */
+    text-align: center;
+}
+
+.tabla-principal tbody td {
+    padding: 3px 2px;
+    border: 1px solid #dee2e6;
+    vertical-align: middle;
+    font-size: 7pt;
+    color: #212529;
+    text-align: right;
+}
+
+.tabla-principal td:nth-child(1), .tabla-principal td:nth-child(2) { text-align: left; }
+
+/* Zebra - Casi blanco */
+.tabla-principal tbody tr:nth-child(even) td { background-color: #f8f9fa; }
+
+/* Total Columns - Sutil diferencia */
+.tabla-principal .total {
+    background-color: #f1f3f5 !important; /* Gris un poco más oscuro que el header */
+    color: #212529;
+    font-weight: 700;
+    border-bottom: 1px solid #ced4da;
+}
+.tabla-principal tbody tr:nth-child(even) .total { background-color: #e9ecef !important; }
+
+/* Pie de Tabla */
+.tabla-principal tfoot th {
+    background-color: #e9ecef; /* Igual al header */
+    color: #495057;
+    font-weight: bold;
+    padding: 4px 2px;
+    border: 1px solid #ced4da;
+}
+.tabla-principal tfoot .total {
+    background-color: #dee2e6 !important; /* Un poco mas oscuro para destacar */
+    color: #212529 !important;
+}
+
+/* --- RESUMEN (Separado) --- */
+.resumen-container {
+    width: 100%;
+    margin-top: 15px;
+    overflow: hidden;
+}
+.resumen-col { width: 48%; }
+.resumen-col.izq { float: left; margin-right: 2%; }
+.resumen-col.der { float: right; margin-left: 2%; }
+
+.tabla-resumen {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 7pt;
+    border: 1px solid #dee2e6;
+}
+/* Header Claro Resumen */
+.tabla-resumen th {
+    background-color: #e9ecef; /* Match solicitado */
+    color: #495057;
+    padding: 6px;
+    text-align: left;
+    font-size: 7pt;
+    text-transform: uppercase;
+    font-weight: bold;
+    border: 1px solid #ced4da;
+}
+.tabla-resumen td {
+    padding: 4px 6px;
+    border-bottom: 1px solid #f1f3f5;
+    background-color: #fff;
+    color: #495057;
+}
+.tabla-resumen td.numero {
+    text-align: right;
+    font-weight: bold;
+    color: #212529;
+}
+/* Subtotales */
+.tabla-resumen .total td {
+    background-color: #f8f9fa;
+    font-weight: bold;
+    border-top: 1px solid #dee2e6;
+}
+/* Total Descuentos Highlight */
+.tabla-resumen .total-destacado td {
+    background-color: #e9ecef;
+    color: #212529;
+    font-weight: bold;
+    border-top: 1px solid #ced4da;
+    border-bottom: 2px solid #fff; /* Separador visual */
+}
+/* Marcadores Distintivos (Texto Limpio) */
+.fixed-marker {
+    display: inline-block;
+    font-size: 7pt; /* Un poco mas grande para que se note al ser solo texto */
+    font-weight: bold;
+    font-style: italic; /* Solicitado */
+    margin-right: 3px;
+    vertical-align: middle;
+    border: none;
+    padding: 0;
+}
+.marker-f {
+    color: #212529; /* Negro oscuro */
+}
+.marker-p {
+    color: #007bff; /* Azul Institucional */
+}
+
+/* Gran Total Final - Unificado (Etiqueta + Valor) */
+.tabla-resumen .total-final td {
+    background-color: #e9ecef; /* Fondo unificado */
+    color: #212529;
+    font-weight: bold; /* Bold para ambos */
+    font-size: 8pt;
+    padding: 6px;
+    border-top: 2px solid #ced4da; /* Separación visual superior */
+    border-bottom: 2px solid #ced4da;
+}
+.tabla-resumen .total-final td.final {
+    font-size: 9pt; /* El número un poco más grande */
+    text-align: right;
+}
+.tabla-resumen { margin-bottom: 0; }
