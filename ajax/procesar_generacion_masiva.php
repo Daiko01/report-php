@@ -127,99 +127,11 @@ try {
         unset($contrato);
 
         foreach ($contratos as $contrato) {
-            // 4. Calcular Días Trabajados (Lógica 30 días comercial)
-            $dias_trabajados = 30;
+            // 4. Calcular Días Trabajados (Delegado al Servicio)
+            $dias_trabajados = $calculoService->calcularDiasTrabajados($contrato['fecha_inicio'], $contrato['fecha_termino'] ?? null, $mes, $ano);
 
-            $inicio_contrato = strtotime($contrato['fecha_inicio']);
-            $fin_contrato = $contrato['fecha_termino'] ? strtotime($contrato['fecha_termino']) : null;
-            $inicio_mes_ts = strtotime($primer_dia);
-            $fin_mes_ts = strtotime($ultimo_dia);
-
-            // Caso 1: Contrato empieza este mes
-            if ($inicio_contrato >= $inicio_mes_ts) {
-                // Dias = 30 - (dia_inicio) + 1
-                $dia_inicio = (int)date('j', $inicio_contrato);
-
-                // Excepción febrero: Si empieza el 28/29 de Feb, el cálculo 30 - dia + 1 puede dar problemas.
-                // La norma general comercial es: Si labora mes completo = 30.
-                // Si ingresa después del 1, se pagan los días efectivos.
-                // Simplificación: usaremos la diferencia de días + 1, ajustado a 30 si es mes completo.
-                // Pero comercialmente: 30 - dia + 1 es el estándar.
-                // Si entra el 31, se paga (30-31+1) = 0? No, se paga 1 día (o 0 si 31 no cuenta).
-                // Ajuste simple: Calcular días reales, y si es todo el mes -> 30.
-
-                // Usemos date_diff para ser exactos en días calendario y luego topar a 30?
-                // Mejor, lógica simple solicitada: "asumiendo 30 días trabajados por defecto".
-                // Solo ajustamos si entra o sale.
-
-                $dias_trabajados = 30 - $dia_inicio + 1;
-                // Si entra el 31, da 0?
-                if ($dias_trabajados < 0) $dias_trabajados = 0; // Por seguridad
-            }
-
-            // Caso 2: Contrato termina este mes
-            if ($fin_contrato && $fin_contrato <= $fin_mes_ts) {
-                $dia_fin = (int)date('j', $fin_contrato);
-                if ($inicio_contrato >= $inicio_mes_ts) {
-                    $datediff = $fin_contrato - $inicio_contrato;
-                    $dias_trabajados = round($datediff / (60 * 60 * 24)) + 1;
-                } else {
-                    $dias_trabajados = $dia_fin;
-                    // Si termina el 31, se considera mes completo (30).
-                    if ($dia_fin == 31) $dias_trabajados = 30;
-                }
-            }
-
-            // --- LOGICA LICENCIAS MÉDICAS ---
-            // Calcular días de licencia que caen dentro del periodo activo del contrato en este mes.
-            $stmt_lic_check = $pdo->prepare("SELECT fecha_inicio, fecha_fin FROM trabajador_licencias WHERE trabajador_id = ? AND fecha_inicio <= ? AND fecha_fin >= ?");
-            // Buscamos licencias que intercepten con el mes (la intersección fina la hacemos en PHP)
-            $stmt_lic_check->execute([$contrato['trabajador_id'], $ultimo_dia, $primer_dia]);
-            $licencias_encontradas = $stmt_lic_check->fetchAll(PDO::FETCH_ASSOC);
-
-            $dias_descuento_licencia = 0;
-            // Definir el rango efectivo del contrato en este mes para descontar licencias válido
-            $inicio_efectivo = ($inicio_contrato > $inicio_mes_ts) ? $inicio_contrato : $inicio_mes_ts;
-            $fin_efectivo = ($fin_contrato && $fin_contrato < $fin_mes_ts) ? $fin_contrato : $fin_mes_ts;
-
-            foreach ($licencias_encontradas as $lic) {
-                $l_ini = strtotime($lic['fecha_inicio']);
-                $l_fin = strtotime($lic['fecha_fin']);
-
-                // Intersección: Licencia vs (Contrato & Mes)
-                $overlap_start = max($l_ini, $inicio_efectivo);
-                $overlap_end = min($l_fin, $fin_efectivo);
-
-                if ($overlap_start <= $overlap_end) {
-                    // Contar días uno a uno para aplicar lógica 30 días
-                    // Lógica: No contar el día 31.
-
-                    $current = $overlap_start;
-                    while ($current <= $overlap_end) {
-                        $dia_numero = (int)date('j', $current);
-
-                        // Si es día 31, LO IGNORAMOS para el descuento
-                        if ($dia_numero == 31) {
-                            $current = strtotime('+1 day', $current);
-                            continue;
-                        }
-
-                        $dias_descuento_licencia++;
-                        $current = strtotime('+1 day', $current);
-                    }
-                }
-            }
-
-            // AJUSTE FEBRERO MES COMPLETO
-            // Si es Febrero y la licencia cubrió todo el mes calendario (28 o 29), el descuento debe ser 30.
-            if ($mes == 2) {
-                $dias_mes_feb = (int)date('t', strtotime("$ano-02-01"));
-                // Si el descuento calculado (sin ajustes raros) es igual a los días del mes, 
-                // significa que estuvo enfermo todo el mes.
-                if ($dias_descuento_licencia == $dias_mes_feb) {
-                    $dias_descuento_licencia = 30;
-                }
-            }
+            // Calcular días de descuento por licencias
+            $dias_descuento_licencia = $calculoService->calcularDiasLicencia($contrato['trabajador_id'], $contrato['fecha_inicio'], $contrato['fecha_termino'] ?? null, $mes, $ano);
 
             // Aplicar descuento
             $dias_trabajados = $dias_trabajados - $dias_descuento_licencia;
@@ -228,26 +140,13 @@ try {
             if ($dias_trabajados > 30) $dias_trabajados = 30;
             if ($dias_trabajados < 0) $dias_trabajados = 0;
 
-            // PRORRATEO SUELDO (Si días < 30 y no es porque entró o salió, o sí? 
-            // Si tiene licencia, se paga proporcional.
-            // Si dias_trabajados < 30, prorrateamos el sueldo base.
-            // Guardamos original para snapshot (SIS).
+            // PRORRATEO SUELDO (Delegado al Servicio)
             $sueldo_contractual_completo = (int)$contrato['sueldo_imponible'];
+            $contrato['sueldo_imponible'] = $calculoService->calcularProporcional($sueldo_contractual_completo, $dias_trabajados);
 
-            if ($dias_trabajados < 30) {
-                // Cálculo proporcional
-                // Si dias es 0, sueldo es 0.
-                if ($dias_trabajados == 0) {
-                    $contrato['sueldo_imponible'] = 0;
-                    $contrato['bonos_imponibles'] = 0;
-                } else {
-                    $contrato['sueldo_imponible'] = round(($sueldo_contractual_completo / 30) * $dias_trabajados);
-                    // Bonos también? Asumimos que sí, son imponibles mensuales. 
-                    // Si son tratos (no fijos) esto podría ser error, pero es generación masiva estándar.
-                    if (isset($contrato['bonos_imponibles']) && $contrato['bonos_imponibles'] > 0) {
-                        $contrato['bonos_imponibles'] = round(($contrato['bonos_imponibles'] / 30) * $dias_trabajados);
-                    }
-                }
+            // Bonos también? Asumimos que sí, son imponibles mensuales. 
+            if (isset($contrato['bonos_imponibles']) && $contrato['bonos_imponibles'] > 0) {
+                $contrato['bonos_imponibles'] = $calculoService->calcularProporcional($contrato['bonos_imponibles'], $dias_trabajados);
             }
 
             // 5. Buscar Aporte Externo

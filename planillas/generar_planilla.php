@@ -94,23 +94,20 @@ try {
 
     foreach ($contratos_vigentes as $c) {
 
-        // 7.1. Lógica de Días
-        $fecha_inicio_contrato = strtotime($c['fecha_inicio']);
-        $fecha_inicio_mes = strtotime($primer_dia);
-        $fecha_fin_mes = strtotime($ultimo_dia);
-        $fecha_fin_real = null;
-        if ($c['esta_finiquitado']) $fecha_fin_real = strtotime($c['fecha_finiquito']);
-        elseif ($c['fecha_termino']) $fecha_fin_real = strtotime($c['fecha_termino']);
+        // 7.1. Lógica de Días (Refactorizado con Service)
+        $fecha_fin_efectiva = ($c['esta_finiquitado'] ?? false) ? $c['fecha_finiquito'] : $c['fecha_termino'];
 
-        $dia_inicio = max($fecha_inicio_contrato, $fecha_inicio_mes);
-        $dia_fin = $fecha_fin_real ? min($fecha_fin_real, $fecha_fin_mes) : $fecha_fin_mes;
+        $dias_trabajados_bruto = $calculoService->calcularDiasTrabajados($c['fecha_inicio'], $fecha_fin_efectiva, $mes, $ano);
 
-        $dias_trabajados = 0;
-        if ($dia_fin >= $dia_inicio) $dias_trabajados = (int)round(($dia_fin - $dia_inicio) / (60 * 60 * 24)) + 1;
-        if ($dias_trabajados > 30) $dias_trabajados = 30;
+        // Calcular Licencias
+        $dias_licencia = $calculoService->calcularDiasLicencia($c['trabajador_id'], $c['fecha_inicio'], $fecha_fin_efectiva, $mes, $ano);
+
+        // Días efectivos = Brutos - Licencias
+        $dias_trabajados = max(0, $dias_trabajados_bruto - $dias_licencia);
+
         if ($dias_trabajados <= 0) continue;
 
-        $sueldo_proporcional = ($dias_trabajados == 30) ? $c['sueldo_imponible'] : round(($c['sueldo_imponible'] / 30) * $dias_trabajados);
+        $sueldo_proporcional = $calculoService->calcularProporcional($c['sueldo_imponible'], $dias_trabajados);
 
         // --- 7.2. MATCH DE APORTES ---
 

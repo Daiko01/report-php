@@ -16,114 +16,21 @@ $msg = '';
 $msg_type = '';
 
 // =================================================================================
-// 1. PROCESO DE GUARDADO (POST) - Mantenido EXACTO de tu código
+// 1. PROCESO DE GUARDADO (POST)
 // =================================================================================
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $bus_id = (int)$_POST['bus_id'];
-    $mes = (int)$_POST['mes'];
-    $anio = (int)$_POST['anio'];
+    require_once dirname(__DIR__) . '/app/includes/procesar_cierre.php';
 
-    // Inputs Manuales
-    $subsidio_operacional = (int)($_POST['subsidio_operacional'] ?? 0);
-    $devolucion_minutos = (int)($_POST['devolucion_minutos'] ?? 0);
-    $otros_ingresos_1 = (int)($_POST['otros_ingresos_1'] ?? 0);
-    $otros_ingresos_2 = (int)($_POST['otros_ingresos_2'] ?? 0);
-    $otros_ingresos_3 = (int)($_POST['otros_ingresos_3'] ?? 0);
+    $resultado = procesar_grabado_cierre($pdo, $_POST);
 
-    $anticipo = (int)($_POST['anticipo'] ?? 0);
-    $asignacion_familiar = (int)($_POST['asignacion_familiar'] ?? 0);
-    $pago_minutos = (int)($_POST['pago_minutos'] ?? 0);
-    $saldo_anterior = (int)($_POST['saldo_anterior'] ?? 0);
-    $ayuda_mutua = (int)($_POST['ayuda_mutua'] ?? 0);
-    $servicio_grua = (int)($_POST['servicio_grua'] ?? 0);
-    $poliza_seguro = (int)($_POST['poliza_seguro'] ?? 0);
+    $msg = $resultado['message'];
+    $msg_type = $resultado['type'];
 
-    $valor_vueltas_directo = (int)($_POST['valor_vueltas_directo'] ?? 0);
-    $valor_vueltas_local = (int)($_POST['valor_vueltas_local'] ?? 0);
-    $cant_vueltas_directo = (int)($_POST['cant_vueltas_directo'] ?? 0);
-    $cant_vueltas_local = (int)($_POST['cant_vueltas_local'] ?? 0);
-
-    // Campos calculados
-    $monto_leyes_sociales = (int)($_POST['monto_leyes_sociales'] ?? 0);
-    $monto_administracion_aplicado = (int)($_POST['monto_administracion_aplicado'] ?? 0);
-
-    try {
-        $stmt = $pdo->prepare("INSERT INTO cierres_maquinas 
-            (bus_id, mes, anio, subsidio_operacional, devolucion_minutos, otros_ingresos_1, otros_ingresos_2, otros_ingresos_3,
-             anticipo, asignacion_familiar, pago_minutos, saldo_anterior, ayuda_mutua, servicio_grua, poliza_seguro,
-             valor_vueltas_directo, valor_vueltas_local, cant_vueltas_directo, cant_vueltas_local,
-             monto_leyes_sociales, monto_administracion_aplicado,
-             derechos_loza, seguro_cartolas, gps, boleta_garantia, boleta_garantia_dos)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ON DUPLICATE KEY UPDATE
-             subsidio_operacional = VALUES(subsidio_operacional),
-             devolucion_minutos = VALUES(devolucion_minutos),
-             otros_ingresos_1 = VALUES(otros_ingresos_1),
-             otros_ingresos_2 = VALUES(otros_ingresos_2),
-             otros_ingresos_3 = VALUES(otros_ingresos_3),
-             anticipo = VALUES(anticipo),
-             asignacion_familiar = VALUES(asignacion_familiar),
-             pago_minutos = VALUES(pago_minutos),
-             saldo_anterior = VALUES(saldo_anterior),
-             ayuda_mutua = VALUES(ayuda_mutua),
-             servicio_grua = VALUES(servicio_grua),
-             poliza_seguro = VALUES(poliza_seguro),
-             valor_vueltas_directo = VALUES(valor_vueltas_directo),
-             valor_vueltas_local = VALUES(valor_vueltas_local),
-             cant_vueltas_directo = VALUES(cant_vueltas_directo),
-             cant_vueltas_local = VALUES(cant_vueltas_local),
-             monto_leyes_sociales = VALUES(monto_leyes_sociales),
-             monto_administracion_aplicado = VALUES(monto_administracion_aplicado),
-             derechos_loza = VALUES(derechos_loza),
-             seguro_cartolas = VALUES(seguro_cartolas),
-             gps = VALUES(gps),
-             boleta_garantia = VALUES(boleta_garantia),
-             boleta_garantia_dos = VALUES(boleta_garantia_dos)
-        ");
-
-        $derechos_loza = (int)($_POST['derechos_loza'] ?? 0);
-        $seguro_cartolas = (int)($_POST['seguro_cartolas'] ?? 0);
-        $gps = (int)($_POST['gps'] ?? 0);
-        $boleta_garantia = (int)($_POST['boleta_garantia'] ?? 0);
-        $boleta_garantia_dos = (int)($_POST['boleta_garantia_dos'] ?? 0);
-
-        $stmt->execute([
-            $bus_id,
-            $mes,
-            $anio,
-            $subsidio_operacional,
-            $devolucion_minutos,
-            $otros_ingresos_1,
-            $otros_ingresos_2,
-            $otros_ingresos_3,
-            $anticipo,
-            $asignacion_familiar,
-            $pago_minutos,
-            $saldo_anterior,
-            $ayuda_mutua,
-            $servicio_grua,
-            $poliza_seguro,
-            $valor_vueltas_directo,
-            $valor_vueltas_local,
-            $cant_vueltas_directo,
-            $cant_vueltas_local,
-            $monto_leyes_sociales,
-            $monto_administracion_aplicado,
-            $derechos_loza,
-            $seguro_cartolas,
-            $gps,
-            $boleta_garantia,
-            $boleta_garantia_dos
-        ]);
-        $msg = "Cierre guardado correctamente.";
-        $msg_type = "success";
-
-        // Mantener variables para la vista
-        $mes_sel = $mes;
-        $anio_sel = $anio;
-    } catch (Exception $e) {
-        $msg = "Error al guardar: " . $e->getMessage();
-        $msg_type = "danger";
+    if ($resultado['success']) {
+        $mes_sel = $resultado['mes'];
+        $anio_sel = $resultado['anio'];
+        // $bus_id ya viene del POST para la vista
+        $bus_id = (int)$_POST['bus_id'];
     }
 }
 

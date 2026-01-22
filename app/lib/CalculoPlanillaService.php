@@ -277,4 +277,129 @@ class CalculoPlanillaService
             'tramo_asignacion_familiar' => $tramo_letra_aplicada
         ];
     }
+
+    /**
+     * Calcula los días trabajados en el mes bajo la lógica de 30 días comerciales.
+     * Ajusta si el contrato inicia o termina dentro del mes.
+     */
+    public function calcularDiasTrabajados($fecha_inicio_contrato, $fecha_termino_contrato, $mes, $ano)
+    {
+        $dias_trabajados = 30;
+        $primer_dia_mes = sprintf("%04d-%02d-01", $ano, $mes);
+        $ultimo_dia_mes = date("Y-m-t", strtotime($primer_dia_mes));
+
+        $inicio_ts = strtotime($fecha_inicio_contrato);
+        $fin_ts = $fecha_termino_contrato ? strtotime($fecha_termino_contrato) : null;
+        $inicio_mes_ts = strtotime($primer_dia_mes);
+        $fin_mes_ts = strtotime($ultimo_dia_mes);
+
+        // Caso 1: Contrato inicia este mes
+        if ($inicio_ts >= $inicio_mes_ts) {
+            $dia_inicio = (int)date('j', $inicio_ts);
+            // Lógica comercial: 30 - dia_inicio + 1
+            $dias_trabajados = 30 - $dia_inicio + 1;
+        }
+
+        // Caso 2: Contrato termina este mes
+        if ($fin_ts && $fin_ts <= $fin_mes_ts) {
+            $dia_fin = (int)date('j', $fin_ts);
+            // Si inició antes de este mes, contamos desde el 1 hasta el fin
+            if ($inicio_ts < $inicio_mes_ts) {
+                // Si termina el 31, cuenta como 30
+                if ($dia_fin == 31) {
+                    $dias_trabajados = 30;
+                } else {
+                    $dias_trabajados = $dia_fin;
+                }
+            } else {
+                // Si inició Y terminó en el mismo mes
+                // Diferencia días reales + 1
+                $diff = $fin_ts - $inicio_ts;
+                $dias_reales = round($diff / (60 * 60 * 24)) + 1;
+                $dias_trabajados = $dias_reales;
+            }
+        }
+
+        // Ajuste febrero: Si es mes completo (inicia antes, termina despues), asegurar 30.
+        // Ya está inicializado en 30, pero si febrero tiene 28/29, la lógica comercial mantiene 30 si trabajó todo el mes.
+
+        // Return 
+        return max(0, min(30, $dias_trabajados));
+    }
+
+    /**
+     * Calcula los días de licencia médica que caen dentro del periodo activo (contrato) en el mes.
+     * Excluye el día 31 de las licencias para ser consistente con la norma de 30 días.
+     */
+    public function calcularDiasLicencia($trabajador_id, $fecha_inicio_contrato, $fecha_termino_contrato, $mes, $ano)
+    {
+        $primer_dia = sprintf("%04d-%02d-01", $ano, $mes);
+        $ultimo_dia = date("Y-m-t", strtotime($primer_dia));
+
+        $inicio_mes_ts = strtotime($primer_dia);
+        $fin_mes_ts = strtotime($ultimo_dia);
+
+        $inicio_contrato_ts = strtotime($fecha_inicio_contrato);
+        $fin_contrato_ts = $fecha_termino_contrato ? strtotime($fecha_termino_contrato) : null;
+
+        // Definir el rango efectivo donde el trabajador "debería" estar trabajando
+        $inicio_efectivo = max($inicio_contrato_ts, $inicio_mes_ts);
+        $fin_efectivo = ($fin_contrato_ts && $fin_contrato_ts < $fin_mes_ts) ? $fin_contrato_ts : $fin_mes_ts;
+
+        if ($inicio_efectivo > $fin_efectivo) return 0;
+
+        // Buscar licencias que intercepten con el mes
+        $stmt = $this->pdo->prepare("
+            SELECT fecha_inicio, fecha_fin 
+            FROM trabajador_licencias 
+            WHERE trabajador_id = ? 
+            AND fecha_inicio <= ? 
+            AND fecha_fin >= ?
+        ");
+        $stmt->execute([$trabajador_id, $ultimo_dia, $primer_dia]);
+        $licencias = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $dias_descuento = 0;
+
+        foreach ($licencias as $lic) {
+            $l_ini = strtotime($lic['fecha_inicio']);
+            $l_fin = strtotime($lic['fecha_fin']);
+
+            // Intersección: Licencia vs Rango Efectivo
+            $overlap_start = max($l_ini, $inicio_efectivo);
+            $overlap_end = min($l_fin, $fin_efectivo);
+
+            if ($overlap_start <= $overlap_end) {
+                $current = $overlap_start;
+                while ($current <= $overlap_end) {
+                    $dia_numero = (int)date('j', $current);
+                    if ($dia_numero != 31) {
+                        $dias_descuento++;
+                    }
+                    $current = strtotime('+1 day', $current);
+                }
+            }
+        }
+
+        // Ajuste Febrero mes completo
+        if ($mes == 2) {
+            $dias_mes_feb = (int)date('t', $inicio_mes_ts);
+            if ($dias_descuento == $dias_mes_feb) {
+                $dias_descuento = 30;
+            }
+        }
+
+        return $dias_descuento;
+    }
+
+    /**
+     * Calcula sueldo proporcional en base a días trabajados (base 30).
+     */
+    public function calcularProporcional($monto_base, $dias_trabajados)
+    {
+        if ($dias_trabajados >= 30) return $monto_base;
+        if ($dias_trabajados <= 0) return 0;
+
+        return round(($monto_base / 30) * $dias_trabajados);
+    }
 }

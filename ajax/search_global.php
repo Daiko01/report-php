@@ -1,6 +1,7 @@
 <?php
 // ajax/search_global.php
 require_once '../app/core/bootstrap.php';
+require_once '../app/includes/session_check.php';
 
 header('Content-Type: application/json');
 
