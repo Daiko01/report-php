@@ -63,25 +63,36 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
 <style>
     /* Estilos personalizados para la barra de acciones */
     #massActionsToolbar {
-        opacity: 0;
-        transition: opacity 0.3s ease;
-        pointer-events: none;
+        display: none;
+        /* Hidden from layout by default */
         background-color: #e3e6f0;
         border-bottom: 2px solid #4e73df;
         padding: 10px 20px;
         position: sticky;
         top: 0;
         z-index: 10;
-        display: flex;
         align-items: center;
         gap: 10px;
         margin-bottom: 15px;
         border-radius: 5px;
+        animation: slideDown 0.3s ease-out;
     }
 
     #massActionsToolbar.visible {
-        opacity: 1;
-        pointer-events: auto;
+        display: flex;
+        /* Show layout when visible */
+    }
+
+    @keyframes slideDown {
+        from {
+            transform: translateY(-20px);
+            opacity: 0;
+        }
+
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
     }
 
     .filter-section {
@@ -97,48 +108,57 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
     <h1 class="h3 mb-4 text-gray-800">Gestión de Cierre Mensual</h1>
 
     <!-- SECTION: Filtros Externos -->
-    <div class="filter-section shadow-sm">
-        <h6 class="font-weight-bold text-primary mb-3"><i class="fas fa-filter"></i> Filtros de Búsqueda</h6>
-        <div class="row g-2">
-            <div class="col-md-3">
-                <label class="small font-weight-bold">Empleador</label>
-                <select id="filterEmpleador" class="form-select form-select-sm">
-                    <option value="">Todos los Empleadores</option>
-                    <?php foreach ($empleadores_filtro as $emp): ?>
-                        <option value="<?= htmlspecialchars($emp['nombre']) ?>"><?= htmlspecialchars($emp['nombre']) ?></option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-            <div class="col-md-2">
-                <label class="small font-weight-bold">Mes</label>
-                <select id="filterMes" class="form-select form-select-sm">
-                    <option value="">Todos</option>
-                    <?php foreach ($meses_nombres as $num => $nombre): ?>
-                        <option value="<?= sprintf("%02d", $num) ?>"><?= $nombre ?></option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-            <div class="col-md-2">
-                <label class="small font-weight-bold">Año</label>
-                <select id="filterAno" class="form-select form-select-sm">
-                    <option value="">Todos</option>
-                    <?php foreach ($anos_filtro as $y): ?>
-                        <option value="<?= $y ?>"><?= $y ?></option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-            <div class="col-md-2">
-                <label class="small font-weight-bold">Estado</label>
-                <select id="filterEstado" class="form-select form-select-sm">
-                    <option value="">Todos</option>
-                    <option value="Abierto">Abierto</option>
-                    <option value="Cerrado">Cerrado</option>
-                </select>
-            </div>
-            <div class="col-md-3 d-flex align-items-end justify-content-end">
-                <button class="btn btn-sm btn-secondary" onclick="resetFilters()">
-                    <i class="fas fa-sync-alt"></i> Limpiar Filtros
-                </button>
+    <!-- SECTION: Filtros Externos (NUEVO) -->
+    <div class="card shadow mb-3">
+        <div class="card-header py-3 bg-white d-flex justify-content-between align-items-center">
+            <h6 class="m-0 fw-bold text-primary"><i class="fas fa-calendar-check me-1"></i> Filtros de Planillas</h6>
+            <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#filterPanel">
+                <i class="fas fa-filter"></i> Filtros
+            </button>
+        </div>
+
+        <div class="collapse border-top bg-light p-3" id="filterPanel">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold text-muted">Empleador:</label>
+                    <select id="filterEmpleador" class="form-select form-select-sm">
+                        <option value="">Todos los Empleadores</option>
+                        <?php foreach ($empleadores_filtro as $emp): ?>
+                            <option value="<?= htmlspecialchars($emp['nombre']) ?>"><?= htmlspecialchars($emp['nombre']) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small fw-bold text-muted">Mes:</label>
+                    <select id="filterMes" class="form-select form-select-sm">
+                        <option value="">Todos</option>
+                        <?php foreach ($meses_nombres as $num => $nombre): ?>
+                            <option value="<?= sprintf("%02d", $num) ?>"><?= $nombre ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small fw-bold text-muted">Año:</label>
+                    <select id="filterAno" class="form-select form-select-sm">
+                        <option value="">Todos</option>
+                        <?php foreach ($anos_filtro as $y): ?>
+                            <option value="<?= $y ?>"><?= $y ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small fw-bold text-muted">Estado:</label>
+                    <select id="filterEstado" class="form-select form-select-sm">
+                        <option value="">Todos</option>
+                        <option value="Abierto">Abierto</option>
+                        <option value="Cerrado">Cerrado</option>
+                    </select>
+                </div>
+                <div class="col-md-3 d-flex align-items-end justify-content-end">
+                    <button class="btn btn-sm btn-outline-secondary w-100" id="btnClearFilters">
+                        <i class="fas fa-times me-1"></i> Limpiar
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -221,6 +241,8 @@ require_once dirname(__DIR__) . '/app/includes/footer.php';
             order: [
                 [2, 'desc']
             ], // Ordenar por periodo
+            // Updated DOM
+            dom: '<"d-flex justify-content-between align-items-center mb-3"f<"d-flex gap-2"l>>rt<"d-flex justify-content-between align-items-center mt-3"ip>',
             columnDefs: [{
                     orderable: false,
                     targets: [0, 5]
@@ -229,7 +251,12 @@ require_once dirname(__DIR__) . '/app/includes/footer.php';
                     visible: false,
                     targets: [3]
                 } // Ocultar columna Año (usada para filtro)
-            ]
+            ],
+            initComplete: function() {
+                // Styling Search
+                $('.dataTables_filter input').addClass('form-control shadow-sm').attr('placeholder', 'Buscar planilla...');
+                $('.dataTables_length select').addClass('form-select shadow-sm');
+            }
         });
 
         // --- 2. LOGICA DE FILTROS EXTERNOS ---
@@ -260,12 +287,18 @@ require_once dirname(__DIR__) . '/app/includes/footer.php';
             table.column(4).search(val ? '^' + val + '$' : '', true, false).draw();
         });
 
-        window.resetFilters = function() {
+        $('#btnClearFilters').click(function() {
             $('#filterEmpleador').val('').trigger('change');
             $('#filterMes').val('').trigger('change');
             $('#filterAno').val('').trigger('change');
             $('#filterEstado').val('').trigger('change');
-        };
+
+            // Clear Global Search Input
+            $('.dataTables_filter input').val('');
+
+            // Reset DataTable Search
+            table.search('').columns().search('').draw();
+        });
 
         // --- 3. SELECCIÓN MASIVA ---
         function updateToolbar() {

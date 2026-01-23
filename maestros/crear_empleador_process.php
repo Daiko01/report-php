@@ -31,34 +31,26 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     }
 
     try {
-        // 3. COMPATIBILIDAD LEGADA: Obtener el nombre del sistema (Ej: "BUSES BP")
-        // Esto asegura que la columna 'empresa_sistema' (texto) se llene correctamente para reportes viejos.
-        $stmt_sys = $pdo->prepare("SELECT nombre FROM empresas_sistema WHERE id = ?");
-        $stmt_sys->execute([$empresa_sistema_id]);
-        $nombre_sistema_texto = $stmt_sys->fetchColumn();
+        // 3. COMPATIBILIDAD LEGADA: Eliminado fetch de nombre texto.
+        // La identidad se maneja exclusivamente por ID ahora.
 
-        if (!$nombre_sistema_texto) {
-            throw new Exception("Error interno: Identidad de sistema no encontrada.");
-        }
-
-        // 4. INSERT FINAL: Guardamos ID para lógica nueva y TEXTO para reportes antiguos
+        // 4. INSERT FINAL: Solo ID
         $sql = "INSERT INTO empleadores 
-                (rut, nombre, empresa_sistema, empresa_sistema_id, caja_compensacion_id, mutual_seguridad_id, tasa_mutual_decimal) 
+                (rut, nombre, empresa_sistema_id, caja_compensacion_id, mutual_seguridad_id, tasa_mutual_decimal) 
                 VALUES 
-                (:rut, :nombre, :sis_nombre, :sis_id, :caja, :mutual, :tasa)";
+                (:rut, :nombre, :sis_id, :caja, :mutual, :tasa)";
 
         $stmt = $pdo->prepare($sql);
         $stmt->execute([
             ':rut' => $rut_formateado,
             ':nombre' => $nombre,
-            ':sis_nombre' => $nombre_sistema_texto, // Campo varchar
             ':sis_id' => $empresa_sistema_id,       // Campo int
             ':caja' => $caja_id,
             ':mutual' => $mutual_id,
             ':tasa' => $tasa_mutual
         ]);
 
-        $_SESSION['flash_message'] = ['type' => 'success', 'message' => 'Empleador creado exitosamente para ' . $nombre_sistema_texto];
+        $_SESSION['flash_message'] = ['type' => 'success', 'message' => 'Empleador creado exitosamente.'];
         header('Location: gestionar_empleadores.php');
         exit;
     } catch (Exception $e) {

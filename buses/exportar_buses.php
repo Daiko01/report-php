@@ -16,9 +16,9 @@ $sql = "SELECT b.numero_maquina, b.patente,
                u.numero as unidad, 
                COALESCE(t.nombre, '---') as terminal
         FROM buses b
-        JOIN unidades u ON b.unidad_id = u.id
+        JOIN terminales t ON b.terminal_id = t.id
+        JOIN unidades u ON t.unidad_id = u.id
         LEFT JOIN empleadores e ON b.empleador_id = e.id
-        LEFT JOIN terminales t ON b.terminal_id = t.id
         WHERE u.empresa_asociada_id = :id_sistema
         ORDER BY CAST(b.numero_maquina AS UNSIGNED) ASC";
 

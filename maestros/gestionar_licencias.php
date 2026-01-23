@@ -164,39 +164,28 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
     </div>
 
     <!-- Sección de Filtros Externa -->
-    <div class="card shadow mb-4 border-bottom-primary">
-        <div class="card-header py-3 bg-gradient-white" data-bs-toggle="collapse" data-bs-target="#filterCard" style="cursor:pointer;">
-            <h6 class="m-0 font-weight-bold text-primary">
-                <i class="fas fa-search me-1"></i> Filtros de Búsqueda Avanzada
-                <i class="fas fa-chevron-down float-end transition-icon"></i>
-            </h6>
+    <!-- Sección de Filtros Externa (NUEVA) -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3 bg-white d-flex justify-content-between align-items-center">
+            <h6 class="m-0 fw-bold text-primary"><i class="fas fa-file-medical me-1"></i> Licencias Registradas</h6>
+
+            <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#filterPanel">
+                <i class="fas fa-filter"></i> Filtros
+            </button>
         </div>
-        <div class="collapse show" id="filterCard">
-            <div class="card-body bg-light">
-                <div class="row g-3">
-                    <div class="col-md-2">
-                        <label class="small fw-bold text-gray-600">Folio</label>
-                        <input type="text" class="form-control form-control-sm border-left-primary" id="filterFolio" placeholder="Buscar Folio...">
-                    </div>
-                    <div class="col-md-3">
-                        <label class="small fw-bold text-gray-600">Trabajador</label>
-                        <input type="text" class="form-control form-control-sm" id="filterTrabajador" placeholder="Nombre...">
-                    </div>
-                    <div class="col-md-2">
-                        <label class="small fw-bold text-gray-600">RUT</label>
-                        <input type="text" class="form-control form-control-sm" id="filterRut" placeholder="RUT...">
-                    </div>
-                    <div class="col-md-3">
-                        <label class="small fw-bold text-gray-600">Tipo Licencia</label>
-                        <select class="form-select form-select-sm" id="filterTipo">
-                            <option value="">Todas</option>
-                        </select>
-                    </div>
-                    <div class="col-md-2 d-flex align-items-end">
-                        <button class="btn btn-sm btn-secondary w-100 shadow-sm" id="btnClearFilters">
-                            <i class="fas fa-eraser"></i> Limpiar
-                        </button>
-                    </div>
+
+        <div class="collapse border-top bg-light p-3" id="filterPanel">
+            <div class="row g-3">
+                <div class="col-md-9">
+                    <label class="form-label small fw-bold text-muted">Tipo Licencia:</label>
+                    <select class="form-select form-select-sm" id="filterTipo" autocomplete="off">
+                        <option value="">Todas</option>
+                    </select>
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <button class="btn btn-sm btn-outline-secondary w-100" id="btnClearFilters">
+                        <i class="fas fa-times me-1"></i> Limpiar
+                    </button>
                 </div>
             </div>
         </div>
@@ -353,26 +342,34 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
             order: [
                 [4, "desc"]
             ], // Ordenar por fecha inicio desc
-            dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"i>>rt<"row"<"col-sm-12"p>>',
+            // Updated DOM
+            dom: '<"d-flex justify-content-between align-items-center mb-3"f<"d-flex gap-2"l>>rt<"d-flex justify-content-between align-items-center mt-3"ip>',
 
             initComplete: function() {
                 var api = this.api();
+
+                // Styling Search
+                $('.dataTables_filter input').addClass('form-control shadow-sm').attr('placeholder', 'Buscar licencia...');
+                $('.dataTables_length select').addClass('form-select shadow-sm');
 
                 // Helper populateSelect
                 function populateSelect(colIndex, selectId) {
                     var column = api.column(colIndex);
                     var select = $(selectId);
-                    column.data().unique().sort().each(function(d, j) {
-                        var cleanData = d;
-                        if (typeof d === 'string' && d.indexOf('<') !== -1) {
-                            cleanData = $('<div>').html(d).text().trim();
-                        }
-                        cleanData = (cleanData) ? String(cleanData).trim() : '';
 
-                        if (cleanData !== '' && !select.find('option[value="' + cleanData + '"]').length) {
-                            select.append('<option value="' + cleanData + '">' + cleanData + '</option>');
-                        }
-                    });
+                    if (select.children('option').length <= 1) {
+                        column.data().unique().sort().each(function(d, j) {
+                            var cleanData = d;
+                            if (typeof d === 'string' && d.indexOf('<') !== -1) {
+                                cleanData = $('<div>').html(d).text().trim();
+                            }
+                            cleanData = (cleanData) ? String(cleanData).trim() : '';
+
+                            if (cleanData !== '' && !select.find('option[value="' + cleanData + '"]').length) {
+                                select.append('<option value="' + cleanData + '">' + cleanData + '</option>');
+                            }
+                        });
+                    }
                 }
 
                 // Columna 3 es Tipo de Licencia
@@ -380,33 +377,33 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
             }
         });
 
-        // 1.1 Icono de Colapso
-        $('#filterCard').on('show.bs.collapse', function() {
-            $('.fa-chevron-down').css('transform', 'rotate(180deg)');
-        });
-        $('#filterCard').on('hide.bs.collapse', function() {
-            $('.fa-chevron-down').css('transform', 'rotate(0deg)');
-        });
+        // --- EXTERNAL FILTERS LOGIC ---
+
+        // Custom filtering function
+        $.fn.dataTable.ext.search.push(
+            function(settings, data, dataIndex) {
+                const fTipo = $('#filterTipo').val();
+                const cellTipo = data[3] || ""; // Col 3 is Tipo
+
+                if (fTipo && !cellTipo.includes(fTipo)) return false;
+
+                return true;
+            }
+        );
 
         // Bindings
-        $('#filterFolio').on('keyup change', function() {
-            table.column(0).search(this.value).draw();
-        }); // Col 0: Folio
-        $('#filterTrabajador').on('keyup change', function() {
-            table.column(1).search(this.value).draw();
-        }); // Col 1: Trabajador
-        $('#filterRut').on('keyup change', function() {
-            table.column(2).search(this.value).draw();
-        }); // Col 2: RUT
-
         $('#filterTipo').on('change', function() {
-            var val = $.fn.dataTable.util.escapeRegex($(this).val());
-            table.column(3).search(val ? '^' + val + '$' : '', true, false).draw();
+            table.draw();
         });
 
         $('#btnClearFilters').on('click', function() {
-            $('#filterFolio, #filterTrabajador, #filterRut, #filterTipo').val('');
-            table.columns().search('').draw();
+            $('#filterTipo').val('').trigger('change');
+
+            // Clear Global Search Input
+            $('.dataTables_filter input').val('');
+
+            // Reset DataTable Search (Global + Columns)
+            table.search('').columns().search('').draw();
         });
 
         // Inicializar Select2 con Fix de Modal

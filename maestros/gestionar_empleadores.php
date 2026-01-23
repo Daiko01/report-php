@@ -32,42 +32,34 @@ try {
         </a>
     </div>
 
-    <!-- Sección de Filtros Externa -->
-    <div class="card shadow mb-4 border-bottom-primary">
-        <div class="card-header py-3 bg-gradient-white" data-bs-toggle="collapse" data-bs-target="#filterCard" style="cursor:pointer;">
-            <h6 class="m-0 font-weight-bold text-primary">
-                <i class="fas fa-search me-1"></i> Filtros de Búsqueda Avanzada
-                <i class="fas fa-chevron-down float-end transition-icon"></i>
-            </h6>
+    <!-- Sección de Filtros Externa (NUEVA) -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3 bg-white d-flex justify-content-between align-items-center">
+            <h6 class="m-0 fw-bold text-primary"><i class="fas fa-building me-1"></i> Empleadores Registrados</h6>
+
+            <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#filterPanel">
+                <i class="fas fa-filter"></i> Filtros
+            </button>
         </div>
-        <div class="collapse show" id="filterCard">
-            <div class="card-body bg-light">
-                <div class="row g-3">
-                    <div class="col-md-3">
-                        <label class="small fw-bold text-gray-600">Nombre</label>
-                        <input type="text" class="form-control form-control-sm border-left-primary" id="filterNombre" placeholder="Buscar por Nombre...">
-                    </div>
-                    <div class="col-md-2">
-                        <label class="small fw-bold text-gray-600">RUT</label>
-                        <input type="text" class="form-control form-control-sm" id="filterRut" placeholder="Buscar por RUT...">
-                    </div>
-                    <div class="col-md-3">
-                        <label class="small fw-bold text-gray-600">Caja de Compensación</label>
-                        <select class="form-select form-select-sm" id="filterCaja">
-                            <option value="">Todas</option>
-                        </select>
-                    </div>
-                    <div class="col-md-3">
-                        <label class="small fw-bold text-gray-600">Mutual de Seguridad</label>
-                        <select class="form-select form-select-sm" id="filterMutual">
-                            <option value="">Todas</option>
-                        </select>
-                    </div>
-                    <div class="col-md-1 d-flex align-items-end">
-                        <button class="btn btn-sm btn-secondary w-100 shadow-sm" id="btnClearFilters">
-                            <i class="fas fa-eraser"></i>
-                        </button>
-                    </div>
+
+        <div class="collapse border-top bg-light p-3" id="filterPanel">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label small fw-bold text-muted">Caja de Compensación:</label>
+                    <select class="form-select form-select-sm" id="filterCaja" autocomplete="off">
+                        <option value="">Todas</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label small fw-bold text-muted">Mutual de Seguridad:</label>
+                    <select class="form-select form-select-sm" id="filterMutual" autocomplete="off">
+                        <option value="">Todas</option>
+                    </select>
+                </div>
+                <div class="col-md-4 d-flex align-items-end">
+                    <button class="btn btn-sm btn-outline-secondary w-100" id="btnClearFilters">
+                        <i class="fas fa-times me-1"></i> Limpiar
+                    </button>
                 </div>
             </div>
         </div>
@@ -132,29 +124,36 @@ require_once dirname(__DIR__) . '/app/includes/footer.php';
             responsive: true,
             orderCellsTop: true,
             fixedHeader: true,
-            dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"i>>rt<"row"<"col-sm-12"p>>', // Custom DOM
+            // Updated DOM
+            dom: '<"d-flex justify-content-between align-items-center mb-3"f<"d-flex gap-2"l>>rt<"d-flex justify-content-between align-items-center mt-3"ip>',
 
             initComplete: function() {
                 var api = this.api();
+
+                // Styling Search
+                $('.dataTables_filter input').addClass('form-control shadow-sm').attr('placeholder', 'Buscar empleador...');
+                $('.dataTables_length select').addClass('form-select shadow-sm');
 
                 // Helper para llenar selects
                 function populateSelect(colIndex, selectId) {
                     var column = api.column(colIndex);
                     var select = $(selectId);
 
-                    column.data().unique().sort().each(function(d, j) {
-                        var cleanData = d;
-                        // Si contiene tags HTML, extraer solo el texto
-                        if (typeof d === 'string' && d.indexOf('<') !== -1) {
-                            cleanData = $('<div>').html(d).text().trim();
-                        }
+                    if (select.children('option').length <= 1) {
+                        column.data().unique().sort().each(function(d, j) {
+                            var cleanData = d;
+                            // Si contiene tags HTML, extraer solo el texto
+                            if (typeof d === 'string' && d.indexOf('<') !== -1) {
+                                cleanData = $('<div>').html(d).text().trim();
+                            }
 
-                        cleanData = (cleanData) ? String(cleanData).trim() : '';
+                            cleanData = (cleanData) ? String(cleanData).trim() : '';
 
-                        if (cleanData !== '' && !select.find('option[value="' + cleanData + '"]').length) {
-                            select.append('<option value="' + cleanData + '">' + cleanData + '</option>');
-                        }
-                    });
+                            if (cleanData !== '' && !select.find('option[value="' + cleanData + '"]').length) {
+                                select.append('<option value="' + cleanData + '">' + cleanData + '</option>');
+                            }
+                        });
+                    }
                 }
 
                 // Llenar Selects Externos: Caja(2), Mutual(3)
@@ -163,39 +162,44 @@ require_once dirname(__DIR__) . '/app/includes/footer.php';
             }
         });
 
-        // 1.1 Icono de Colapso Dinámico
-        $('#filterCard').on('show.bs.collapse', function() {
-            $('.fa-chevron-down').css('transform', 'rotate(180deg)');
-        });
-        $('#filterCard').on('hide.bs.collapse', function() {
-            $('.fa-chevron-down').css('transform', 'rotate(0deg)');
-        });
+        // --- EXTERNAL FILTERS LOGIC ---
+
+        // Custom filtering function
+        $.fn.dataTable.ext.search.push(
+            function(settings, data, dataIndex) {
+                const fCaja = $('#filterCaja').val();
+                const fMutual = $('#filterMutual').val();
+
+                // Column indices:
+                // 2: Caja
+                // 3: Mutual
+
+                const cellCaja = data[2] || "";
+                const cellMutual = data[3] || "";
+
+                if (fCaja && !cellCaja.includes(fCaja)) return false;
+                if (fMutual && !cellMutual.includes(fMutual)) return false;
+
+                return true;
+            }
+        );
 
         // Binding de Eventos para Filtros Externos
-
-        // Texto
-        $('#filterNombre').on('keyup change', function() {
-            table.column(0).search(this.value).draw();
-        });
-        $('#filterRut').on('keyup change', function() {
-            table.column(1).search(this.value).draw();
+        $('#filterCaja, #filterMutual').on('change', function() {
+            table.draw();
         });
 
-        // Selects
-        function bindSelect(id, colIndex) {
-            $(id).on('change', function() {
-                var val = $.fn.dataTable.util.escapeRegex($(this).val());
-                table.column(colIndex).search(val ? '^' + val + '$' : '', true, false).draw();
-            });
-        }
-
-        bindSelect('#filterCaja', 2);
-        bindSelect('#filterMutual', 3);
 
         // Limpiar Filtros
         $('#btnClearFilters').on('click', function() {
-            $('#filterNombre, #filterRut, #filterCaja, #filterMutual').val('');
-            table.columns().search('').draw();
+            $('#filterCaja').val('').trigger('change');
+            $('#filterMutual').val('').trigger('change');
+
+            // Clear Global Search Input
+            $('.dataTables_filter input').val('');
+
+            // Reset DataTable Search (Global + Columns)
+            table.search('').columns().search('').draw();
         });
 
         // LÓGICA DE ELIMINACIÓN CON SWEETALERT

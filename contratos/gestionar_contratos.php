@@ -94,38 +94,38 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
         </a>
     </div>
 
-    <!-- Sección de Filtros Externa -->
-    <div class="card shadow mb-4 border-bottom-primary">
-        <div class="card-header py-3 bg-gradient-white" data-bs-toggle="collapse" data-bs-target="#filterCard" style="cursor:pointer;">
-            <h6 class="m-0 font-weight-bold text-primary">
-                <i class="fas fa-search me-1"></i> Filtros de Búsqueda Avanzada
-                <i class="fas fa-chevron-down float-end transition-icon"></i>
-            </h6>
+    <!-- Sección de Filtros Externa (NUEVA) -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3 bg-white d-flex justify-content-between align-items-center">
+            <h6 class="m-0 fw-bold text-primary"><i class="fas fa-file-contract me-1"></i> Contratos Registrados</h6>
+
+            <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#filterPanel">
+                <i class="fas fa-filter"></i> Filtros
+            </button>
         </div>
-        <div class="collapse show" id="filterCard">
-            <div class="card-body bg-light">
-                <div class="row g-3">
-                    <div class="col-md-4">
-                        <label class="small fw-bold text-gray-600">Trabajador (Nombre/RUT)</label>
-                        <input type="text" class="form-control form-control-sm border-left-primary" id="filterTrabajador" placeholder="Buscar trabajador...">
-                    </div>
-                    <div class="col-md-4">
-                        <label class="small fw-bold text-gray-600">Empleador</label>
-                        <select class="form-select form-select-sm" id="filterEmpleador">
-                            <option value="">Todos</option>
-                        </select>
-                    </div>
-                    <div class="col-md-3">
-                        <label class="small fw-bold text-gray-600">Estado</label>
-                        <select class="form-select form-select-sm" id="filterEstado">
-                            <option value="">Todos</option>
-                        </select>
-                    </div>
-                    <div class="col-md-1 d-flex align-items-end">
-                        <button class="btn btn-sm btn-secondary w-100 shadow-sm" id="btnClearFilters">
-                            <i class="fas fa-eraser"></i>
-                        </button>
-                    </div>
+
+        <div class="collapse border-top bg-light p-3" id="filterPanel">
+            <div class="row g-3">
+                <div class="col-md-5">
+                    <label class="form-label small fw-bold text-muted">Empleador:</label>
+                    <select class="form-select form-select-sm" id="filterEmpleador" autocomplete="off">
+                        <option value="">Todos</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label small fw-bold text-muted">Estado:</label>
+                    <select class="form-select form-select-sm" id="filterEstado" autocomplete="off">
+                        <option value="">Todos</option>
+                        <option value="Vigente">Vigente</option>
+                        <option value="Por Vencer">Por Vencer</option>
+                        <option value="Vencido">Vencido</option>
+                        <option value="Finiquitado">Finiquitado</option>
+                    </select>
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <button class="btn btn-sm btn-outline-secondary w-100" id="btnClearFilters">
+                        <i class="fas fa-times me-1"></i> Limpiar
+                    </button>
                 </div>
             </div>
         </div>
@@ -148,16 +148,42 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
                     $hoy = date('Y-m-d');
                     if ($c['esta_finiquitado']) {
                         $label = "Finiquitado";
-                        $color = "danger";
+                        $color = "danger"; // Red for Finiquitado
                         $sub = date('d/m/Y', strtotime($c['fecha_finiquito']));
+                        $filterStatus = "Finiquitado";
                     } elseif ($c['fecha_termino'] && $c['fecha_termino'] < $hoy) {
                         $label = "Vencido";
-                        $color = "warning";
+                        $color = "warning"; // Yellow as requested for Vencido (though technically expired)
                         $sub = "Plazo cumplido";
+                        $filterStatus = "Vencido";
+                    } elseif ($c['fecha_termino'] && $c['fecha_termino'] <= date('Y-m-d', strtotime('+30 days'))) {
+                        $label = "Vigente"; // Filter name
+                        $color = "info"; // Blue/Info for Por Vencer
+
+                        // Calculate days remaining
+                        $fecha_termino = new DateTime($c['fecha_termino']);
+                        $fecha_hoy = new DateTime($hoy);
+                        $dias_restantes = $fecha_hoy->diff($fecha_termino)->days;
+                        // Since logic block checks <= 30 days and >= hoy (implicit by else if above failing), days >= 0
+                        // Does < hoy check time? date('Y-m-d') has no time.
+                        // Technically if term < hoy, it's vencido. So here diff is positive.
+
+                        // Use days + 1 because diff can be 0 if today is end date?
+                        // Let's rely on diff->days (absolute). Since we know it's future or today.
+                        $sub = "Por Vencer (" . $dias_restantes . " días)";
+                        $filterStatus = "Por Vencer"; // Restored distinct filter status
                     } else {
                         $label = "Vigente";
-                        $color = "success";
+                        $color = "success"; // Green for Vigente
                         $sub = "Activo";
+                        $filterStatus = "Vigente";
+                    }
+
+                    if ($c['esta_finiquitado']) {
+                        $label = "Finiquitado";
+                        $color = "secondary";
+                        $sub = date('d/m/Y', strtotime($c['fecha_finiquito']));
+                        $filterStatus = "Finiquitado";
                     }
                 ?>
                     <tr>
@@ -171,7 +197,7 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
                             <div class="text-muted"><?php echo $c['fecha_termino'] ? date('d/m/Y', strtotime($c['fecha_termino'])) : 'Indefinido'; ?></div>
                         </td>
                         <td class="text-end fw-bold text-dark">$<?php echo number_format($c['sueldo_imponible'], 0, ',', '.'); ?></td>
-                        <td class="text-center">
+                        <td class="text-center" data-status="<?php echo $filterStatus; ?>">
                             <div class="d-flex align-items-center justify-content-center">
                                 <span class="status-dot bg-<?php echo $color; ?>"></span>
                                 <span class="small fw-bold text-<?php echo $color; ?>"><?php echo $label; ?></span>
@@ -206,67 +232,86 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
             order: [
                 [2, "desc"]
             ], // Ordenar por fecha inicio desc
-            dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"i>>rt<"row"<"col-sm-12"p>>',
+            // Updated DOM
+            dom: '<"d-flex justify-content-between align-items-center mb-3"f<"d-flex gap-2"l>>rt<"d-flex justify-content-between align-items-center mt-3"ip>',
 
             initComplete: function() {
                 var api = this.api();
+
+                // Styling Search
+                $('.dataTables_filter input').addClass('form-control shadow-sm').attr('placeholder', 'Buscar contrato...');
+                $('.dataTables_length select').addClass('form-select shadow-sm');
 
                 // Helper para llenar selects
                 function populateSelect(colIndex, selectId) {
                     var column = api.column(colIndex);
                     var select = $(selectId);
 
-                    column.data().unique().sort().each(function(d, j) {
-                        var cleanData = d;
-                        if (typeof d === 'string' && d.indexOf('<') !== -1) {
-                            cleanData = $('<div>').html(d).text().trim();
-                        }
-                        cleanData = (cleanData) ? String(cleanData).trim() : '';
+                    if (select.children('option').length <= 1) {
+                        column.data().unique().sort().each(function(d, j) {
+                            var cleanData = d;
+                            // Si contiene tags HTML, extraer solo el texto
+                            if (typeof d === 'string' && d.indexOf('<') !== -1) {
+                                cleanData = $('<div>').html(d).text().trim();
+                            }
 
-                        if (cleanData !== '' && !select.find('option[value="' + cleanData + '"]').length) {
-                            select.append('<option value="' + cleanData + '">' + cleanData + '</option>');
-                        }
-                    });
+                            cleanData = (cleanData) ? String(cleanData).trim() : '';
+
+                            if (cleanData !== '' && !select.find('option[value="' + cleanData + '"]').length) {
+                                select.append('<option value="' + cleanData + '">' + cleanData + '</option>');
+                            }
+                        });
+                    }
                 }
 
                 populateSelect(1, '#filterEmpleador');
-                // Estado lo dejamos manual o lo llenamos?
-                // Mejor manual para asegurar etiquetas limpias
-                var selectEstado = $('#filterEstado');
-                if (selectEstado.children('option').length <= 1) { // Si solo tiene "Todos"
-                    selectEstado.append('<option value="Vigente">Vigente</option>');
-                    selectEstado.append('<option value="Vencido">Vencido</option>');
-                    selectEstado.append('<option value="Finiquitado">Finiquitado</option>');
-                }
+                // Estado is now hardcoded in HTML for specific options requested
             }
         });
 
-        // Icono colapso
-        $('#filterCard').on('show.bs.collapse', function() {
-            $('.fa-chevron-down').css('transform', 'rotate(180deg)');
-        });
-        $('#filterCard').on('hide.bs.collapse', function() {
-            $('.fa-chevron-down').css('transform', 'rotate(0deg)');
-        });
+        // --- EXTERNAL FILTERS LOGIC ---
+
+        // Custom filtering function
+        $.fn.dataTable.ext.search.push(
+            function(settings, data, dataIndex) {
+                const fEmp = $('#filterEmpleador').val();
+                const fEstado = $('#filterEstado').val();
+
+                // Column indices:
+                // 1: Empleador
+                // 4: Estado (w/ HTML)
+
+                const cellEmp = data[1] || "";
+                const cellEstado = data[4] || "";
+
+                if (fEmp && !cellEmp.includes(fEmp)) return false;
+
+                // Custom Logic for Status using data-attribute
+                const node = settings.aoData[dataIndex].anCells[4];
+                const statusValue = $(node).data('status');
+
+                // Strict match since visual options match data-status values
+                // "Por Vencer" filter will match "Por Vencer" data status
+                if (fEstado && statusValue !== fEstado) return false;
+
+                return true;
+            }
+        );
 
         // Bindings
-        $('#filterTrabajador').on('keyup change', function() {
-            table.column(0).search(this.value).draw();
+        $('#filterEmpleador, #filterEstado').on('change', function() {
+            table.draw();
         });
 
-        function bindSelect(id, colIndex) {
-            $(id).on('change', function() {
-                var val = $.fn.dataTable.util.escapeRegex($(this).val());
-                table.column(colIndex).search(val ? (colIndex === 4 ? val : '^' + val + '$') : '', true, false).draw();
-            });
-        }
-
-        bindSelect('#filterEmpleador', 1);
-        bindSelect('#filterEstado', 4); // Estado usa contains search simple
-
         $('#btnClearFilters').on('click', function() {
-            $('#filterTrabajador, #filterEmpleador, #filterEstado').val('');
-            table.columns().search('').draw();
+            $('#filterEmpleador').val('').trigger('change');
+            $('#filterEstado').val('').trigger('change');
+
+            // Clear Global Search Input
+            $('.dataTables_filter input').val('');
+
+            // Reset DataTable Search (Global + Columns)
+            table.search('').columns().search('').draw();
         });
     });
 </script>

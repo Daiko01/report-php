@@ -12,6 +12,16 @@ $bus_id = isset($_REQUEST['bus_id']) ? (int)$_REQUEST['bus_id'] : 0;
 
 $months_list = [1 => 'Enero', 2 => 'Febrero', 3 => 'Marzo', 4 => 'Abril', 5 => 'Mayo', 6 => 'Junio', 7 => 'Julio', 8 => 'Agosto', 9 => 'Septiembre', 10 => 'Octubre', 11 => 'Noviembre', 12 => 'Diciembre'];
 
+// --- CARGA DE DATOS PARA FILTROS (Igual que en gestionar_buses.php) ---
+// Empleadores del sistema actual
+$empleadores_filter = $pdo->query("SELECT id, nombre, empresa_sistema_id FROM empleadores WHERE empresa_sistema_id = " . ID_EMPRESA_SISTEMA . " ORDER BY nombre")->fetchAll();
+
+// Unidades del sistema actual
+$unidades_filter = $pdo->query("SELECT id, numero FROM unidades WHERE empresa_asociada_id = " . ID_EMPRESA_SISTEMA . " ORDER BY CAST(numero AS UNSIGNED)")->fetchAll();
+
+// Terminales vinculados a este sistema
+$terminales_filter = $pdo->query("SELECT t.id, t.nombre, t.unidad_id FROM terminales t JOIN unidades u ON t.unidad_id = u.id WHERE u.empresa_asociada_id = " . ID_EMPRESA_SISTEMA . " ORDER BY t.nombre")->fetchAll();
+
 $msg = '';
 $msg_type = '';
 
@@ -79,14 +89,18 @@ if ($bus_id > 0) {
     $admin_global = $calculos['admin_global'];
 } else {
     // B. SI ESTAMOS EN EL DASHBOARD (LISTA DE MÁQUINAS)
-    // Consulta "Inteligente": Trae solo buses con producción en el mes seleccionado
+    // Consulta "Inteligente": Trae buses con producción en el mes seleccionado + DATOS FILTRO
     $sqlDashboard = "SELECT b.id, b.numero_maquina, b.patente, e.nombre as empleador,
+                            CASE WHEN t.nombre IS NULL THEN '' ELSE t.nombre END as nombre_terminal,
+                            CASE WHEN u.numero IS NULL THEN '' ELSE u.numero END as numero_unidad,
                             COUNT(pb.id) as total_guias,
                             SUM(pb.ingreso) as total_ingreso,
                             cm.id as cierre_id
                      FROM buses b
                      JOIN produccion_buses pb ON b.id = pb.bus_id
                      JOIN empleadores e ON b.empleador_id = e.id
+                     LEFT JOIN terminales t ON b.terminal_id = t.id
+                     LEFT JOIN unidades u ON t.unidad_id = u.id
                      LEFT JOIN cierres_maquinas cm ON b.id = cm.bus_id AND cm.mes = ? AND cm.anio = ?
                      WHERE MONTH(pb.fecha) = ? AND YEAR(pb.fecha) = ?
                      GROUP BY b.id
@@ -155,8 +169,49 @@ function val($key, $default = 0)
         </div>
 
         <div class="card shadow mb-4">
-            <div class="card-header py-3 bg-gradient-light">
+            <div class="card-header py-3 bg-gradient-light d-flex justify-content-between align-items-center">
                 <h6 class="m-0 font-weight-bold text-primary">Estado de Cierre de Flota</h6>
+                <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#filterPanel">
+                    <i class="fas fa-filter"></i> Filtros
+                </button>
+            </div>
+
+            <!-- Filter Panel Reparto -->
+            <div class="collapse border-bottom bg-light p-3" id="filterPanel">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label small fw-bold text-muted">Filtrar por Unidad:</label>
+                        <select class="form-select form-select-sm" id="filtroUnidad">
+                            <option value="">Todas</option>
+                            <?php foreach ($unidades_filter as $u): ?>
+                                <option value="Unidad <?= $u['numero'] ?>">Unidad <?= $u['numero'] ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small fw-bold text-muted">Filtrar por Empleador:</label>
+                        <select class="form-select form-select-sm" id="filtroEmpleador">
+                            <option value="">Todos</option>
+                            <?php foreach ($empleadores_filter as $e): ?>
+                                <option value="<?= htmlspecialchars($e['nombre']) ?>"><?= htmlspecialchars($e['nombre']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small fw-bold text-muted">Filtrar por Terminal:</label>
+                        <select class="form-select form-select-sm" id="filtroTerminal">
+                            <option value="">Todos</option>
+                            <?php foreach ($terminales_filter as $t): ?>
+                                <option value="<?= htmlspecialchars($t['nombre']) ?>"><?= htmlspecialchars($t['nombre']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="col-md-3 d-flex align-items-end">
+                        <button class="btn btn-sm btn-outline-secondary w-100" id="btnLimpiarFiltros">
+                            <i class="fas fa-times me-1"></i> Limpiar Filtros
+                        </button>
+                    </div>
+                </div>
             </div>
             <div class="card-body p-0">
                 <div class="table-responsive p-3">
@@ -164,6 +219,7 @@ function val($key, $default = 0)
                         <thead class="bg-light text-uppercase text-xs font-weight-bold">
                             <tr>
                                 <th class="ps-4">Máquina</th>
+                                <th>Unidad/Terminal</th> <!-- Nuevo -->
                                 <th>Producción</th>
                                 <th>Ingreso Total</th>
                                 <th>Estado</th>
@@ -178,7 +234,13 @@ function val($key, $default = 0)
                                     <tr>
                                         <td class="ps-4">
                                             <div class="fw-bold text-gray-800">Nº <?= $m['numero_maquina'] ?></div>
-                                            <small class="text-muted"><?= $m['patente'] ?> &bull; <?= $m['empleador'] ?></small>
+                                            <small class="text-muted"><?= $m['patente'] ?> &bull; <?= htmlspecialchars($m['empleador']) ?></small>
+                                        </td>
+                                        <td>
+                                            <?php if ($m['numero_unidad']): ?>
+                                                <span class="badge bg-light text-dark border d-block mb-1">Unidad <?= $m['numero_unidad'] ?></span>
+                                            <?php endif; ?>
+                                            <small class="text-muted"><?= $m['nombre_terminal'] ?: '-' ?></small>
                                         </td>
                                         <td>
                                             <span class="badge bg-light text-dark border"><?= $m['total_guias'] ?> guías</span>
@@ -466,7 +528,7 @@ function val($key, $default = 0)
 <script>
     document.addEventListener("DOMContentLoaded", function() {
         // Inicializar DataTable "Bonito"
-        $('#tablaStatusFlota').DataTable({
+        const table = $('#tablaStatusFlota').DataTable({
             language: {
                 url: '<?= BASE_URL ?>/public/assets/vendor/datatables/Spanish.json'
             },
@@ -474,20 +536,20 @@ function val($key, $default = 0)
             autoWidth: false,
             pageLength: 25,
             order: [
-                [3, 'asc'],
-                [0, 'asc']
-            ], // Ordenar por Estado (Pendientes primero) y luego por Máquina
+                [4, 'asc'], // Order by Estado (Column 4)
+                [0, 'asc'] // Order by Maquina (Column 0)
+            ],
             columnDefs: [{
                     orderable: false,
-                    targets: [4]
-                }, // Columna Acciones no ordenable
+                    targets: [5] // Acciones
+                },
                 {
                     className: "text-center",
-                    targets: [1, 3]
+                    targets: [2, 4] // Produccion, Estado
                 },
                 {
                     className: "text-end",
-                    targets: [2, 4]
+                    targets: [3, 5] // Ingreso, Accion
                 }
             ],
             dom: '<"d-flex justify-content-between align-items-center mb-3"f<"d-flex gap-2"l>>rt<"d-flex justify-content-between align-items-center mt-3"ip>',
@@ -495,6 +557,42 @@ function val($key, $default = 0)
                 $('.dataTables_filter input').addClass('form-control shadow-sm').attr('placeholder', 'Buscar máquina...');
                 $('.dataTables_length select').addClass('form-select shadow-sm');
             }
+        });
+
+        // --- EXTERNAL FILTERS ---
+        // Custom filtering function
+        $.fn.dataTable.ext.search.push(
+            function(settings, data, dataIndex) {
+                const fUnidad = $('#filtroUnidad').val();
+                const fEmp = $('#filtroEmpleador').val();
+                const fTerm = $('#filtroTerminal').val();
+
+                // Column indices:
+                // 0: Maquina (contains Patente & Employer text)
+                // 1: Unidad/Terminal (contains Text)
+
+                // Let's grab text from cells
+                const cellMaquina = data[0] || ""; // Contains Employer and Name
+                const cellUbi = data[1] || ""; // Contains Unit and Terminal
+
+                if (fUnidad && !cellUbi.includes(fUnidad)) return false;
+                if (fTerm && !cellUbi.includes(fTerm)) return false;
+                if (fEmp && !cellMaquina.includes(fEmp)) return false;
+
+                return true;
+            }
+        );
+
+        // Event Listeners for Filters
+        $('#filtroUnidad, #filtroEmpleador, #filtroTerminal').on('change', function() {
+            table.draw();
+        });
+
+        $('#btnLimpiarFiltros').click(function() {
+            $('#filtroUnidad').val('');
+            $('#filtroEmpleador').val('');
+            $('#filtroTerminal').val('');
+            table.draw();
         });
     });
 

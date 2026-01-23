@@ -63,7 +63,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 $sql_buses_activos = "SELECT b.id, b.numero_maquina, b.patente, COUNT(p.id) as total_guias
                       FROM buses b
                       INNER JOIN produccion_buses p ON b.id = p.bus_id
-                      INNER JOIN unidades u ON b.unidad_id = u.id
+                      INNER JOIN terminales t ON b.terminal_id = t.id
+                      INNER JOIN unidades u ON t.unidad_id = u.id
                       WHERE MONTH(p.fecha) = ? AND YEAR(p.fecha) = ?
                       AND u.empresa_asociada_id = ?
                       GROUP BY b.id

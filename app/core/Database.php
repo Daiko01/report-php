@@ -10,7 +10,7 @@ class Database
     public function __construct()
     {
         $this->host = $_ENV['DB_HOST'] ?? 'localhost';
-        $this->db_name = $_ENV['DB_NAME'] ?? 'db_transreport_bp2';
+        $this->db_name = $_ENV['DB_NAME'] ?? 'db_transreport_bp_p';
         $this->username = $_ENV['DB_USER'] ?? 'root';
         $this->password = $_ENV['DB_PASS'] ?? '';
     }

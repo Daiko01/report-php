@@ -106,3 +106,73 @@ $meses = [
 </div>
 
 <?php require_once dirname(__DIR__) . '/app/includes/footer.php'; ?>
+
+<script>
+    $(document).ready(function() {
+        // Intercept button clicks for validation
+        $('button[name="tipo_reporte"]').on('click', function(e) {
+            e.preventDefault();
+            var btn = $(this);
+            var tipo = btn.val();
+            // Get text for alert (Sindicatos, etc.) - extract from bold tag inside button
+            var text = btn.find('strong').text();
+
+            var form = btn.closest('form');
+            var mes = form.find('select[name="mes"]').val();
+            var ano = form.find('select[name="ano"]').val();
+
+            Swal.fire({
+                title: 'Verificando información...',
+                text: 'Por favor espere',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            $.ajax({
+                url: '<?php echo BASE_URL; ?>/ajax/check_report_data.php',
+                type: 'POST',
+                data: {
+                    mes: mes,
+                    ano: ano,
+                    tipo_reporte: tipo
+                },
+                dataType: 'json',
+                success: function(response) {
+                    if (response.exists) {
+                        Swal.close();
+                        // Proceed to submit
+                        // We need to ensure the button value is sent since we prevented default
+                        // Create hidden input if not exists
+                        if (form.find('input[name="tipo_reporte"]').length === 0) {
+                            $('<input>').attr({
+                                type: 'hidden',
+                                name: 'tipo_reporte',
+                                value: tipo
+                            }).appendTo(form);
+                        } else {
+                            form.find('input[name="tipo_reporte"]').val(tipo);
+                        }
+
+                        form.submit();
+
+                        // Clean up hidden input strictly after short delay so user can click another?
+                        // Actually target=_blank so current page stays.
+                        // Ideally we remove it after a moment or overwrite it next click.
+                    } else {
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Sin Información',
+                            text: 'No existen datos registrados para el Reporte de ' + text + ' en el periodo seleccionado (' + mes + '/' + ano + ').',
+                            confirmButtonColor: '<?php echo COLOR_SISTEMA; ?>'
+                        });
+                    }
+                },
+                error: function() {
+                    Swal.fire('Error', 'No se pudo verificar la información. Intente nuevamente.', 'error');
+                }
+            });
+        });
+    });
+</script>

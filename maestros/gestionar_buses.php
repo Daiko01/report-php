@@ -16,11 +16,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         }
 
         if (!empty($ids)) {
-            // Seguridad: Borrar si el bus pertenece a una unidad de este sistema
-            // Usamos unidades (u) en vez de empleadores para permitir borrar buses sin dueño
+            // Seguridad: Borrar si el bus (via terminal) pertenece a una unidad de este sistema
             $placeholders = implode(',', array_fill(0, count($ids), '?'));
             $sql = "DELETE b FROM buses b 
-                    JOIN unidades u ON b.unidad_id = u.id 
+                    JOIN terminales t ON b.terminal_id = t.id
+                    JOIN unidades u ON t.unidad_id = u.id 
                     WHERE b.id IN ($placeholders) AND u.empresa_asociada_id = ?";
 
             $params = $ids;
@@ -54,14 +54,16 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 // Modo Edición
                 $patente = trim($_POST['patentes_input']);
                 $nro_maq = trim($_POST['maquinas_input']);
-                $stmt = $pdo->prepare("UPDATE buses SET empleador_id=?, unidad_id=?, terminal_id=?, numero_maquina=?, patente=? WHERE id=?");
-                $stmt->execute([$empleador_id, $unidad_id, $terminal_id, $nro_maq, $patente, $_POST['bus_id']]);
+                // ELIMINADO: unidad_id. Se deriva de terminal_id
+                $stmt = $pdo->prepare("UPDATE buses SET empleador_id=?, terminal_id=?, numero_maquina=?, patente=? WHERE id=?");
+                $stmt->execute([$empleador_id, $terminal_id, $nro_maq, $patente, $_POST['bus_id']]);
                 $_SESSION['flash_message'] = ['type' => 'success', 'message' => 'Bus actualizado con éxito.'];
             } else {
                 // Modo Creación (Permite comas para ingreso múltiple)
                 $maquinas_raw = explode(',', $_POST['maquinas_input']);
                 $patentes_raw = explode(',', $_POST['patentes_input']);
-                $stmt = $pdo->prepare("INSERT INTO buses (numero_maquina, empleador_id, unidad_id, terminal_id, patente) VALUES (?, ?, ?, ?, ?)");
+                // ELIMINADO: unidad_id
+                $stmt = $pdo->prepare("INSERT INTO buses (numero_maquina, empleador_id, terminal_id, patente) VALUES (?, ?, ?, ?)");
 
                 foreach ($maquinas_raw as $index => $nro) {
                     $nro = trim($nro);
@@ -73,7 +75,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     $check->execute([$nro]);
                     if ($check->fetch()) continue;
 
-                    $stmt->execute([$nro, $empleador_id, $unidad_id, $terminal_id, $patente]);
+                    // En la nueva estructura, terminal_id es CUALQUIER COSA MENOS NULL si queremos unidad.
+                    // Si el usuario no seleccionó terminal, esto fallará silenciósamente o guardará sin unidad (si FK lo permite).
+                    // Como buses_ibfk_3 (terminal) es FK, debe ser válido. 
+                    // Asumimos que la validación HTML5 required en terminal_id está presente o manejada.
+
+                    $stmt->execute([$nro, $empleador_id, $terminal_id, $patente]);
                 }
                 $_SESSION['flash_message'] = ['type' => 'success', 'message' => 'Registros procesados correctamente.'];
             }
@@ -145,7 +152,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     continue;
                 }
 
-                // 3. Buscar Terminal
+                // 3. Buscar Terminal (AHORA OBLIGATORIO)
                 $ter_id = null;
                 if ($uni_id && !empty($nom_ter)) {
                     $ter = $pdo->prepare("SELECT id FROM terminales WHERE nombre LIKE ? AND unidad_id = ? LIMIT 1");
@@ -153,10 +160,16 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     $ter_id = $ter->fetchColumn() ?: null;
                 }
 
+                if (!$ter_id) {
+                    $errores[] = "Línea $linea: Terminal '$nom_ter' no encontrado en Unidad $num_uni. (Requerido)";
+                    continue;
+                }
+
                 // 4. Insertar / Actualizar
                 try {
-                    $ins = $pdo->prepare("INSERT INTO buses (numero_maquina, patente, empleador_id, unidad_id, terminal_id) VALUES (?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE patente=VALUES(patente), empleador_id=VALUES(empleador_id), unidad_id=VALUES(unidad_id), terminal_id=VALUES(terminal_id)");
-                    $ins->execute([$nro, $patente, $emp_id, $uni_id, $ter_id]);
+                    // ELIMINADO: unidad_id
+                    $ins = $pdo->prepare("INSERT INTO buses (numero_maquina, patente, empleador_id, terminal_id) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE patente=VALUES(patente), empleador_id=VALUES(empleador_id), terminal_id=VALUES(terminal_id)");
+                    $ins->execute([$nro, $patente, $emp_id, $ter_id]);
                     $exitosos++;
                 } catch (Exception $ex) {
                     $errores[] = "Línea $linea: Error DB para bus $nro - " . $ex->getMessage();
@@ -206,15 +219,22 @@ $unidades = $pdo->query("SELECT id, numero, empresa_asociada_id FROM unidades WH
 // Terminales vinculados a este sistema
 $terminales = $pdo->query("SELECT t.id, t.nombre, t.unidad_id FROM terminales t JOIN unidades u ON t.unidad_id = u.id WHERE u.empresa_asociada_id = " . ID_EMPRESA_SISTEMA)->fetchAll();
 
-// 1. Obtener registros (Simplificado: todos los buses del sistema)
-$sql_buses = "SELECT b.*, e.nombre as nombre_empleador, u.numero as numero_unidad, t.nombre as nombre_terminal 
+// 1. Obtener registros. JOIN U via T
+$sql_buses = "SELECT b.*, 
+              e.nombre as nombre_empleador, 
+              e.empresa_sistema_id,
+              u.id as unidad_id, 
+              u.numero as numero_unidad, 
+              t.nombre as nombre_terminal 
               FROM buses b 
               LEFT JOIN empleadores e ON b.empleador_id = e.id 
-              JOIN unidades u ON b.unidad_id = u.id 
               LEFT JOIN terminales t ON b.terminal_id = t.id 
+              LEFT JOIN unidades u ON t.unidad_id = u.id 
               WHERE u.empresa_asociada_id = " . ID_EMPRESA_SISTEMA . "
               ORDER BY CAST(b.numero_maquina AS UNSIGNED) ASC";
 $buses = $pdo->query($sql_buses)->fetchAll();
+
+
 
 $json_unidades = json_encode($unidades, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?: '[]';
 $json_terminales = json_encode($terminales, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?: '[]';
@@ -264,9 +284,9 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
                         </select>
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label fw-bold">3. Terminal (Opcional)</label>
-                        <select class="form-select" name="terminal_id" id="terminal_id" disabled>
-                            <option value="">Sin Terminal / No Aplica</option>
+                        <label class="form-label fw-bold">3. Terminal (Requerido)</label>
+                        <select class="form-select" name="terminal_id" id="terminal_id" disabled required>
+                            <option value="">Seleccione Terminal...</option>
                         </select>
                     </div>
                     <div class="col-md-4">
@@ -292,13 +312,55 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
                 <h6 class="m-0 fw-bold text-primary"><i class="fas fa-list me-1"></i> Flota Registrada (<?= count($buses) ?>)</h6>
 
                 <div class="d-flex align-items-center gap-2">
-                    <!-- Filtros eliminados a petición -->
+                    <!-- Filters Toggle -->
+                    <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#filterPanel">
+                        <i class="fas fa-filter"></i> Filtros
+                    </button>
+                    <!-- Columnas Toggle (Optional, can be added later) -->
+                </div>
+            </div>
+
+            <!-- Filter Panel -->
+            <div class="collapse border-top bg-light p-3" id="filterPanel">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label small fw-bold text-muted">Filtrar por Unidad:</label>
+                        <select class="form-select form-select-sm" id="filtroUnidad">
+                            <option value="">Todas</option>
+                            <?php foreach ($unidades as $u): ?>
+                                <option value="Unidad <?= $u['numero'] ?>">Unidad <?= $u['numero'] ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small fw-bold text-muted">Filtrar por Empleador:</label>
+                        <select class="form-select form-select-sm" id="filtroEmpleador">
+                            <option value="">Todos</option>
+                            <?php foreach ($empleadores as $e): ?>
+                                <option value="<?= htmlspecialchars($e['nombre']) ?>"><?= htmlspecialchars($e['nombre']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small fw-bold text-muted">Filtrar por Terminal:</label>
+                        <select class="form-select form-select-sm" id="filtroTerminal">
+                            <option value="">Todos</option>
+                            <?php foreach ($terminales as $t): ?>
+                                <option value="<?= htmlspecialchars($t['nombre']) ?>"><?= htmlspecialchars($t['nombre']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="col-md-3 d-flex align-items-end">
+                        <button class="btn btn-sm btn-outline-secondary w-100" id="btnLimpiarFiltros">
+                            <i class="fas fa-times me-1"></i> Limpiar Filtros
+                        </button>
+                    </div>
                 </div>
             </div>
 
             <!-- Bulk Actions Toolbar (Hidden by default) -->
-            <div id="bulkToolbar" class="mt-2 text-end" style="display:none;">
-                <span class="text-muted small me-2"><span id="selectedCount">0</span> seleccionados</span>
+            <div id="bulkToolbar" class="mt-2 text-end bg-warning bg-opacity-10 p-2 border-top border-warning" style="display:none;">
+                <span class="text-dark small fw-bold me-2"><span id="selectedCount">0</span> seleccionados</span>
                 <button type="button" class="btn btn-sm btn-danger shadow-sm" onclick="confirmBulkDelete()">
                     <i class="fas fa-trash-alt me-1"></i> Eliminar Selección
                 </button>
@@ -308,11 +370,11 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
             <form id="formBulkDelete" method="POST">
                 <?php csrf_field(); ?>
                 <input type="hidden" name="action" value="bulk_delete">
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0 datatable-es" id="busTable">
+                <div class="table-responsive p-2">
+                    <table class="table table-hover align-middle mb-0" id="busTable">
                         <thead class="bg-light text-uppercase small fw-bold">
                             <tr>
-                                <th class="ps-3" style="width: 40px;">
+                                <th class="ps-3 no-sort" style="width: 40px;">
                                     <div class="form-check">
                                         <input class="form-check-input" type="checkbox" id="checkAll">
                                     </div>
@@ -322,7 +384,7 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
                                 <th>Terminal</th>
                                 <th>Dueño</th>
                                 <th>Patente</th>
-                                <th class="text-end pe-4">Acciones</th>
+                                <th class="text-end pe-4 no-sort">Acciones</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -346,7 +408,7 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
                                             data-emp="<?= $b['empleador_id'] ?>"
                                             data-uni="<?= $b['unidad_id'] ?>"
                                             data-ter="<?= $b['terminal_id'] ?>"
-                                            data-empresa-id="<?= $e['empresa_sistema_id'] ?? ID_EMPRESA_SISTEMA ?>">
+                                            data-empresa-id="<?= $b['empresa_sistema_id'] ?? ID_EMPRESA_SISTEMA ?>">
                                             <i class="fas fa-edit"></i>
                                         </button>
                                         <button type="button" class="btn btn-sm btn-outline-danger btn-eliminar" data-id="<?= $b['id'] ?>">
@@ -360,12 +422,8 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
                 </div>
             </form>
             <?php if (empty($buses)): ?>
-                <div class="text-center py-5">
-                    <p class="text-muted mb-0">No se encontraron registros coincidente.</p>
-                </div>
+                <!-- Empty state handled by Datatables usually, but kept for fallback -->
             <?php endif; ?>
-
-            <!-- Paginación UI (Eliminada: DataTables la incluye) -->
         </div>
     </div>
 </div>
@@ -394,6 +452,69 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
 
     $(document).ready(function() {
 
+        // --- DATATABLES SETUP ---
+        const table = $('#busTable').DataTable({
+            language: {
+                url: '<?php echo BASE_URL; ?>/public/assets/vendor/datatables/Spanish.json'
+            },
+            responsive: true,
+            order: [
+                [1, 'asc']
+            ], // Order by Machine Number (Column 1)
+            columnDefs: [{
+                    orderable: false,
+                    targets: [0, 6]
+                }, // Disable sorting on Checkbox & Actions
+                {
+                    className: "text-center",
+                    targets: [1]
+                } // Center Number
+            ],
+            dom: '<"d-flex justify-content-between align-items-center m-2"lf>rt<"d-flex justify-content-between align-items-center m-2"ip>',
+            pageLength: 25
+        });
+
+        // --- EXTERNAL FILTERS ---
+
+        // Custom filtering function
+        $.fn.dataTable.ext.search.push(
+            function(settings, data, dataIndex) {
+                const fUnidad = $('#filtroUnidad').val();
+                const fEmp = $('#filtroEmpleador').val();
+                const fTerm = $('#filtroTerminal').val();
+
+                // Column indices:
+                // 2: Unidad (contains "Unidad X")
+                // 3: Terminal
+                // 4: Dueño
+
+                const dbUnidad = data[2] || "";
+                const dbTerm = data[3] || "";
+                const dbEmp = data[4] || "";
+
+                if (fUnidad && !dbUnidad.includes(fUnidad)) return false;
+                if (fEmp && !dbEmp.includes(fEmp)) return false;
+                if (fTerm && !dbTerm.includes(fTerm)) return false;
+
+                return true;
+            }
+        );
+
+        // Event Listeners for Filters
+        $('#filtroUnidad, #filtroEmpleador, #filtroTerminal').on('change', function() {
+            table.draw();
+        });
+
+        $('#btnLimpiarFiltros').click(function() {
+            $('#filtroUnidad').val('');
+            $('#filtroEmpleador').val('');
+            $('#filtroTerminal').val('');
+            table.draw();
+        });
+
+
+        // --- EXISTING LOGIC (Updated to work with DataTables) ---
+
         // Global Select2 is already initialized in footer.php
         // No need to re-initialize here unless specific config is needed.
 
@@ -402,7 +523,7 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
             $el.html(html).prop('disabled', false).trigger('change');
         }
 
-        // 1. Filtrado de Unidades
+        // 1. Filtrado de Unidades (Edit Form)
         $('#empleador_id').on('change', function() {
             const $u = $('#unidad_id');
             const $t = $('#terminal_id');
@@ -412,7 +533,6 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
             $t.html('<option value="">Sin Terminal / No Aplica</option>').prop('disabled', true).trigger('change');
 
             if ($(this).val()) {
-                console.log('Unidades disponibles:', unidadesData);
                 if (unidadesData.length > 0) {
                     let opts = '<option value="">Seleccione Unidad...</option>';
                     unidadesData.forEach(u => {
@@ -426,7 +546,7 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
             }
         });
 
-        // 2. Filtrado de Terminales
+        // 2. Filtrado de Terminales (Edit Form)
         $('#unidad_id').on('change', function() {
             const unidadId = parseInt($(this).val()) || 0;
             const $t = $('#terminal_id');
@@ -448,8 +568,9 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
             }
         });
 
-        // 3. Edición (Cargar Formulario)
-        $('.btn-editar').click(function() {
+        // 3. Edición (Cargar Formulario) - USE DELEGATION for DataTables pages
+        // .btn-editar might be on a second page, so use $(document).on
+        $(document).on('click', '.btn-editar', function() {
             const btn = $(this);
             $('#bus_id').val(btn.data('id'));
             $('#maquinas_input').val(btn.data('nro'));
@@ -491,6 +612,9 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
         const $selectedCount = $('#selectedCount');
 
         function updateToolbar() {
+            // Checkboxes in DataTable might be on other pages, but typically we only count visible ones for bulk action
+            // Or we need extensive logic for cross-page selection. 
+            // For now, let's assume we operate on current view's DOM for simplicity or users check "Select All" on current page.
             const count = $('.check-item:checked').length;
             $selectedCount.text(count);
             if (count > 0) {
@@ -500,14 +624,26 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
             }
         }
 
+        // Handle "Select All"
         $checkAll.on('change', function() {
-            $('.check-item').prop('checked', $(this).is(':checked'));
+            const isChecked = $(this).is(':checked');
+            // Select only visible rows in current page
+            $('.check-item').prop('checked', isChecked);
             updateToolbar();
         });
 
+        // Handle individual checks - Delegation needed
         $(document).on('change', '.check-item', function() {
-            const allChecked = $('.check-item:checked').length === $('.check-item').length;
-            $checkAll.prop('checked', allChecked);
+            const total = $('.check-item').length;
+            const checked = $('.check-item:checked').length;
+
+            $checkAll.prop('checked', total > 0 && total === checked);
+            updateToolbar();
+        });
+
+        // DataTable draw event: Re-bind state or uncheck "Select All" if traversing pages
+        table.on('draw', function() {
+            $checkAll.prop('checked', false);
             updateToolbar();
         });
 
@@ -520,8 +656,8 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
             }
         };
 
-        // 5. Single Delete Handler
-        $('.btn-eliminar').click(function() {
+        // 5. Single Delete Handler - Delegation needed
+        $(document).on('click', '.btn-eliminar', function() {
             const id = $(this).data('id');
             if (confirm('¿Está seguro de eliminar este bus?')) {
                 // Create a dynamic form to submit generic delete
@@ -534,7 +670,5 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
                 form.submit();
             }
         });
-
-        // Search Filter (Eliminado: DataTables lo incluye)
     });
 </script>

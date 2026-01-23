@@ -34,20 +34,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     }
 
     try {
-        // 3. COMPATIBILIDAD: Buscamos el nombre del sistema para mantener el campo de texto actualizado
-        $stmt_sys = $pdo->prepare("SELECT nombre FROM empresas_sistema WHERE id = ?");
-        $stmt_sys->execute([$empresa_sistema_id]);
-        $nombre_sistema_texto = $stmt_sys->fetchColumn();
-
-        if (!$nombre_sistema_texto) {
-            throw new Exception("Error interno: Identidad de sistema no válida.");
-        }
+        // 3. COMPATIBILIDAD: Eliminado fetch.
 
         // 4. UPDATE CON SEGURIDAD: Solo actualizamos si el ID pertenece a esta empresa sistema
         $sql = "UPDATE empleadores SET 
                     rut = :rut,
                     nombre = :nombre,
-                    empresa_sistema = :sis_nombre, 
                     empresa_sistema_id = :sis_id, 
                     caja_compensacion_id = :caja,
                     mutual_seguridad_id = :mutual,
@@ -58,7 +50,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $stmt->execute([
             ':rut' => $rut_formateado,
             ':nombre' => $nombre,
-            ':sis_nombre' => $nombre_sistema_texto,
             ':sis_id' => $empresa_sistema_id,
             ':caja' => $caja_id,
             ':mutual' => $mutual_id,
