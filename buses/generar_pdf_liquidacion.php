@@ -458,7 +458,7 @@ try {
             : '<tr><td>Seguro y Cartolas</td><td align="right">---</td></tr>') . '
                     <tr><td>GPS</td><td align="right">' . number_format($v['gps'], 0, ',', '.') . '</td></tr>
                     <tr><td>Boleta Garantía</td><td align="right">' . number_format($v['bol_gar'], 0, ',', '.') . '</td></tr>
-                    <tr><td>Boleta Garantía 2</td><td align="right">' . number_format($v['bol_ga2'], 0, ',', '.') . '</td></tr>
+                    <tr><td>Asesorías Varias</td><td align="right">' . number_format($v['bol_ga2'], 0, ',', '.') . '</td></tr>
                     <tr bgcolor="#ddd"><td><b>SUBTOTAL CARGOS</b></td><td align="right"><b>' . number_format($total_nuevos_cargos, 0, ',', '.') . '</b></td></tr>
                 </table>
             </td>

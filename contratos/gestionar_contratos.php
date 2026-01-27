@@ -43,43 +43,104 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
         border-color: var(--primary-color) !important;
     }
 
+    /* Card & Filter Styles */
     .filter-bar {
         background: #fff;
         border-radius: 12px;
         border: 1px solid #e3e6f0;
     }
 
-    .table-modern td {
-        padding: 1rem;
-        border-bottom: 1px solid #f8f9fc !important;
+    /* Table Container & Base */
+    #tableContainer {
+        border-radius: 15px;
+        overflow: hidden;
+        border: none;
+        box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.1) !important;
     }
 
+    .table-modern {
+        margin-bottom: 0 !important;
+    }
+
+    .table-modern thead th {
+        background-color: #f8f9fc;
+        color: #858796;
+        text-transform: uppercase;
+        font-weight: 700;
+        font-size: 0.75rem;
+        letter-spacing: 0.05em;
+        padding: 1.25rem 1.5rem;
+        border-bottom: 1px solid #e3e6f0;
+        border-top: none !important;
+    }
+
+    .table-modern td {
+        padding: 1.25rem 1.5rem;
+        vertical-align: middle;
+        color: #5a5c69;
+        border-bottom: 1px solid #e3e6f0 !important;
+        font-size: 0.9rem;
+    }
+
+    .table-modern tbody tr:last-child td {
+        border-bottom: none !important;
+    }
+
+    .table-modern tbody tr:hover {
+        background-color: #fdfdfe;
+    }
+
+    /* Status Dots */
     .status-dot {
-        width: 8px;
-        height: 8px;
+        width: 10px;
+        height: 10px;
         border-radius: 50%;
         display: inline-block;
-        margin-right: 5px;
+        margin-right: 8px;
+        flex-shrink: 0;
     }
 
+    /* DataTables Pagination & Controls */
     .page-link {
-        color: #5a5c69;
-        border: none;
-        background: transparent;
-        font-weight: 600;
-        border-radius: 8px !important;
+        color: #858796;
+        border: 1px solid #dddfeb;
+        margin: 0 3px;
+        border-radius: 0.35rem !important;
+        font-size: 0.85rem;
     }
 
     .page-item.active .page-link {
         background-color: var(--primary-color) !important;
+        border-color: var(--primary-color) !important;
         color: white !important;
     }
 
-    /* Animación sutil de carga */
-    .loading-fade {
-        opacity: 0.5;
-        pointer-events: none;
-        transition: opacity 0.2s;
+    /* Custom Search Input */
+    .dataTables_filter input {
+        border-radius: 20px !important;
+        padding: 0.5rem 1.2rem !important;
+        border: 1px solid #d1d3e2 !important;
+        font-size: 0.9rem;
+        background-color: #f8f9fc;
+        min-width: 250px;
+    }
+
+    .dataTables_filter input:focus {
+        background-color: #fff;
+        border-color: var(--primary-color) !important;
+        outline: none;
+    }
+
+    /* Wrapper Styles */
+    .dt-header {
+        background-color: #ffffff;
+        padding: 1.5rem 1.5rem 1rem 1.5rem;
+    }
+
+    .dt-footer {
+        background-color: #ffffff;
+        padding: 1rem 1.5rem 1.5rem 1.5rem;
+        border-top: 1px solid #e3e6f0;
     }
 </style>
 
@@ -232,15 +293,16 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
             order: [
                 [2, "desc"]
             ], // Ordenar por fecha inicio desc
-            // Updated DOM
-            dom: '<"d-flex justify-content-between align-items-center mb-3"f<"d-flex gap-2"l>>rt<"d-flex justify-content-between align-items-center mt-3"ip>',
+
+            // Updated DOM with better structure and padding classes
+            dom: '<"dt-header d-flex justify-content-between align-items-center"f<"d-flex gap-2"l>>rt<"dt-footer d-flex justify-content-between align-items-center"ip>',
 
             initComplete: function() {
                 var api = this.api();
 
                 // Styling Search
-                $('.dataTables_filter input').addClass('form-control shadow-sm').attr('placeholder', 'Buscar contrato...');
-                $('.dataTables_length select').addClass('form-select shadow-sm');
+                $('.dataTables_filter input').addClass('shadow-sm').attr('placeholder', 'Buscar contrato...');
+                $('.dataTables_length select').addClass('form-select form-select-sm shadow-sm border-0 bg-light');
 
                 // Helper para llenar selects
                 function populateSelect(colIndex, selectId) {

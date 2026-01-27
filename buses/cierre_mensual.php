@@ -238,7 +238,7 @@ function val($key, $default = 0)
                                         </td>
                                         <td>
                                             <?php if ($m['numero_unidad']): ?>
-                                                <span class="badge bg-light text-dark border d-block mb-1">Unidad <?= $m['numero_unidad'] ?></span>
+                                                <span class="badge bg-light text-dark border me-2">Unidad <?= $m['numero_unidad'] ?></span>
                                             <?php endif; ?>
                                             <small class="text-muted"><?= $m['nombre_terminal'] ?: '-' ?></small>
                                         </td>
