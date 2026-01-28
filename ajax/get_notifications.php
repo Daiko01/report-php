@@ -63,6 +63,43 @@ try {
             'url' => BASE_URL . '/maestros/gestionar_licencias.php'
         ];
     }
+    // 3. (NUEVO) RECORDATORIO CIERRE REMUNERACIONES (Solo Admin, fin de mes)
+    // Se activa desde el día 25 de cada mes
+    if (isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'admin') {
+        $dia_actual = (int)date('d');
+        // Para pruebas, se puede ajustar este límite. Por defecto >= 25.
+        if ($dia_actual >= 25) {
+            $mes_actual = date('m');
+            $ano_actual = date('Y');
+            
+            // Contar planillas abiertas del mes actual
+            // Una planilla está abierta si existe en planillas_mensuales pero NO en cierres_mensuales con esta_cerrado=1
+            $sqlCierre = "SELECT COUNT(DISTINCT p.empleador_id) as abiertas
+                          FROM planillas_mensuales p
+                          LEFT JOIN cierres_mensuales c ON p.empleador_id = c.empleador_id 
+                                                        AND p.mes = c.mes 
+                                                        AND p.ano = c.ano
+                          WHERE p.mes = :mes AND p.ano = :ano 
+                          AND (c.esta_cerrado IS NULL OR c.esta_cerrado = 0)";
+            
+            $stmtCierre = $pdo->prepare($sqlCierre);
+            $stmtCierre->execute([':mes' => $mes_actual, ':ano' => $ano_actual]);
+            $rowCierre = $stmtCierre->fetch(PDO::FETCH_ASSOC);
+            $abiertas = $rowCierre['abiertas'] ?? 0;
+
+            if ($abiertas > 0) {
+                 $notifications[] = [
+                    'type' => 'cierre',
+                    'id' => 'cierre_mes_' . $mes_actual, // ID único virtual
+                    'mensaje' => "Cierre Remuneraciones",
+                    'subtexto' => "$abiertas planillas por cerrar",
+                    'fecha' => date('d/m/Y'),
+                    'url' => BASE_URL . '/planillas/cierres_mensuales.php'
+                ];
+            }
+        }
+    }
+
 } catch (PDOException $e) {
     // error_log($e->getMessage());
 }
