@@ -126,14 +126,17 @@ function val($key, $default = 0)
             <?php if ($bus_id > 0): ?>
                 <a href="cierre_mensual.php?mes=<?= $mes_sel ?>&anio=<?= $anio_sel ?>" class="btn btn-sm btn-secondary me-2"><i class="fas fa-arrow-left"></i> Volver al Panel</a>
                 Cierre Mensual Máquina
-            <?php else: ?>
                 <i class="fas fa-file-invoice-dollar"></i> Panel de Cierres Mensuales
             <?php endif; ?>
         </h1>
         <?php if ($bus_id == 0): ?>
-            <button onclick="procesarCierreMasivo()" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm">
-                <i class="fas fa-magic fa-sm text-white-50"></i> Procesar Cierre Masivo
-            </button>
+            <?php if ($bus_id == 0): ?>
+                <div class="d-none d-sm-block">
+                    <button onclick="procesarCierreMasivo()" class="btn btn-sm btn-primary shadow-sm">
+                        <i class="fas fa-magic fa-sm text-white-50"></i> Procesar Cierre Masivo
+                    </button>
+                </div>
+            <?php endif; ?>
         <?php endif; ?>
     </div>
 

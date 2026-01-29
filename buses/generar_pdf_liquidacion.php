@@ -171,7 +171,13 @@ try {
         // ---------------------------------------------------------
 
         // Datos Producción
-        $stmtProd = $pdo->prepare("SELECT * FROM produccion_buses WHERE bus_id = ? AND MONTH(fecha) = ? AND YEAR(fecha) = ? ORDER BY fecha ASC");
+        $stmtProd = $pdo->prepare("
+            SELECT p.*, t.nombre as nombre_conductor_real 
+            FROM produccion_buses p
+            LEFT JOIN trabajadores t ON p.conductor_id = t.id
+            WHERE p.bus_id = ? AND MONTH(p.fecha) = ? AND YEAR(p.fecha) = ? 
+            ORDER BY p.fecha ASC
+        ");
         $stmtProd->execute([$bus['bus_id'], $mes, $anio]);
         $produccion = $stmtProd->fetchAll(PDO::FETCH_ASSOC);
 
@@ -233,10 +239,12 @@ try {
             $ase = $row['gasto_aseo'] ?? 0;
             $via = $row['gasto_viatico'] ?? 0;
             $pag = $row['pago_conductor'] ?? 0;
-            $apo = $row['aporte_previsional'] ?? 0;
+            // MAPPING: Aportes (Legacy/CSV) > Imposiciones (New)
+            $apo = $row['aporte_previsional'] ?: ($row['gasto_imposiciones'] ?? 0);
             $var = $row['gasto_varios'] ?? 0;
             $ext = $row['gasto_cta_extra'] ?? 0;
-            $nom = $row['conductor_nombre_csv'] ?? '---';
+            // PREFERIR NOMBRE DE DATABASE (ID), SINO CSV, SINO VACIO
+            $nom = $row['nombre_conductor_real'] ?? ($row['conductor_nombre_csv'] ?? '---');
 
             $sum['ing'] += $ing;
             $sum['pet'] += $pet;

@@ -10,6 +10,8 @@ $paginas_flota = [
     'gestionar_buses.php',     // Movido desde Maestros (El listado de máquinas)
     'crear_bus.php',           // Asumiendo existencia
     'editar_bus.php',          // Asumiendo existencia
+    'ingreso_guia.php',
+    'editar_guia.php',
     'importar_produccion.php',
     'planilla_mensual.php',
     'cierre_mensual.php',
@@ -101,120 +103,136 @@ $paginas_sistema = [
 
             <ul class="list-unstyled components">
 
-                <li class="<?php echo ($pagina_actual == 'index.php') ? 'active' : ''; ?>">
-                    <a href="<?php echo BASE_URL; ?>/index.php"><i class="fas fa-tachometer-alt me-2"></i> Dashboard</a>
-                </li>
+                <?php $user_role = $_SESSION['user_role'] ?? ''; ?>
+
+                <?php if ($user_role !== 'recaudador'): ?>
+                    <li class="<?php echo ($pagina_actual == 'index.php') ? 'active' : ''; ?>">
+                        <a href="<?php echo BASE_URL; ?>/index.php"><i class="fas fa-tachometer-alt me-2"></i> Dashboard</a>
+                    </li>
+                <?php endif; ?>
 
                 <li class="<?php echo (in_array($pagina_actual, $paginas_flota)) ? 'active' : ''; ?>">
                     <a href="#flotaMenu" data-bs-toggle="collapse" aria-expanded="<?php echo (in_array($pagina_actual, $paginas_flota)) ? 'true' : 'false'; ?>" class="dropdown-toggle">
                         <i class="fas fa-bus me-2"></i> Gestión de Flota
                     </a>
                     <ul class="collapse list-unstyled <?php echo (in_array($pagina_actual, $paginas_flota)) ? 'show' : ''; ?>" id="flotaMenu">
-                        <li class="<?php echo ($pagina_actual == 'configuracion.php') ? 'active' : ''; ?>">
-                            <a href="<?php echo BASE_URL; ?>/buses/configuracion.php">1. Configuración del Mes</a>
-                        </li>
-                        <li class="<?php echo ($pagina_actual == 'gestionar_buses.php') ? 'active' : ''; ?>">
-                            <a href="<?php echo BASE_URL; ?>/maestros/gestionar_buses.php">2. Directorio de Buses</a>
-                        </li>
-                        <li class="<?php echo ($pagina_actual == 'importar_produccion.php') ? 'active' : ''; ?>">
-                            <a href="<?php echo BASE_URL; ?>/buses/importar_produccion.php">3. Importar Producción (CSV)</a>
-                        </li>
-                        <li class="<?php echo ($pagina_actual == 'planilla_mensual.php') ? 'active' : ''; ?>">
-                            <a href="<?php echo BASE_URL; ?>/buses/planilla_mensual.php">4. Editar Planilla</a>
-                        </li>
-                        <li class="<?php echo ($pagina_actual == 'cierre_mensual.php') ? 'active' : ''; ?>">
-                            <a href="<?php echo BASE_URL; ?>/buses/cierre_mensual.php">5. Cierre Mensual</a>
-                        </li>
-                        <li class="<?php echo ($pagina_actual == 'seleccionar_reporte.php') ? 'active' : ''; ?>">
-                            <a href="<?php echo BASE_URL; ?>/buses/seleccionar_reporte.php">6. Reportes de Flota</a>
-                        </li>
-                    </ul>
-                </li>
 
-                <li class="<?php echo (in_array($pagina_actual, $paginas_rrhh)) ? 'active' : ''; ?>">
-                    <a href="#rrhhMenu" data-bs-toggle="collapse" aria-expanded="<?php echo (in_array($pagina_actual, $paginas_rrhh)) ? 'true' : 'false'; ?>" class="dropdown-toggle">
-                        <i class="fas fa-users me-2"></i> Recursos Humanos
-                    </a>
-                    <ul class="collapse list-unstyled <?php echo (in_array($pagina_actual, $paginas_rrhh)) ? 'show' : ''; ?>" id="rrhhMenu">
-
-                        <div class="sidebar-heading">Personal</div>
-                        <li class="<?php echo ($pagina_actual == 'gestionar_trabajadores.php') ? 'active' : ''; ?>">
-                            <a href="<?php echo BASE_URL; ?>/maestros/gestionar_trabajadores.php">Directorio Trabajadores</a>
-                        </li>
-                        <li class="<?php echo ($pagina_actual == 'gestionar_empleadores.php') ? 'active' : ''; ?>">
-                            <a href="<?php echo BASE_URL; ?>/maestros/gestionar_empleadores.php">Empresas / Empleadores</a>
-                        </li>
-                        <li class="<?php echo ($pagina_actual == 'gestionar_contratos.php') ? 'active' : ''; ?>">
-                            <a href="<?php echo BASE_URL; ?>/contratos/gestionar_contratos.php">Gestión de Contratos</a>
-                        </li>
-                        <li class="<?php echo ($pagina_actual == 'gestionar_licencias.php') ? 'active' : ''; ?>">
-                            <a href="<?php echo BASE_URL; ?>/maestros/gestionar_licencias.php">Licencias Médicas</a>
-                        </li>
-
-                        <div class="sidebar-heading">Procesos de Sueldo</div>
-                        <li class="<?php echo ($pagina_actual == 'cargar_aportes.php') ? 'active' : ''; ?>">
-                            <a href="<?php echo BASE_URL; ?>/aportes/cargar_aportes.php">Cargar Movimientos (CSV)</a>
-                        </li>
-                        <li class="<?php echo ($pagina_actual == 'generacion_masiva.php') ? 'active' : ''; ?>">
-                            <a href="<?php echo BASE_URL; ?>/planillas/generacion_masiva.php">Generación Masiva</a>
-                        </li>
-                        <li class="<?php echo ($pagina_actual == 'dashboard_mensual.php') ? 'active' : ''; ?>">
-                            <a href="<?php echo BASE_URL; ?>/planillas/dashboard_mensual.php">Aportes Patronales</a>
-                        </li>
-                        <li class="<?php echo ($pagina_actual == 'cargar_selector.php') ? 'active' : ''; ?>">
-                            <a href="<?php echo BASE_URL; ?>/planillas/cargar_selector.php">Generar Previsionales</a>
-                        </li>
-                        <?php if (isset($_SESSION['user_role']) && ($_SESSION['user_role'] == 'admin')): ?>
-                            <li class="<?php echo ($pagina_actual == 'cierres_mensuales.php') ? 'active' : ''; ?>">
-                                <a href="<?php echo BASE_URL; ?>/planillas/cierres_mensuales.php">Cierre Remuneraciones</a>
+                        <?php if ($user_role !== 'recaudador'): ?>
+                            <li class="<?php echo ($pagina_actual == 'configuracion.php') ? 'active' : ''; ?>">
+                                <a href="<?php echo BASE_URL; ?>/buses/configuracion.php">1. Configuración del Mes</a>
+                            </li>
+                            <li class="<?php echo ($pagina_actual == 'gestionar_buses.php') ? 'active' : ''; ?>">
+                                <a href="<?php echo BASE_URL; ?>/maestros/gestionar_buses.php">2. Directorio de Buses</a>
                             </li>
                         <?php endif; ?>
 
-                        <div class="sidebar-heading">Liquidaciones</div>
-                        <li class="<?php echo ($pagina_actual == 'generar_liquidacion.php') ? 'active' : ''; ?>">
-                            <a href="<?php echo BASE_URL; ?>/liquidaciones/generar_liquidacion.php">Generar Liquidaciones</a>
-                        </li>
-                        <li class="<?php echo ($pagina_actual == 'listar_liquidaciones.php') ? 'active' : ''; ?>">
-                            <a href="<?php echo BASE_URL; ?>/liquidaciones/listar_liquidaciones.php">Historial / Descargas</a>
+                        <li class="<?php echo ($pagina_actual == 'ingreso_guia.php') ? 'active' : ''; ?>">
+                            <a href="<?php echo BASE_URL; ?>/buses/ingreso_guia.php">3. Guía Diaria</a>
                         </li>
 
-                        <div class="sidebar-heading">Reportabilidad</div>
-
-                        <li class="<?php echo ($pagina_actual == 'reportes_especiales.php') ? 'active' : ''; ?>">
-                            <a href="<?php echo BASE_URL; ?>/reportes/reportes_especiales.php">Reportes Especiales</a>
-                        </li>
-                        <li class="<?php echo ($pagina_actual == 'ver_excedentes.php') ? 'active' : ''; ?>">
-                            <a href="<?php echo BASE_URL; ?>/aportes/ver_excedentes.php">Historial Excedentes</a>
-                        </li>
-                    </ul>
-                </li>
-
-                <li class="<?php echo (in_array($pagina_actual, $paginas_sistema)) ? 'active' : ''; ?>">
-                    <a href="#sistemaMenu" data-bs-toggle="collapse" aria-expanded="<?php echo (in_array($pagina_actual, $paginas_sistema)) ? 'true' : 'false'; ?>" class="dropdown-toggle">
-                        <i class="fas fa-cogs me-2"></i> Sistema y Parámetros
-                    </a>
-                    <ul class="collapse list-unstyled <?php echo (in_array($pagina_actual, $paginas_sistema)) ? 'show' : ''; ?>" id="sistemaMenu">
-
-                        <?php if (isset($_SESSION['user_role']) && $_SESSION['user_role'] == 'admin'): ?>
-                            <li class="<?php echo ($pagina_actual == 'gestionar_usuarios.php') ? 'active' : ''; ?>">
-                                <a href="<?php echo BASE_URL; ?>/admin/gestionar_usuarios.php"><i class="fas fa-user-shield me-2"></i> Usuarios del Sistema</a>
+                        <?php if ($user_role !== 'recaudador'): ?>
+                            <li class="<?php echo ($pagina_actual == 'importar_produccion.php') ? 'active' : ''; ?>">
+                                <a href="<?php echo BASE_URL; ?>/buses/importar_produccion.php">4. Importar Producción (CSV)</a>
                             </li>
-                            <li class="<?php echo ($pagina_actual == 'gestionar_sis.php') ? 'active' : ''; ?>">
-                                <a href="<?php echo BASE_URL; ?>/admin/gestionar_sis.php"><i class="fas fa-chart-line me-2"></i> Indicadores (SIS)</a>
+                            <li class="<?php echo ($pagina_actual == 'planilla_mensual.php') ? 'active' : ''; ?>">
+                                <a href="<?php echo BASE_URL; ?>/buses/planilla_mensual.php">5. Editar Planilla</a>
                             </li>
-                            <li class="<?php echo ($pagina_actual == 'gestionar_tramos_cargas.php') ? 'active' : ''; ?>">
-                                <a href="<?php echo BASE_URL; ?>/maestros/gestionar_tramos_cargas.php"><i class="fas fa-child me-2"></i> Tramos Asignación Familiar</a>
+                            <li class="<?php echo ($pagina_actual == 'cierre_mensual.php') ? 'active' : ''; ?>">
+                                <a href="<?php echo BASE_URL; ?>/buses/cierre_mensual.php">6. Cierre Mensual</a>
+                            </li>
+                            <li class="<?php echo ($pagina_actual == 'seleccionar_reporte.php') ? 'active' : ''; ?>">
+                                <a href="<?php echo BASE_URL; ?>/buses/seleccionar_reporte.php">7. Reportes de Flota</a>
                             </li>
                         <?php endif; ?>
-
-                        <li class="<?php echo ($pagina_actual == 'gestionar_sindicatos.php') ? 'active' : ''; ?>">
-                            <a href="<?php echo BASE_URL; ?>/maestros/gestionar_sindicatos.php">Sindicatos</a>
-                        </li>
-                        <li class="<?php echo ($pagina_actual == 'gestionar_afps.php') ? 'active' : ''; ?>">
-                            <a href="<?php echo BASE_URL; ?>/maestros/gestionar_afps.php">AFPs y Comisiones</a>
-                        </li>
                     </ul>
                 </li>
+
+                <?php if ($user_role !== 'recaudador'): ?>
+                    <li class="<?php echo (in_array($pagina_actual, $paginas_rrhh)) ? 'active' : ''; ?>">
+                        <a href="#rrhhMenu" data-bs-toggle="collapse" aria-expanded="<?php echo (in_array($pagina_actual, $paginas_rrhh)) ? 'true' : 'false'; ?>" class="dropdown-toggle">
+                            <i class="fas fa-users me-2"></i> Recursos Humanos
+                        </a>
+                        <ul class="collapse list-unstyled <?php echo (in_array($pagina_actual, $paginas_rrhh)) ? 'show' : ''; ?>" id="rrhhMenu">
+
+                            <div class="sidebar-heading">Personal</div>
+                            <li class="<?php echo ($pagina_actual == 'gestionar_trabajadores.php') ? 'active' : ''; ?>">
+                                <a href="<?php echo BASE_URL; ?>/maestros/gestionar_trabajadores.php">Directorio Trabajadores</a>
+                            </li>
+                            <li class="<?php echo ($pagina_actual == 'gestionar_empleadores.php') ? 'active' : ''; ?>">
+                                <a href="<?php echo BASE_URL; ?>/maestros/gestionar_empleadores.php">Empresas / Empleadores</a>
+                            </li>
+                            <li class="<?php echo ($pagina_actual == 'gestionar_contratos.php') ? 'active' : ''; ?>">
+                                <a href="<?php echo BASE_URL; ?>/contratos/gestionar_contratos.php">Gestión de Contratos</a>
+                            </li>
+                            <li class="<?php echo ($pagina_actual == 'gestionar_licencias.php') ? 'active' : ''; ?>">
+                                <a href="<?php echo BASE_URL; ?>/maestros/gestionar_licencias.php">Licencias Médicas</a>
+                            </li>
+
+                            <div class="sidebar-heading">Procesos de Sueldo</div>
+                            <li class="<?php echo ($pagina_actual == 'cargar_aportes.php') ? 'active' : ''; ?>">
+                                <a href="<?php echo BASE_URL; ?>/aportes/cargar_aportes.php">Cargar Movimientos (CSV)</a>
+                            </li>
+                            <li class="<?php echo ($pagina_actual == 'generacion_masiva.php') ? 'active' : ''; ?>">
+                                <a href="<?php echo BASE_URL; ?>/planillas/generacion_masiva.php">Generación Masiva</a>
+                            </li>
+                            <li class="<?php echo ($pagina_actual == 'dashboard_mensual.php') ? 'active' : ''; ?>">
+                                <a href="<?php echo BASE_URL; ?>/planillas/dashboard_mensual.php">Aportes Patronales</a>
+                            </li>
+                            <li class="<?php echo ($pagina_actual == 'cargar_selector.php') ? 'active' : ''; ?>">
+                                <a href="<?php echo BASE_URL; ?>/planillas/cargar_selector.php">Generar Previsionales</a>
+                            </li>
+                            <?php if (isset($_SESSION['user_role']) && ($_SESSION['user_role'] == 'admin')): ?>
+                                <li class="<?php echo ($pagina_actual == 'cierres_mensuales.php') ? 'active' : ''; ?>">
+                                    <a href="<?php echo BASE_URL; ?>/planillas/cierres_mensuales.php">Cierre Remuneraciones</a>
+                                </li>
+                            <?php endif; ?>
+
+                            <div class="sidebar-heading">Liquidaciones</div>
+                            <li class="<?php echo ($pagina_actual == 'generar_liquidacion.php') ? 'active' : ''; ?>">
+                                <a href="<?php echo BASE_URL; ?>/liquidaciones/generar_liquidacion.php">Generar Liquidaciones</a>
+                            </li>
+                            <li class="<?php echo ($pagina_actual == 'listar_liquidaciones.php') ? 'active' : ''; ?>">
+                                <a href="<?php echo BASE_URL; ?>/liquidaciones/listar_liquidaciones.php">Historial / Descargas</a>
+                            </li>
+
+                            <div class="sidebar-heading">Reportabilidad</div>
+
+                            <li class="<?php echo ($pagina_actual == 'reportes_especiales.php') ? 'active' : ''; ?>">
+                                <a href="<?php echo BASE_URL; ?>/reportes/reportes_especiales.php">Reportes Especiales</a>
+                            </li>
+                            <li class="<?php echo ($pagina_actual == 'ver_excedentes.php') ? 'active' : ''; ?>">
+                                <a href="<?php echo BASE_URL; ?>/aportes/ver_excedentes.php">Historial Excedentes</a>
+                            </li>
+                        </ul>
+                    </li>
+
+                    <li class="<?php echo (in_array($pagina_actual, $paginas_sistema)) ? 'active' : ''; ?>">
+                        <a href="#sistemaMenu" data-bs-toggle="collapse" aria-expanded="<?php echo (in_array($pagina_actual, $paginas_sistema)) ? 'true' : 'false'; ?>" class="dropdown-toggle">
+                            <i class="fas fa-cogs me-2"></i> Sistema y Parámetros
+                        </a>
+                        <ul class="collapse list-unstyled <?php echo (in_array($pagina_actual, $paginas_sistema)) ? 'show' : ''; ?>" id="sistemaMenu">
+
+                            <?php if (isset($_SESSION['user_role']) && $_SESSION['user_role'] == 'admin'): ?>
+                                <li class="<?php echo ($pagina_actual == 'gestionar_usuarios.php') ? 'active' : ''; ?>">
+                                    <a href="<?php echo BASE_URL; ?>/admin/gestionar_usuarios.php"><i class="fas fa-user-shield me-2"></i> Usuarios del Sistema</a>
+                                </li>
+                                <li class="<?php echo ($pagina_actual == 'gestionar_sis.php') ? 'active' : ''; ?>">
+                                    <a href="<?php echo BASE_URL; ?>/admin/gestionar_sis.php"><i class="fas fa-chart-line me-2"></i> Indicadores (SIS)</a>
+                                </li>
+                                <li class="<?php echo ($pagina_actual == 'gestionar_tramos_cargas.php') ? 'active' : ''; ?>">
+                                    <a href="<?php echo BASE_URL; ?>/maestros/gestionar_tramos_cargas.php"><i class="fas fa-child me-2"></i> Tramos Asignación Familiar</a>
+                                </li>
+                            <?php endif; ?>
+
+                            <li class="<?php echo ($pagina_actual == 'gestionar_sindicatos.php') ? 'active' : ''; ?>">
+                                <a href="<?php echo BASE_URL; ?>/maestros/gestionar_sindicatos.php">Sindicatos</a>
+                            </li>
+                            <li class="<?php echo ($pagina_actual == 'gestionar_afps.php') ? 'active' : ''; ?>">
+                                <a href="<?php echo BASE_URL; ?>/maestros/gestionar_afps.php">AFPs y Comisiones</a>
+                            </li>
+                        </ul>
+                    </li>
+                <?php endif; ?>
 
             </ul>
 

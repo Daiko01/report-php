@@ -132,6 +132,8 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
 
                             <option value="admin">Administrador (admin)</option>
 
+                            <option value="recaudador">Recaudador (recaudador)</option>
+
                         </select>
 
                     </div>

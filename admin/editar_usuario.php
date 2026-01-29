@@ -126,6 +126,8 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
 
                             <option value="admin" <?php echo ($user['role'] == 'admin') ? 'selected' : ''; ?>>Administrador (admin)</option>
 
+                            <option value="recaudador" <?php echo ($user['role'] == 'recaudador') ? 'selected' : ''; ?>>Recaudador (recaudador)</option>
+
                         </select>
 
                     </div>
