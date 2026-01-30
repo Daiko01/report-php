@@ -43,14 +43,16 @@ function procesar_grabado_cierre($pdo, $post_data)
     $boleta_garantia = (int)($post_data['boleta_garantia'] ?? 0);
     $boleta_garantia_dos = (int)($post_data['boleta_garantia_dos'] ?? 0);
 
+    $estado = $post_data['estado'] ?? 'Cerrado';
+
     try {
         $stmt = $pdo->prepare("INSERT INTO cierres_maquinas 
             (bus_id, mes, anio, subsidio_operacional, devolucion_minutos, otros_ingresos_1, otros_ingresos_2, otros_ingresos_3,
              anticipo, asignacion_familiar, pago_minutos, saldo_anterior, ayuda_mutua, servicio_grua, poliza_seguro,
              valor_vueltas_directo, valor_vueltas_local, cant_vueltas_directo, cant_vueltas_local,
              monto_leyes_sociales, monto_administracion_aplicado,
-             derechos_loza, seguro_cartolas, gps, boleta_garantia, boleta_garantia_dos)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             derechos_loza, seguro_cartolas, gps, boleta_garantia, boleta_garantia_dos, estado)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE
              subsidio_operacional = VALUES(subsidio_operacional),
              devolucion_minutos = VALUES(devolucion_minutos),
@@ -74,7 +76,8 @@ function procesar_grabado_cierre($pdo, $post_data)
              seguro_cartolas = VALUES(seguro_cartolas),
              gps = VALUES(gps),
              boleta_garantia = VALUES(boleta_garantia),
-             boleta_garantia_dos = VALUES(boleta_garantia_dos)
+             boleta_garantia_dos = VALUES(boleta_garantia_dos),
+             estado = VALUES(estado)
         ");
 
         $stmt->execute([
@@ -103,7 +106,8 @@ function procesar_grabado_cierre($pdo, $post_data)
             $seguro_cartolas,
             $gps,
             $boleta_garantia,
-            $boleta_garantia_dos
+            $boleta_garantia_dos,
+            $estado
         ]);
 
         return [

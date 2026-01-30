@@ -204,14 +204,26 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
 <!-- HISTORIAL RÁPIDO (Últimas 10) -->
 <div class="card shadow mb-4">
     <div class="card-header py-2 bg-gray-200 d-flex justify-content-between align-items-center">
-        <h6 class="m-0 fw-bold text-dark small text-uppercase">Últimos Ingresos</h6>
-        <input type="date" id="filtroFechaHistorial" class="form-control form-control-sm w-auto" value="<?php echo date('Y-m-d'); ?>">
+        <div class="d-flex align-items-center gap-2">
+            <h6 class="m-0 fw-bold text-dark small text-uppercase">Últimos Ingresos</h6>
+            <button id="btnCerrarSeleccionadas" class="btn btn-sm btn-danger shadow-sm d-none" onclick="cerrarGuiasMasivo()">
+                <i class="fas fa-lock me-1"></i> Cerrar Seleccionadas
+            </button>
+            <button id="btnReabrirSeleccionadas" class="btn btn-sm btn-success shadow-sm d-none" onclick="reabrirGuiasMasivo()">
+                <i class="fas fa-unlock me-1"></i> Reabrir Seleccionadas
+            </button>
+        </div>
+        <div class="d-flex align-items-center">
+            <span class="small me-2 fw-bold text-muted">Fecha:</span>
+            <input type="date" id="filtroFechaHistorial" class="form-control form-control-sm" value="<?= date('Y-m-d') ?>" style="width: 140px;">
+        </div>
     </div>
     <div class="card-body p-0">
         <div class="table-responsive">
-            <table class="table table-sm table-striped mb-0 small" id="historialRapido">
+            <table class="table table-sm table-striped table-hover mb-0 small" id="historialRapido">
                 <thead>
                     <tr>
+                        <th class="text-center" width="5%"><input type="checkbox" id="checkTodo" title="Seleccionar Todo"></th>
                         <th class="text-start">Fecha</th>
                         <th class="text-start">N° Guía</th>
                         <th class="text-start">Bus</th>
@@ -219,13 +231,14 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
                         <th class="text-start">Conductor</th>
                         <th class="text-start">Ingreso</th>
                         <th class="text-start">Líquido</th>
+                        <th class="text-center">Estado</th>
                         <th class="text-start">Acción</th>
                     </tr>
                 </thead>
                 <tbody class="text-dark">
                     <!-- Loaded via JS -->
                     <tr>
-                        <td colspan="7" class="text-muted py-2">Cargando...</td>
+                        <td colspan="10" class="text-muted py-2">Cargando...</td>
                     </tr>
                 </tbody>
             </table>
@@ -333,8 +346,22 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
 
             fetch(`../ajax/get_ultimos_folios.php?bus_id=${currentBusId}`)
                 .then(r => r.json())
-                .then(folios => {
-                    // Iterar la respuesta y llenar
+                .then(data => {
+                    const folios = data.folios || {};
+                    const gastos = data.gastos || {};
+
+                    // Fill Expenses
+                    if (gastos) {
+                        $('input[name="gasto_administracion"]').val(gastos.gasto_administracion || '');
+                        $('input[name="gasto_boletos"]').val(gastos.gasto_boletos || '');
+                        $('input[name="gasto_petroleo"]').val(gastos.gasto_petroleo || '');
+                        $('input[name="gasto_aseo"]').val(gastos.gasto_aseo || '');
+                        $('input[name="gasto_viatico"]').val(gastos.gasto_viatico || '');
+                        $('input[name="gasto_varios"]').val(gastos.gasto_varios || '');
+                        $('input[name="gasto_imposiciones"]').val(gastos.gasto_imposiciones || '');
+                    }
+
+                    // Iterar folios y llenar
                     for (const [tarifa, folioFin] of Object.entries(folios)) {
                         // Buscar input de inicio para esta tarifa
                         const $tr = $(`tr[data-tarifa="${tarifa}"]`);
@@ -486,8 +513,10 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
         }
 
         // --- 5. HISTORIAL RAPIDO ---
-        function loadHistory() {
+        // --- 5. HISTORIAL RAPIDO ---
+        window.loadHistory = function() {
             const fecha = $('#filtroFechaHistorial').val();
+
             fetch(`get_historial_guia.php?fecha=${fecha}`)
                 .then(r => r.text())
                 .then(html => {
@@ -498,23 +527,24 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
 
                     $('#historialRapido tbody').html(html);
 
-                    // Init DataTables (Simple Mode)
+                    // Init DataTables (Standard "Pretty" Mode)
                     $('#historialRapido').DataTable({
                         "language": {
                             "url": "//cdn.datatables.net/plug-ins/1.13.4/i18n/es-ES.json"
                         },
                         "paging": true,
-                        "lengthChange": false, // No "Show entries"
-                        "searching": true,
-                        "ordering": false, // Backend ordered by ID DESC
+                        "lengthChange": false,
+                        "searching": true, // Default search enabled
+                        "ordering": false,
                         "info": false,
                         "pageLength": 10,
-                        "dom": '<"row"<"col-sm-12 col-md-12 text-end"f>>t<"row"<"col-sm-12"p>>' // Search right, Table, Pagination center
+                        "dom": '<"row"<"col-sm-12 col-md-12 text-end"f>>t<"row"<"col-sm-12"p>>'
                     });
                 })
                 .catch(() => $('#historialRapido tbody').html(''));
         }
 
+        // Trigger on change for date
         $('#filtroFechaHistorial').on('change', function() {
             loadHistory();
         });
@@ -558,5 +588,203 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
                 }
             });
         };
+
+        // --- 6. LOGICA CIERRE (INDIDIVUAL & MASIVO) ---
+
+        // Toggle "Seleccionar Todo"
+        $(document).on('change', '#checkTodo', function() {
+            const isChecked = $(this).is(':checked');
+            $('.guia-selector').prop('checked', isChecked);
+            toggleBulkButton();
+        });
+
+        // Toggle Individual Checkbox
+        $(document).on('change', '.guia-selector', function() {
+            toggleBulkButton();
+            // Update "Select All" status
+            const total = $('.guia-selector').length;
+            const checked = $('.guia-selector:checked').length;
+            $('#checkTodo').prop('checked', total === checked && total > 0);
+        });
+
+        function toggleBulkButton() {
+            let countOpen = 0;
+            let countClosed = 0;
+
+            $('.guia-selector:checked').each(function() {
+                const status = $(this).data('status');
+                if (status === 'Cerrada') countClosed++;
+                else countOpen++;
+            });
+
+            $('#btnCerrarSeleccionadas').addClass('d-none');
+            $('#btnReabrirSeleccionadas').addClass('d-none');
+
+            if (countOpen > 0) {
+                $('#btnCerrarSeleccionadas').removeClass('d-none').text(`Cerrar (${countOpen}) Seleccionadas`);
+            } else if (countClosed > 0) {
+                $('#btnReabrirSeleccionadas').removeClass('d-none').text(`Reabrir (${countClosed}) Seleccionadas`);
+            }
+        }
+
+        // Cierre Individual
+        window.cerrarGuiaIndividual = function(id) {
+            Swal.fire({
+                title: '¿Cerrar esta Guía?',
+                text: "Una vez cerrada, no podrá editarse.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#f0ad4e',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Sí, Cerrar',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    procesarCierre([id]);
+                }
+            });
+        };
+
+        // Cierre Masivo
+        window.cerrarGuiasMasivo = function() {
+            const ids = [];
+            $('.guia-selector:checked').each(function() {
+                ids.push($(this).val());
+            });
+
+            if (ids.length === 0) return;
+
+            Swal.fire({
+                title: '¿Cerrar Guías Seleccionadas?',
+                text: `Se cerrarán ${ids.length} guías.`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Sí, Cerrar Todo',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    procesarCierre(ids);
+                }
+            });
+        };
+
+        function procesarCierre(ids) {
+            Swal.showLoading();
+
+            // Build Form Data
+            const formData = new FormData();
+            ids.forEach(id => formData.append('ids[]', id));
+
+            fetch('../ajax/procesar_cierre_guia.php', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(r => r.json())
+                .then(res => {
+                    if (res.success) {
+                        Swal.fire('Éxito', res.message, 'success');
+                        loadHistory();
+                        $('#checkTodo').prop('checked', false);
+                        toggleBulkButton(); // hide
+                    } else {
+                        Swal.fire('Error', res.message, 'error');
+                    }
+                })
+                .catch(() => Swal.fire('Error', 'Fallo de conexión', 'error'));
+        }
+
+        // Reapertura Individual
+        window.reabrirGuiaIndividual = function(id) {
+            Swal.fire({
+                title: '¿Reabrir esta Guía?',
+                text: "Quedará disponible para edición.",
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#1cc88a',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Sí, Reabrir',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    procesarReapertura([id]);
+                }
+            });
+        };
+
+        // Cierre Masivo (Updated to exclude closed)
+        window.cerrarGuiasMasivo = function() {
+            const ids = [];
+            $('.guia-selector:checked').each(function() {
+                if ($(this).data('status') !== 'Cerrada') ids.push($(this).val());
+            });
+
+            if (ids.length === 0) return;
+
+            Swal.fire({
+                title: '¿Cerrar Guías Seleccionadas?',
+                text: `Se cerrarán ${ids.length} guías.`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Sí, Cerrar Todo',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    procesarCierre(ids);
+                }
+            });
+        };
+
+        // Reapertura Masiva
+        window.reabrirGuiasMasivo = function() {
+            const ids = [];
+            $('.guia-selector:checked').each(function() {
+                if ($(this).data('status') === 'Cerrada') ids.push($(this).val());
+            });
+
+            if (ids.length === 0) return;
+
+            Swal.fire({
+                title: '¿Reabrir Guías Seleccionadas?',
+                text: `Se reabrirán ${ids.length} guías.`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#1cc88a',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Sí, Reabrir Todo',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    procesarReapertura(ids);
+                }
+            });
+        };
+
+        function procesarReapertura(ids) {
+            Swal.showLoading();
+            const formData = new FormData();
+            ids.forEach(id => formData.append('ids[]', id));
+
+            fetch('../ajax/procesar_reabrir_guia.php', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(r => r.json())
+                .then(res => {
+                    if (res.success) {
+                        Swal.fire('Éxito', res.message, 'success');
+                        loadHistory();
+                        $('#checkTodo').prop('checked', false);
+                        toggleBulkButton();
+                    } else {
+                        Swal.fire('Error', res.message, 'error');
+                    }
+                })
+                .catch(() => Swal.fire('Error', 'Fallo de conexión', 'error'));
+        }
+
     });
 </script>

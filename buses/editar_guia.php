@@ -68,10 +68,36 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
 </style>
 
 <div class="container-fluid">
+    <?php
+    $estado = $guia['estado'] ?? 'Abierto';
+    $isClosed = ($estado === 'Cerrada');
+    $isAdmin = (isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'admin');
+    $readonlyAttr = $isClosed ? 'disabled' : '';
+    ?>
+
     <div class="d-sm-flex align-items-center justify-content-between mb-4">
-        <h1 class="h3 mb-0 text-gray-800"><i class="fas fa-edit text-warning me-2"></i>Editar Guía #<?= $guia['nro_guia'] ?></h1>
+        <h1 class="h3 mb-0 text-gray-800">
+            <i class="fas fa-edit text-warning me-2"></i>Editar Guía #<?= $guia['nro_guia'] ?>
+            <?php if ($isClosed): ?>
+                <span class="badge bg-secondary ms-2"><i class="fas fa-lock me-1"></i> CERRADA</span>
+            <?php else: ?>
+                <span class="badge bg-success ms-2"><i class="fas fa-check-circle me-1"></i> ABIERTA</span>
+            <?php endif; ?>
+        </h1>
         <a href="ingreso_guia.php" class="btn btn-secondary btn-sm shadow-sm"><i class="fas fa-arrow-left me-1"></i> Cancelar</a>
     </div>
+
+    <!-- Alert for Closed State -->
+    <?php if ($isClosed): ?>
+        <div class="alert alert-secondary border-left-secondary shadow-sm" role="alert">
+            <h4 class="alert-heading"><i class="fas fa-lock"></i> Guía Cerrada</h4>
+            <p class="mb-0">Esta guía se encuentra cerrada y no puede ser modificada.
+                <?php if ($isAdmin): ?>
+                    Como administrador, puedes reabrirla para realizar correcciones.
+                <?php endif; ?>
+            </p>
+        </div>
+    <?php endif; ?>
 
     <form id="formGuia" autocomplete="off">
         <!-- Hidden ID for Update -->
@@ -89,11 +115,11 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
                         <div class="row mb-3">
                             <div class="col-6">
                                 <label class="small fw-bold">Fecha</label>
-                                <input type="date" class="form-control" name="fecha" id="fecha" value="<?= $guia['fecha'] ?>" required>
+                                <input type="date" class="form-control" name="fecha" id="fecha" value="<?= $guia['fecha'] ?>" required <?= $readonlyAttr ?>>
                             </div>
                             <div class="col-6">
                                 <label class="small fw-bold">N° Guía</label>
-                                <input type="number" class="form-control fw-bold text-center" name="nro_guia" value="<?= $guia['nro_guia'] ?>" required>
+                                <input type="number" class="form-control fw-bold text-center" name="nro_guia" value="<?= $guia['nro_guia'] ?>" required <?= $readonlyAttr ?>>
                             </div>
                         </div>
 
@@ -106,7 +132,7 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
                             $bus = $pdo->query("SELECT empleador_id FROM buses WHERE id = " . $guia['bus_id'])->fetch();
                             $emp_select_id = $bus['empleador_id'];
                             ?>
-                            <select class="form-select select2" id="empleador_id" name="empleador_id" required>
+                            <select class="form-select select2" id="empleador_id" name="empleador_id" required <?= $readonlyAttr ?>>
                                 <?php foreach ($empleadores as $e): ?>
                                     <option value="<?= $e['id'] ?>" <?= $e['id'] == $emp_select_id ? 'selected' : '' ?>><?= htmlspecialchars($e['nombre']) ?></option>
                                 <?php endforeach; ?>
@@ -116,15 +142,15 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
                         <!-- BUS -->
                         <div class="mb-3">
                             <label class="small fw-bold text-muted">B. Bus</label>
-                            <select class="form-select select2" id="bus_id" name="bus_id" required>
-                                <!-- Populated by JS -->
+                            <select class="form-select select2" id="bus_id" name="bus_id" required disabled>
+                                <!-- Populated by JS, handled specifically for edit mode -->
                             </select>
                         </div>
 
                         <!-- CONDUCTOR -->
                         <div class="mb-2">
                             <label class="small fw-bold text-primary">C. Conductor</label>
-                            <select class="form-select select2" id="conductor_id" name="conductor_id" required>
+                            <select class="form-select select2" id="conductor_id" name="conductor_id" required <?= $readonlyAttr ?>>
                                 <!-- Populated by JS -->
                             </select>
                         </div>
@@ -157,8 +183,8 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
                                 ?>
                                     <tr data-tarifa="<?= $t ?>">
                                         <td class="align-middle text-center fw-bold bg-light"><?= $t ?></td>
-                                        <td><input type="number" class="form-control form-control-sm input-pecera folio-inicio" name="folios[<?= $t ?>][inicio]" value="<?= $inicio ?>"></td>
-                                        <td><input type="number" class="form-control form-control-sm input-pecera folio-fin" name="folios[<?= $t ?>][fin]" value="<?= $fin ?>"></td>
+                                        <td><input type="number" class="form-control form-control-sm input-pecera folio-inicio" name="folios[<?= $t ?>][inicio]" value="<?= $inicio ?>" <?= $readonlyAttr ?>></td>
+                                        <td><input type="number" class="form-control form-control-sm input-pecera folio-fin" name="folios[<?= $t ?>][fin]" value="<?= $fin ?>" <?= $readonlyAttr ?>></td>
                                         <td class="align-middle text-end pe-3 text-dark fw-bold total-row-val">0</td>
                                     </tr>
                                 <?php endforeach; ?>
@@ -194,14 +220,25 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
                         foreach ($gastos as $key => $label): ?>
                             <div class="mb-2">
                                 <label class="small fw-bold"><?= $label ?></label>
-                                <input type="number" class="form-control form-control-sm input-gasto" name="<?= $key ?>" value="<?= $guia[$key] ?>">
+                                <input type="number" class="form-control form-control-sm input-gasto" name="<?= $key ?>" value="<?= $guia[$key] ?>" <?= $readonlyAttr ?>>
                             </div>
                         <?php endforeach; ?>
 
                         <div class="d-grid gap-2 pt-2">
-                            <button type="button" class="btn btn-warning fw-bold text-dark shadow-sm" id="btnGuardar">
-                                <i class="fas fa-save me-2"></i> ACTUALIZAR
-                            </button>
+                            <?php if (!$isClosed): ?>
+                                <!-- BOTONES ESTADO ABIERTO -->
+                                <button type="button" class="btn btn-warning fw-bold text-dark shadow-sm" onclick="submitForm('guardar')">
+                                    <i class="fas fa-save me-2"></i> ACTUALIZAR
+                                </button>
+                                <!-- Logica de cierre movida al listado principal -->
+                            <?php else: ?>
+                                <!-- BOTONES ESTADO CERRADO -->
+                                <?php if ($isAdmin || (isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'contador')): ?>
+                                    <button type="button" class="btn btn-danger fw-bold shadow-sm" onclick="submitForm('reabrir')">
+                                        <i class="fas fa-unlock me-2"></i> REABRIR GUÍA
+                                    </button>
+                                <?php endif; ?>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>
@@ -232,10 +269,12 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
 
         // 2. Load Buses for current employer
         const empId = $('#empleador_id').val();
+        const isReadOnly = <?= $isClosed ? 'true' : 'false' ?>;
         fetch(`../ajax/get_buses_por_empleador.php?empleador_id=${empId}`).then(r => r.json()).then(buses => {
             let opts = '';
             buses.forEach(b => opts += `<option value="${b.id}" ${b.id == busIdInit ? 'selected' : ''}>${b.numero_maquina}</option>`);
             $('#bus_id').html(opts);
+            if (!isReadOnly) $('#bus_id').prop('disabled', false); // Enable only if not read only
         });
 
         // Calc initials
@@ -260,22 +299,51 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
         $(document).on('input', '.folio-inicio, .folio-fin', calculateTotals);
 
         // --- SAVE LOGIC ---
-        $('#btnGuardar').click(function() {
-            // Reuse same process endpoint? Yes, it supports ON DUPLICATE KEY UPDATE based on ID if we pass it properly? 
-            // Actually, update process endpoint to handle Explicit Update if 'guia_id' is present?
-            // Wait, 'guardar_guia_process.php' uses `INSERT ... ON DUPLICATE KEY UPDATE`. 
-            // It relies on (bus_id, fecha, nro_guia) constraint OR primary key.
-            // It doesn't check 'id'. 
-            // If I change the Nro Guia or Date in Edit, it might create a new one.
-            // Risk: editing 'nro_guia' to a new number makes a new record.
-            // We should fix 'guardar_guia_process.php' to respect 'guia_id' if sent for UPDATE.
+        window.submitForm = function(accion) {
+
+            let titulo = 'Actualizando...';
+            let confirmMsg = '';
+
+            if (accion === 'cerrar') {
+                titulo = 'Cerrando Guía...';
+                confirmMsg = '¿Estás seguro de cerrar esta guía? No podrás editarla nuevamente a menos que seas Administrador.';
+            } else if (accion === 'reabrir') {
+                titulo = 'Reabriendo Guía...';
+                confirmMsg = '¿Reabrir esta guía para edición?';
+            }
+
+            if (confirmMsg) {
+                Swal.fire({
+                    title: 'Confirmar Acción',
+                    text: confirmMsg,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'Sí, proceder',
+                    cancelButtonText: 'Cancelar'
+                }).then((r) => {
+                    if (r.isConfirmed) processSubmit(accion, titulo);
+                });
+            } else {
+                processSubmit(accion, titulo);
+            }
+        };
+
+        function processSubmit(accion, titulo) {
+            // Enable ALL fields to ensure they are sent (Fecha, Nro Guia, Bus, Conductor, etc are disabled when closed)
+            $('#formGuia :input').prop('disabled', false);
 
             const formData = new FormData($('#formGuia')[0]);
-            // Add 'action' or 'mode'
+            formData.append('accion', accion);
             formData.append('mode', 'update');
 
+            // Re-disable if not reopening, to maintain UI state (optional but good UI)
+            // But if we are reloading page on success, it doesn't matter much.
+            if (accion !== 'reabrir') {
+                // Check logic: if it was closed, it should be disabled.
+            }
+
             Swal.fire({
-                title: 'Actualizando...',
+                title: titulo,
                 didOpen: () => Swal.showLoading()
             });
 
@@ -283,16 +351,28 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
                     method: 'POST',
                     body: formData
                 })
-                .then(r => r.json())
+                .then(r => r.text()) // Use text() first to debug if JSON fails
+                .then(text => {
+                    try {
+                        return JSON.parse(text);
+                    } catch (e) {
+                        console.error("Server Error:", text);
+                        throw new Error("Respuesta del servidor inválida.");
+                    }
+                })
                 .then(res => {
                     if (res.success) {
-                        Swal.fire('Éxito', 'Guía actualizada', 'success').then(() => {
-                            window.location.href = 'ingreso_guia.php';
+                        Swal.fire('Éxito', 'Operación realizada correctamente.', 'success').then(() => {
+                            window.location.reload();
                         });
                     } else {
                         Swal.fire('Error', res.message, 'error');
                     }
+                })
+                .catch(err => {
+                    console.error(err);
+                    Swal.fire('Error', 'Ocurrió un error al procesar la solicitud: ' + err.message, 'error');
                 });
-        });
+        }
     });
 </script>

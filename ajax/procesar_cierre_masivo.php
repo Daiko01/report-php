@@ -48,14 +48,14 @@ try {
              anticipo, asignacion_familiar, pago_minutos, saldo_anterior, ayuda_mutua, servicio_grua, poliza_seguro,
              valor_vueltas_directo, valor_vueltas_local, cant_vueltas_directo, cant_vueltas_local,
              monto_leyes_sociales, monto_administracion_aplicado,
-             derechos_loza, seguro_cartolas, gps, boleta_garantia, boleta_garantia_dos)
+             derechos_loza, seguro_cartolas, gps, boleta_garantia, boleta_garantia_dos, estado)
             VALUES 
             (?, ?, ?, 
              0, 0, 0, 0, 0, 
              0, 0, 0, 0, 0, 0, 0,
              0, 0, 0, 0,
              ?, ?, 
-             ?, ?, ?, ?, ?)
+             ?, ?, ?, ?, ?, 'Cerrado')
             ON DUPLICATE KEY UPDATE
              monto_leyes_sociales = VALUES(monto_leyes_sociales),
              monto_administracion_aplicado = VALUES(monto_administracion_aplicado),
@@ -63,7 +63,8 @@ try {
              seguro_cartolas = VALUES(seguro_cartolas),
              gps = VALUES(gps),
              boleta_garantia = VALUES(boleta_garantia),
-             boleta_garantia_dos = VALUES(boleta_garantia_dos)";
+             boleta_garantia_dos = VALUES(boleta_garantia_dos),
+             estado = 'Cerrado'";
 
     $stmtInsert = $pdo->prepare($sqlInitial);
 

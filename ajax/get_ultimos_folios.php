@@ -31,7 +31,10 @@ try {
         $folios[$t] = $last ? (int)$last : 0; // Default to 0 if no history
     }
 
-    echo json_encode($folios);
+    echo json_encode([
+        'folios' => $folios,
+        'gastos' => [] // Empty array as requested
+    ]);
 } catch (Exception $e) {
     http_response_code(500);
     echo json_encode(['error' => $e->getMessage()]);

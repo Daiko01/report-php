@@ -140,19 +140,87 @@ try {
             if ($dias_trabajados > 30) $dias_trabajados = 30;
             if ($dias_trabajados < 0) $dias_trabajados = 0;
 
-            // PRORRATEO SUELDO (Delegado al Servicio)
-            $sueldo_contractual_completo = (int)$contrato['sueldo_imponible'];
-            $contrato['sueldo_imponible'] = $calculoService->calcularProporcional($sueldo_contractual_completo, $dias_trabajados);
+            // --- LÓGICA ESPECIAL CONDUCTORES (GUÍAS) ---
+            // Requerimiento: Días trabajados = N° Guías (1 Guía = 1 Día, aunque sean en el mismo día). 
+            $stmtGuides = $pdo->prepare("SELECT COUNT(id) as num_guias, SUM(ingreso) as to_ingreso FROM produccion_buses WHERE conductor_id = ? AND MONTH(fecha) = ? AND YEAR(fecha) = ?");
+            $stmtGuides->execute([$contrato['trabajador_id'], $mes, $ano]);
+            $guideData = $stmtGuides->fetch(PDO::FETCH_ASSOC);
+
+            $es_conductor = ($guideData['num_guias'] > 0);
+
+            if ($es_conductor) {
+                // Días Trabajados = N° Guías
+                $dias_trabajados = (int)$guideData['num_guias'];
+                // Cap at 30 just in case to avoid calculation errors in service? 
+                // Actually if they work 31 days, pay 31? Usually cap at 30 in Chile.
+                if ($dias_trabajados > 30) $dias_trabajados = 30;
+
+                // Cálculo Sueldo A = Suma(Ingreso * 0.22)
+                $total_ingreso_guias = (int)$guideData['to_ingreso'];
+                $sueldo_produccion = round($total_ingreso_guias * 0.22);
+
+                // Sueldo B = Piso Legal (539.000)
+                $sueldo_minimo_legal = 539000;
+
+                if ($dias_trabajados >= 30) {
+                    $piso_legal_proporcional = $sueldo_minimo_legal;
+                } else {
+                    $piso_legal_proporcional = round(($sueldo_minimo_legal / 30) * $dias_trabajados);
+                }
+
+                // NUEVA LÓGICA SOLICITADA:
+                // Si la producción no alcanza el Mínimo Legal COMPLETO (539.000), se ajusta al Piso Proporcional.
+                if ($sueldo_produccion < $sueldo_minimo_legal) {
+                    $nuevo_sueldo_imponible = $piso_legal_proporcional;
+                } else {
+                    $nuevo_sueldo_imponible = $sueldo_produccion;
+                }
+
+                // Update calculated values
+                $contrato['sueldo_imponible'] = $nuevo_sueldo_imponible;
+            } else {
+                // PRORRATEO SUELDO (Delegado al Servicio) para NO conductores o sin guias
+                $sueldo_contractual_completo = (int)$contrato['sueldo_imponible'];
+                $contrato['sueldo_imponible'] = $calculoService->calcularProporcional($sueldo_contractual_completo, $dias_trabajados);
+            }
+            // ---------------------------------------------
 
             // Bonos también? Asumimos que sí, son imponibles mensuales. 
             if (isset($contrato['bonos_imponibles']) && $contrato['bonos_imponibles'] > 0) {
                 $contrato['bonos_imponibles'] = $calculoService->calcularProporcional($contrato['bonos_imponibles'], $dias_trabajados);
             }
 
-            // 5. Buscar Aporte Externo
-            $rut_limpio = preg_replace('/[^0-9kK]/', '', $contrato['rut']);
-            $stmt_aporte->execute([$rut_limpio, $mes, $ano]);
-            $monto_aporte = (int)($stmt_aporte->fetchColumn() ?: 0);
+            // 5. Determinar APORTES (Imposiciones)
+            // Lógica: Prioridad al Cierre Mensual de Máquinas. 
+            // Si el conductor trabajó en buses con cierre y monto > 0, se usa esa suma.
+            // Si no (o es 0), se busca en aportes_externos (CSV).
+
+            $monto_aportes_final = 0;
+
+            // B. Buscar Suma de "Imposiciones" en Guías Diarias (gasto_imposiciones)
+            $sql_sum_guias = "SELECT SUM(gasto_imposiciones) 
+                              FROM produccion_buses 
+                              WHERE conductor_id = ? AND MONTH(fecha) = ? AND YEAR(fecha) = ?";
+            $stmt_sum_guias = $pdo->prepare($sql_sum_guias);
+            $stmt_sum_guias->execute([$contrato['trabajador_id'], $mes, $ano]);
+            $suma_guias = (int)($stmt_sum_guias->fetchColumn() ?: 0);
+
+            // C. Buscar Aporte Externo (CSV) - Como última opción / legado
+            if (isset($stmt_aporte)) {
+                $rut_limpio = preg_replace('/[^0-9kK]/', '', $contrato['rut']);
+                $stmt_aporte->execute([$rut_limpio, $mes, $ano]);
+                $monto_externo = (int)($stmt_aporte->fetchColumn() ?: 0);
+            } else {
+                $monto_externo = 0;
+            }
+
+            // D. Determinación Final
+            if ($suma_guias > 0) {
+                $monto_aportes_final = $suma_guias;
+            } else {
+                $monto_aportes_final = $monto_externo;
+            }
+
 
             // Construir fila para servicio
             // Nota: El servicio busca trabajador en DB, pero necesita ciertos datos en $fila
@@ -179,7 +247,7 @@ try {
                 ':f_inicio' => $contrato['fecha_inicio'],
                 ':f_termino' => !empty($contrato['fecha_termino']) ? $contrato['fecha_termino'] : null,
                 ':dias' => (int)$dias_trabajados,
-                ':aportes' => $monto_aporte,
+                ':aportes' => $monto_aportes_final,
                 ':adicional' => 0, // Default
                 ':cesantia_lic' => 0, // Default
                 ':cotiza_ces' => 0, // Default
@@ -205,6 +273,8 @@ try {
     }
 
     $pdo->commit();
+    // Limpiar cualquier output previo (warnings/notices) que rompa el JSON
+    ob_clean();
     echo json_encode([
         'success' => true,
         'message' => "Proceso Finalizado. Empleadores: {$stats['empleadores_exito']}, Trabajadores generados: {$stats['procesados']}. (Ya existentes ignorados: {$stats['ignorados']})"

@@ -24,7 +24,40 @@ try {
 
     // --- VALIDACIONES DE REGLA DE NEGOCIO ---
 
-    // 1. Validar N° de Guía Único
+    // --- VALIDACION DE ESTADO (Edit Mode) ---
+    if ($guia_id > 0) {
+        $stmtEstado = $pdo->prepare("SELECT estado FROM produccion_buses WHERE id = ?");
+        $stmtEstado->execute([$guia_id]);
+        $estadoActual = $stmtEstado->fetchColumn();
+
+        $accion = $_POST['accion'] ?? 'guardar'; // guardar, cerrar, reabrir
+        $rol = $_SESSION['user_role'] ?? '';
+
+        if ($accion === 'reabrir') {
+            if ($rol !== 'admin') {
+                throw new Exception("Solo el administrador puede reabrir una guía.");
+            }
+            // Proceed to update state to Abierto
+        } elseif ($estadoActual === 'Cerrada') {
+            throw new Exception("La guía está CERRADA y no puede ser editada.");
+        }
+    } else {
+        $accion = 'guardar';
+    }
+
+    $nuevoEstado = 'Abierto';
+    if ($accion === 'cerrar') {
+        $nuevoEstado = 'Cerrada';
+    } elseif ($accion === 'reabrir') {
+        $nuevoEstado = 'Abierto';
+    } else {
+        // If just saving, keep existing state? 
+        // Logic: Validar only edits if Abierto. So effectively it stays Abierto.
+        // But if we are creating new, it defaults to Abierto.
+        if ($guia_id > 0) $nuevoEstado = $estadoActual;
+    }
+
+    // 2. Validar N° de Guía Único
     $stmtCheckGuia = $pdo->prepare("
         SELECT b.numero_maquina, p.fecha 
         FROM produccion_buses p 
@@ -59,6 +92,8 @@ try {
         $cantidad = 0;
         $monto = 0;
 
+        // Logic sync: ingreso_guia uses fin > inicio, editar_guia uses ((fin-inicio)+1).
+        // Let's standardise on current logic of this file: fin > inicio
         if ($fin > $inicio && $inicio > 0) {
             $cantidad = ($fin - $inicio);
             $monto = $cantidad * $tarifa;
@@ -93,7 +128,7 @@ try {
         $sql = "UPDATE produccion_buses SET 
                 bus_id=?, fecha=?, nro_guia=?, ingreso=?, conductor_id=?, 
                 gasto_administracion=?, gasto_petroleo=?, gasto_boletos=?, gasto_aseo=?, gasto_viatico=?, gasto_varios=?, gasto_imposiciones=?, aporte_previsional=?,
-                pago_conductor=?
+                pago_conductor=?, estado=?
                 WHERE id=?";
         $stmt = $pdo->prepare($sql);
         $stmt->execute([
@@ -111,6 +146,7 @@ try {
             $g_impo,
             $g_impo, // Mirror Imposiciones -> Aporte Previsional
             $pago_conductor,
+            $nuevoEstado,
             $guia_id
         ]);
         // Update successful, keep guia_id
