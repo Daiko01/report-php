@@ -18,7 +18,7 @@ try {
     }
 
     $afps = $pdo->query("SELECT id, nombre FROM afps ORDER BY nombre")->fetchAll();
-    $sindicatos = $pdo->query("SELECT id, nombre FROM sindicatos ORDER BY nombre")->fetchAll();
+    $sindicatos = $pdo->query("SELECT id, nombre, descuento FROM sindicatos ORDER BY nombre")->fetchAll();
 
     // CARGAR TRAMOS PARA EL SELECTOR
     $sql_tramos = "SELECT tramo, monto_por_carga 
@@ -99,7 +99,9 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
                         <select class="form-select" id="sindicato_id" name="sindicato_id">
                             <option value="">Ninguno</option>
                             <?php foreach ($sindicatos as $s): ?>
-                                <option value="<?php echo $s['id']; ?>" <?php echo ($s['id'] == $trabajador['sindicato_id']) ? 'selected' : ''; ?>><?php echo htmlspecialchars($s['nombre']); ?></option>
+                                <option value="<?php echo $s['id']; ?>" <?php echo ($s['id'] == $trabajador['sindicato_id']) ? 'selected' : ''; ?>>
+                                    <?php echo htmlspecialchars($s['nombre']) . ' ($ ' . number_format($s['descuento'], 0, ',', '.') . ')'; ?>
+                                </option>
                             <?php endforeach; ?>
                         </select>
                     </div>

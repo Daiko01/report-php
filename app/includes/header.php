@@ -1,5 +1,4 @@
 <?php
-// Detectar página actual
 $pagina_actual = basename($_SERVER['PHP_SELF']);
 
 // --- DEFINICIÓN DE GRUPOS PARA "ACTIVE" (REORGANIZADO CON TODOS LOS ARCHIVOS) ---
@@ -7,9 +6,9 @@ $pagina_actual = basename($_SERVER['PHP_SELF']);
 // 1. GESTIÓN DE FLOTA (Prioridad Operativa)
 $paginas_flota = [
     'configuracion.php',
-    'gestionar_buses.php',     // Movido desde Maestros (El listado de máquinas)
-    'crear_bus.php',           // Asumiendo existencia
-    'editar_bus.php',          // Asumiendo existencia
+    'gestionar_buses.php',
+    'crear_bus.php',
+    'editar_bus.php',
     'ingreso_guia.php',
     'editar_guia.php',
     'importar_produccion.php',
@@ -242,10 +241,10 @@ $paginas_sistema = [
         <div id="content">
 
             <nav class="navbar navbar-expand-lg navbar-light bg-light topbar shadow-sm">
-                <!-- Container for Title/Breadcrumb, Search, Notification -->
+                <!-- Contenedor titulo/migas de pan, buscador, notificaciones -->
                 <div class="d-flex w-100 align-items-center justify-content-between pe-4">
 
-                    <!-- Left: Hamburger + Breadcrumbs -->
+                    <!-- Izquierda: Hamburguesa + Migas de pan -->
                     <div class="d-flex align-items-center">
                         <div class="container-fluid ps-0 d-inline-block w-auto">
                             <button type="button" id="sidebarCollapse" class="btn btn-link text-dark">
@@ -257,7 +256,7 @@ $paginas_sistema = [
                                 <ol class="breadcrumb mb-0">
                                     <li class="breadcrumb-item"><a href="<?php echo BASE_URL; ?>" class="text-decoration-none text-muted">Inicio</a></li>
                                     <?php
-                                    // Mapping of filenames to friendly sidebar titles
+                                    // mapeo de nombres de archivos a títulos de barra lateral
                                     $page_titles = [
                                         // Flota
                                         'configuracion.php' => 'Configuración del Mes',
@@ -304,9 +303,9 @@ $paginas_sistema = [
                                         'perfil.php' => 'Mi Perfil'
                                     ];
 
-                                    // If index.php, we show nothing else (or could show "Dashboard")
+                                    // Si index.php, no mostramos nada más (o podríamos mostrar "Dashboard")
                                     if ($pagina_actual !== 'index.php') {
-                                        // Display category
+                                        // Mostrar categoría
                                         if (in_array($pagina_actual, $paginas_flota)) {
                                             echo '<li class="breadcrumb-item text-muted">Operación de Buses</li>';
                                         } elseif (in_array($pagina_actual, $paginas_rrhh)) {
@@ -315,15 +314,11 @@ $paginas_sistema = [
                                             echo '<li class="breadcrumb-item text-muted">Sistema</li>';
                                         }
 
-                                        // Display Friendly Name or Fallback
+                                        // Mostrar nombre amigable o fallback
                                         $friendly_name = isset($page_titles[$pagina_actual]) ? $page_titles[$pagina_actual] : ucwords(str_replace(['.php', '_'], ['', ' '], $pagina_actual));
 
                                         echo '<li class="breadcrumb-item active" aria-current="page">' . $friendly_name . '</li>';
                                     } else {
-                                        // Optionally explicitly say Dashboard if you want "Inicio > Dashboard"
-                                        // But user asked for "Dashboard or Inicio only". 
-                                        // Since "Inicio" is hardcoded first li, if we do nothing here, it's just "Inicio".
-                                        // If we want "Inicio > Dashboard":
                                         echo '<li class="breadcrumb-item active" aria-current="page">Dashboard</li>';
                                     }
                                     ?>
@@ -332,17 +327,17 @@ $paginas_sistema = [
                         </div>
                     </div>
 
-                    <!-- Right: Search + Notifications -->
+                    <!-- Derecha: Buscador + Notificaciones -->
                     <div class="d-flex align-items-center gap-4">
 
-                        <!-- Search Bar -->
+                        <!-- Barra de búsqueda -->
                         <div class="search-container d-none d-md-block">
                             <i class="fas fa-search search-icon"></i>
                             <input type="text" class="form-control search-input" id="globalSearch" placeholder="Buscar bus, trabajador...">
                             <div class="search-results" id="searchResults"></div>
                         </div>
 
-                        <!-- Notification Bell -->
+                        <!-- Campana de notificaciones -->
                         <div class="dropdown">
                             <a href="#" class="notification-icon" id="notifDropdown" data-bs-toggle="dropdown" aria-expanded="false">
                                 <i class="far fa-bell"></i>
@@ -356,7 +351,7 @@ $paginas_sistema = [
                             </ul>
                         </div>
 
-                        <!-- User Profile Dropdown -->
+                        <!-- Menú desplegable de perfil de usuario -->
                         <div class="dropdown ms-3 border-start ps-3">
                             <a href="#" class="d-flex align-items-center text-decoration-none dropdown-toggle" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
                                 <?php
@@ -389,10 +384,10 @@ $paginas_sistema = [
                 </div>
             </nav>
 
-            <!-- Global JS for Search and Notifications -->
+            <!-- JS global para búsqueda y notificaciones -->
             <script>
                 document.addEventListener("DOMContentLoaded", function() {
-                    // --- Global Search Logic ---
+                    // --- Lógica de búsqueda global ---
                     const searchInput = document.getElementById('globalSearch');
                     const searchResults = document.getElementById('searchResults');
                     let timeout = null;
@@ -435,10 +430,10 @@ $paginas_sistema = [
                                         }
                                     })
                                     .catch(err => console.error('Error searching:', err));
-                            }, 300); // 300ms Update debounce
+                            }, 300); // 300ms actualizacion
                         });
 
-                        // Close search on click outside
+                        // Cerrar búsqueda al hacer clic fuera
                         document.addEventListener('click', function(e) {
                             if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {
                                 searchResults.style.display = 'none';
@@ -446,7 +441,7 @@ $paginas_sistema = [
                         });
                     }
 
-                    // --- Notification Logic ---
+                    // --- Lógica de notificaciones ---
                     const notifBadge = document.getElementById('notifBadge');
                     const notifList = document.getElementById('notifList');
 
@@ -458,7 +453,7 @@ $paginas_sistema = [
                                     notifBadge.textContent = data.count;
                                     notifBadge.style.display = 'block';
 
-                                    // Build list
+                                    // crear lista
                                     let html = '<li class="notification-header">Notificaciones</li>';
                                     data.items.forEach(item => {
                                         html += `
@@ -482,7 +477,7 @@ $paginas_sistema = [
                             .catch(err => console.error('Error fetching notifications:', err));
                     }
 
-                    // Fetch initially
+                    // Fetch inicialmente
                     fetchNotifications();
                 });
             </script>

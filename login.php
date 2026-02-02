@@ -15,6 +15,16 @@ require_once __DIR__ . '/app/includes/session_check.php';
     <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <link href="public/assets/css/style.css?v=1.1" rel="stylesheet">
+    <style>
+        /* Hide default password toggle in Edge/IE */
+        ::-ms-reveal {
+            display: none;
+        }
+
+        ::-ms-clear {
+            display: none;
+        }
+    </style>
 </head>
 
 <body class="login-page">
@@ -47,7 +57,7 @@ require_once __DIR__ . '/app/includes/session_check.php';
                         <label for="username" class="form-label">Usuario (RUT)</label>
                         <div class="input-group">
                             <span class="input-group-text bg-white border-end-0 text-muted"><i class="fas fa-user"></i></span>
-                            <input type="text" class="form-control border-start-0 ps-0" id="username" name="username" maxlength="12" placeholder="12.345.678-9" required autofocus>
+                            <input type="text" class="form-control border-start-0 ps-0" id="username" name="username" maxlength="12" placeholder="12.345.678-9" value="<?php echo isset($_COOKIE['remember_username']) ? htmlspecialchars($_COOKIE['remember_username']) : ''; ?>" required autofocus>
                         </div>
                     </div>
 
@@ -55,8 +65,16 @@ require_once __DIR__ . '/app/includes/session_check.php';
                         <label for="password" class="form-label">Contraseña</label>
                         <div class="input-group">
                             <span class="input-group-text bg-white border-end-0 text-muted"><i class="fas fa-lock"></i></span>
-                            <input type="password" class="form-control border-start-0 ps-0" id="password" name="password" placeholder="••••••••" required>
+                            <input type="password" class="form-control border-start-0 ps-0 value-toggle" id="password" name="password" placeholder="••••••••" required>
+                            <button class="btn btn-outline-secondary border-start-0 toggle-password" type="button" style="border-left: 0;">
+                                <i class="fas fa-eye"></i>
+                            </button>
                         </div>
+                    </div>
+
+                    <div class="mb-4 form-check">
+                        <input type="checkbox" class="form-check-input" id="remember_me" name="remember_me" <?php echo isset($_COOKIE['remember_username']) ? 'checked' : ''; ?>>
+                        <label class="form-check-label text-muted small" for="remember_me">Recordar mi usuario</label>
                     </div>
 
                     <div class="d-grid pt-2">
@@ -122,6 +140,22 @@ require_once __DIR__ . '/app/includes/session_check.php';
 
             // Resultado final con guión
             e.target.value = cuerpo + '-' + dv;
+        });
+
+        // Toggle Password Logic
+        document.querySelector('.toggle-password').addEventListener('click', function() {
+            const input = document.getElementById('password');
+            const icon = this.querySelector('i');
+
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+            } else {
+                input.type = 'password';
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+            }
         });
     </script>
 </body>

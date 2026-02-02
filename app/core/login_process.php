@@ -3,10 +3,10 @@
 require_once __DIR__ . '/bootstrap.php'; // Estamos en /core, así que es directo
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    
+
     // Verificar CSRF antes de procesar nada
     verify_csrf_token();
-    
+
     $username = $_POST['username'];
     $password = $_POST['password'];
 
@@ -17,18 +17,28 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $user = $stmt->fetch();
         // 2. Verificar si el usuario existe y si la contraseña es correcta
         if ($user && password_verify($password, $user['password_hash'])) {
-            
+
             // 3. Verificar si está activo
             if ($user['is_active'] == 1) {
                 // Éxito: Guardar datos en la sesión
                 $_SESSION['user_id'] = $user['id'];
                 $_SESSION['user_nombre'] = $user['nombre_completo'];
                 $_SESSION['user_role'] = $user['role'];
-                
+
+                // --- REMEMBER ME LOGIC ---
+                if (isset($_POST['remember_me'])) {
+                    // Cookie por 30 días
+                    setcookie('remember_username', $username, time() + (86400 * 30), "/");
+                } else {
+                    // Borrar cookie si existe
+                    if (isset($_COOKIE['remember_username'])) {
+                        setcookie('remember_username', '', time() - 3600, "/");
+                    }
+                }
+
                 // Redirigir al Dashboard
                 header('Location: ' . BASE_URL . '/index.php');
                 exit;
-
             } else {
                 // Usuario inactivo
                 $_SESSION['flash_message'] = [
@@ -47,7 +57,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             header('Location: ' . BASE_URL . '/login.php');
             exit;
         }
-
     } catch (PDOException $e) {
         // Error de base de datos
         $_SESSION['flash_message'] = [
@@ -62,4 +71,3 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     header('Location: ../../login.php');
     exit;
 }
-?>

@@ -596,7 +596,7 @@ function val($key, $default = 0)
                             <div class="d-grid gap-2 mt-4 d-md-flex justify-content-md-end">
                                 <?php if (!$isClosed): ?>
                                     <button type="submit" name="estado" value="Abierto" class="btn btn-secondary btn-lg shadow me-md-2">
-                                        <i class="fas fa-save"></i> Guardar Borrador (Abrir)
+                                        <i class="fas fa-save"></i> Guardar(Abrir)
                                     </button>
                                     <button type="submit" name="estado" value="Cerrado" class="btn btn-success btn-lg shadow">
                                         <i class="fas fa-lock"></i> Cerrar Mes

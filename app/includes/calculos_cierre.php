@@ -131,7 +131,16 @@ function calcular_cierre_bus($pdo, $bus_id, $mes, $anio, $parametros_mensuales =
                 // 2. Calcular Base Imponible
                 $ingreso_conductor = (int)$d['total_ingreso'];
                 $dias_trabajados = (int)$d['dias_trabajados'];
-                if ($dias_trabajados > 30) $dias_trabajados = 30;
+
+                // Normalización de Días (Requerimiento: Mes completo = 30 días, aunque sea Febrero de 28)
+                $dias_en_mes_real = cal_days_in_month(CAL_GREGORIAN, $mes, $anio);
+
+                // Si trabajó la cantidad de días del mes (o más, por algun error), se asume 30.
+                if ($dias_trabajados >= $dias_en_mes_real) {
+                    $dias_trabajados = 30;
+                } elseif ($dias_trabajados > 30) {
+                    $dias_trabajados = 30; // Cap de seguridad
+                }
 
                 $sueldo_produccion = round($ingreso_conductor * 0.22);
                 $sueldo_minimo_legal = 539000;

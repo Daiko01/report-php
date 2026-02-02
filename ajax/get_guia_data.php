@@ -4,6 +4,28 @@ require_once dirname(__DIR__) . '/app/includes/session_check.php';
 
 header('Content-Type: application/json');
 
+if (isset($_GET['check_exists']) && isset($_GET['nro_guia'])) {
+    $nro_guia = (int)$_GET['nro_guia'];
+
+    // Check availability globally since Folio must be unique in the system
+    $stmt = $pdo->prepare("
+        SELECT b.numero_maquina 
+        FROM produccion_buses p 
+        JOIN buses b ON p.bus_id = b.id 
+        WHERE p.nro_guia = ? 
+        LIMIT 1
+    ");
+    $stmt->execute([$nro_guia]);
+    $existingBus = $stmt->fetchColumn();
+
+    if ($existingBus) {
+        echo json_encode(['exists' => true, 'message' => "Ya registrado en Bus N° $existingBus"]);
+    } else {
+        echo json_encode(['exists' => false]);
+    }
+    exit;
+}
+
 if (!isset($_GET['id'])) {
     echo json_encode(['success' => false]);
     exit;

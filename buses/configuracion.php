@@ -226,54 +226,54 @@ $months_list = [1 => 'Enero', 2 => 'Febrero', 3 => 'Marzo', 4 => 'Abril', 5 => '
 
                         <h6 class="font-weight-bold text-gray-800 border-bottom pb-2 mb-3 mt-4">Otros Descuentos Mensuales</h6>
 
-                        <div class="mb-3">
-                            <label class="small fw-bold">Derechos de Loza</label>
-                            <div class="input-group input-group-sm">
-                                <span class="input-group-text">$</span>
-                                <input type="number" name="derechos_loza" class="form-control" value="<?= $defaults['derechos_loza_global'] ?>">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="small fw-bold">Derechos de Loza</label>
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text">$</span>
+                                    <input type="number" name="derechos_loza" class="form-control" value="<?= $defaults['derechos_loza_global'] ?>">
+                                </div>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label class="small fw-bold">Seguro y Cartolas (Sept.)</label>
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text">$</span>
+                                    <input type="number" name="seguro_cartolas" class="form-control"
+                                        value="<?= ($mes_sel == 9) ? $defaults['seguro_cartolas_global'] : 0 ?>"
+                                        <?= ($mes_sel != 9) ? 'readonly style="background-color: #e9ecef;"' : '' ?>>
+                                </div>
+                                <?php if ($mes_sel != 9): ?>
+                                    <small class="text-xs text-muted">Editable en Septiembre.</small>
+                                <?php endif; ?>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label class="small fw-bold">GPS</label>
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text">$</span>
+                                    <input type="number" name="gps" class="form-control" value="<?= $defaults['gps_global'] ?>">
+                                </div>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label class="small fw-bold">Boleta Grantía</label>
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text">$</span>
+                                    <input type="number" name="boleta_garantia" class="form-control" value="<?= $defaults['boleta_garantia_global'] ?>">
+                                </div>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label class="small fw-bold">Boleta Grantía 2</label>
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text">$</span>
+                                    <input type="number" name="boleta_garantia_dos" class="form-control" value="<?= $defaults['boleta_garantia_dos_global'] ?>">
+                                </div>
                             </div>
                         </div>
 
-                        <div class="mb-3">
-                            <label class="small fw-bold">Seguro y Cartolas (Solo Septiembre)</label>
-                            <div class="input-group input-group-sm">
-                                <span class="input-group-text">$</span>
-                                <input type="number" name="seguro_cartolas" class="form-control"
-                                    value="<?= ($mes_sel == 9) ? $defaults['seguro_cartolas_global'] : 0 ?>"
-                                    <?= ($mes_sel != 9) ? 'readonly style="background-color: #e9ecef;"' : '' ?>>
-                            </div>
-                            <?php if ($mes_sel != 9): ?>
-                                <small class="text-xs text-muted">Este campo solo es editable en Septiembre.</small>
-                            <?php else: ?>
-                                <small class="text-xs text-muted">Aplica automáticamente para Septiembre.</small>
-                            <?php endif; ?>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="small fw-bold">GPS</label>
-                            <div class="input-group input-group-sm">
-                                <span class="input-group-text">$</span>
-                                <input type="number" name="gps" class="form-control" value="<?= $defaults['gps_global'] ?>">
-                            </div>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="small fw-bold">Boleta Grantía</label>
-                            <div class="input-group input-group-sm">
-                                <span class="input-group-text">$</span>
-                                <input type="number" name="boleta_garantia" class="form-control" value="<?= $defaults['boleta_garantia_global'] ?>">
-                            </div>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="small fw-bold">Boleta Grantía 2</label>
-                            <div class="input-group input-group-sm">
-                                <span class="input-group-text">$</span>
-                                <input type="number" name="boleta_garantia_dos" class="form-control" value="<?= $defaults['boleta_garantia_dos_global'] ?>">
-                            </div>
-                        </div>
-
-                        <div class="form-text mt-3">
+                        <div class="form-text mt-1">
                             <?php if (!$global): ?>
                                 <i class="fas fa-info-circle text-info"></i> Valores sugeridos del mes anterior.
                             <?php else: ?>
@@ -296,7 +296,7 @@ $months_list = [1 => 'Enero', 2 => 'Febrero', 3 => 'Marzo', 4 => 'Abril', 5 => '
                     <div class="card-body p-0">
                         <div class="table-responsive" style="max-height: 600px; overflow-y: auto;">
                             <table class="table table-hover mb-0" id="employersTable">
-                                <thead class="table-light sticky-top" style="top: 0; z-index: 1;">
+                                <thead class="table-light sticky-top" style="top: 0; z-index: 1020;">
                                     <tr>
                                         <th class="ps-4">Empleador</th>
                                         <th>Bus Responsable del Pago</th>

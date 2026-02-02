@@ -159,23 +159,8 @@
                     </thead>
                     <tbody>
                         <tr>
-                            <td>(-) Aportes Conductor</td>
-                            <td class="numero"><?= format_numero($calculos_pie['aportes_conductor']) ?></td>
-                        </tr>
-                        <tr>
-                            <td>(+) Saldos Positivos</td>
-                            <td class="numero"><?= format_numero($calculos_pie['saldos_positivos']) ?></td>
-                        </tr>
-
-                        <!-- RESTORED TOTAL DESCUENTOS -->
-                        <tr class="total-destacado">
-                            <td>TOTAL DESCUENTOS</td>
-                            <td class="numero"><?= format_numero($calculos_pie['total_descuentos_final']) ?></td>
-                        </tr>
-
-                        <tr>
-                            <td style="padding-top:10px;">(+) Asignación Familiar</td>
-                            <td class="numero" style="padding-top:10px;"><?= format_numero($calculos_pie['asignacion_familiar']) ?></td>
+                            <td>(+) Asignación Familiar</td>
+                            <td class="numero"><?= format_numero($calculos_pie['asignacion_familiar']) ?></td>
                         </tr>
                         <tr>
                             <td>(+) Sindicato</td>
@@ -183,9 +168,24 @@
                         </tr>
 
                         <!-- GRAN TOTAL -->
-                        <tr class="total-final">
+                        <tr class="total-destacado">
                             <td>TOTAL LEYES SOCIALES</td>
                             <td class="numero final"><?= format_numero($calculos_pie['total_leyes_sociales']) ?></td>
+                        </tr>
+
+                        <tr>
+                            <td style="padding-top:10px;">(-) Aportes Conductor</td>
+                            <td class="numero" style="padding-top:10px;"><?= format_numero($calculos_pie['aportes_conductor']) ?></td>
+                        </tr>
+                        <tr>
+                            <td>(+) Saldos Positivos</td>
+                            <td class="numero"><?= format_numero($calculos_pie['saldos_positivos']) ?></td>
+                        </tr>
+
+                        <!-- RESTORED TOTAL DESCUENTOS -->
+                        <tr class="total-final">
+                            <td>TOTAL DESCUENTOS</td>
+                            <td class="numero final"><?= format_numero($calculos_pie['total_descuentos_final']) ?></td>
                         </tr>
                     </tbody>
                 </table>

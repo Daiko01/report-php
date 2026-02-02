@@ -58,7 +58,8 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
                         </div>
                         <div class="col-6">
                             <label class="small fw-bold">N° Guía</label>
-                            <input type="number" class="form-control fw-bold text-center" name="nro_guia" required>
+                            <input type="number" class="form-control fw-bold text-center" name="nro_guia" id="nro_guia" required>
+                            <div id="folio_feedback" class="mt-1 small fw-bold" style="min-height: 20px;"></div>
                         </div>
                     </div>
 
@@ -206,6 +207,7 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
     <div class="card-header py-2 bg-gray-200 d-flex justify-content-between align-items-center">
         <div class="d-flex align-items-center gap-2">
             <h6 class="m-0 fw-bold text-dark small text-uppercase">Últimos Ingresos</h6>
+            <a href="historial_guias.php" class="btn btn-sm btn-primary shadow-sm"><i class="fas fa-list me-1"></i> Ver Historial Completo</a>
             <button id="btnCerrarSeleccionadas" class="btn btn-sm btn-danger shadow-sm d-none" onclick="cerrarGuiasMasivo()">
                 <i class="fas fa-lock me-1"></i> Cerrar Seleccionadas
             </button>
@@ -507,9 +509,13 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
 
             $('#fecha').val(new Date().toISOString().split('T')[0]);
             $('#displayTotalIngreso').text('$ 0');
-            // Check if #displayTotalLiquido exists before setting text, though jQuery handles missing elements gracefully.
+            // Check if #displayTotalLiquido exists before setting text
             if ($('#displayTotalLiquido').length) $('#displayTotalLiquido').text('$ 0');
             $('.total-row-val').text('0');
+
+            // Clear validation
+            $('#nro_guia').removeClass('is-invalid is-valid');
+            $('#folio_feedback').html('');
         }
 
         // --- 5. HISTORIAL RAPIDO ---
@@ -785,6 +791,58 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
                 })
                 .catch(() => Swal.fire('Error', 'Fallo de conexión', 'error'));
         }
+
+        // --- LOGICA DE VALIDACIÓN DE FOLIO ---
+        $('#nro_guia').on('blur', function() {
+            const nro = $(this).val();
+            const $feedback = $('#folio_feedback');
+
+            if (!nro) {
+                $feedback.html('');
+                return;
+            }
+
+            // Consultar AJAX (Bus no requerido para check global)
+            fetch(`../ajax/get_guia_data.php?check_exists=1&nro_guia=${nro}`)
+                .then(r => r.json())
+                .then(data => {
+                    if (data.exists) {
+                        // data.message tiene "Ya registrado en Bus N° XXX"
+                        $feedback.html(`<span class="text-danger"><i class="fas fa-times-circle"></i> ${data.message}</span>`);
+                        $(this).addClass('is-invalid').removeClass('is-valid');
+                    } else {
+                        $feedback.html('<span class="text-success"><i class="fas fa-check-circle"></i> Disponible</span>');
+                        $(this).addClass('is-valid').removeClass('is-invalid');
+                    }
+                })
+                .catch(err => console.error(err));
+        });
+
+        // Limpiar validación si cambia el bus (opcional, pero buena UX resetear si el usuario cambia contexto, aunque el check es global)
+        $('#bus_id').on('change', function() {
+            // No necesitamos borrar la validación del folio si es global y sigue siendo válida/inválida.
+            // Pero si quieres re-validar por seguridad:
+            // if ($('#nro_guia').val()) $('#nro_guia').trigger('blur');
+        }); // --- NAVEGACIÓN POR ENTER ---
+        $('body').on('keydown', 'input, select', function(e) {
+            if (e.key === "Enter") {
+                const self = $(this);
+                const form = self.parents('form:eq(0)');
+                if (form.length > 0) {
+                    const focusable = form.find('input, select, textarea, button').filter(':visible:not([readonly]):not([disabled])');
+                    const next = focusable.eq(focusable.index(this) + 1);
+                    if (next.length) {
+                        e.preventDefault();
+                        next.focus();
+                        // Si es select2, abrir (opcional, a veces molesta)
+                        // if (next.hasClass('select2-hidden-accessible')) { next.select2('open'); }
+                    } else {
+                        // Si es el último, submit? O nada.
+                        // e.preventDefault(); // Evitar submit accidental
+                    }
+                }
+            }
+        });
 
     });
 </script>
