@@ -14,7 +14,7 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
 try {
     $sql = "SELECT 
                 t.id, t.rut, t.nombre, t.estado_previsional, t.tiene_cargas, t.numero_cargas, 
-                t.sistema_previsional,
+                t.sistema_previsional, t.es_excedente,
                 a.nombre as nombre_afp,
                 s.nombre as nombre_sindicato
             FROM trabajadores t
@@ -68,6 +68,7 @@ try {
                         <option value="">Todos</option>
                         <option value="Activo">Activo</option>
                         <option value="Pensionado">Pensionado</option>
+                        <option value="Exento">Exento</option>
                     </select>
                 </div>
                 <div class="col-md-3">
@@ -76,6 +77,7 @@ try {
                         <option value="">Total</option>
                     </select>
                 </div>
+
                 <div class="col-md-2">
                     <label class="form-label small fw-bold text-muted">Sindicato:</label>
                     <select class="form-select form-select-sm" id="filterSindicato" autocomplete="off">
@@ -132,7 +134,9 @@ try {
                                 <td><?php echo htmlspecialchars($t['rut']); ?></td>
 
                                 <td>
-                                    <?php if ($t['estado_previsional'] == 'Pensionado'): ?>
+                                    <?php if ($t['es_excedente'] == 1): ?>
+                                        <span class="badge bg-info text-dark">Exento</span>
+                                    <?php elseif ($t['estado_previsional'] == 'Pensionado'): ?>
                                         <span class="badge bg-secondary">Pensionado</span>
                                     <?php else: ?>
                                         <span class="badge bg-success">Activo</span>
@@ -141,7 +145,9 @@ try {
 
                                 <td>
                                     <?php
-                                    if ($t['estado_previsional'] == 'Pensionado') {
+                                    if ($t['es_excedente'] == 1) {
+                                        echo '<span class="text-muted small">Sin Leyes Sociales</span>';
+                                    } elseif ($t['estado_previsional'] == 'Pensionado') {
                                         echo 'N/A';
                                     } elseif ($t['sistema_previsional'] == 'INP') {
                                         echo 'INP';
@@ -289,7 +295,7 @@ require_once dirname(__DIR__) . '/app/includes/footer.php';
         // Event Listeners for Filters
         $('#filterEstado').on('change', function() {
             const val = $(this).val();
-            if (val === 'Pensionado') {
+            if (val === 'Pensionado' || val === 'Exento') {
                 $('#filterPrevision').val('').prop('disabled', true);
             } else {
                 $('#filterPrevision').prop('disabled', false);

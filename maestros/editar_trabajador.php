@@ -34,137 +34,203 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
 ?>
 
 <div class="container-fluid">
-    <h1 class="h3 mb-4 text-gray-800">Editar Trabajador</h1>
-    <div class="card shadow mb-4">
-        <div class="card-header py-3">
-            <h6 class="m-0 font-weight-bold text-primary">Editando: <?php echo htmlspecialchars($trabajador['nombre']); ?></h6>
+
+    <div class="d-flex align-items-center justify-content-between mb-4">
+        <div>
+            <h1 class="h3 mb-1 text-gray-900 fw-bold">Editar Trabajador</h1>
+            <p class="mb-0 text-muted small">Modificando ficha de: <strong><?php echo htmlspecialchars($trabajador['nombre']); ?></strong></p>
         </div>
-        <div class="card-body">
+        <a href="gestionar_trabajadores.php" class="btn btn-light btn-sm text-secondary border">
+            <i class="fas fa-times me-1"></i> Cancelar
+        </a>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-xl-9 col-lg-10">
             <form action="editar_trabajador_process.php" method="POST" class="needs-validation" novalidate>
                 <input type="hidden" name="id" value="<?php echo $trabajador['id']; ?>">
 
-                <h5 class="mb-3 text-primary">Información Personal</h5>
-                <div class="row">
-                    <div class="col-md-8 mb-3">
-                        <label class="form-label">Nombre Completo</label>
-                        <input type="text" class="form-control" value="<?php echo htmlspecialchars($trabajador['nombre']); ?>" readonly disabled>
-                    </div>
-                    <div class="col-md-4 mb-3">
-                        <label class="form-label">RUT</label>
-                        <input type="text" class="form-control" value="<?php echo htmlspecialchars($trabajador['rut']); ?>" readonly disabled>
-                    </div>
-                </div>
+                <!-- Main Card (Minimalist) -->
+                <div class="card shadow-sm border-0 mb-5" style="border-radius: 12px; background: #fff;">
+                    <div class="card-body p-4 p-md-5">
 
-                <hr>
-
-                <h5 class="mb-3 text-primary">Régimen Contractual</h5>
-                <div class="row mb-3">
-                    <div class="col-md-6">
-                        <label class="form-label d-block text-gray-800 fw-bold">Tipo de Contratación</label>
-                        <div class="form-check form-check-inline">
-                            <input class="form-check-input" type="radio" name="es_excedente" id="regimen_normal" value="0" <?php echo ($trabajador['es_excedente'] == 0) ? 'checked' : ''; ?>>
-                            <label class="form-check-label" for="regimen_normal">Normal (Con Leyes Sociales)</label>
-                        </div>
-                        <div class="form-check form-check-inline">
-                            <input class="form-check-input" type="radio" name="es_excedente" id="regimen_exento" value="1" <?php echo ($trabajador['es_excedente'] == 1) ? 'checked' : ''; ?>>
-                            <label class="form-check-label text-danger fw-bold" for="regimen_exento">Exento / Excedente</label>
-                        </div>
-                        <div class="form-text small mt-2">
-                            <i class="fas fa-info-circle"></i> Los trabajadores <strong>Exentos</strong> registran producción pero <strong>NO generan leyes sociales</strong>. Sus aportes van a "Excedentes".
-                        </div>
-                    </div>
-                </div>
-
-                <hr>
-                <h5 class="mb-3 text-primary">Información Previsional</h5>
-                <div class="row">
-                    <div class="col-md-3 mb-3">
-                        <label for="estado_previsional" class="form-label">Estado</label>
-                        <select class="form-select" id="estado_previsional" name="estado_previsional" required>
-                            <option value="Activo" <?php echo ($trabajador['estado_previsional'] == 'Activo') ? 'selected' : ''; ?>>Activo</option>
-                            <option value="Pensionado" <?php echo ($trabajador['estado_previsional'] == 'Pensionado') ? 'selected' : ''; ?>>Pensionado</option>
-                        </select>
-                    </div>
-
-                    <div class="col-md-3 mb-3">
-                        <label for="sistema_previsional" class="form-label">Sistema Previsional</label>
-                        <select class="form-select" id="sistema_previsional" name="sistema_previsional" required>
-                            <option value="AFP" <?php echo ($trabajador['sistema_previsional'] == 'AFP') ? 'selected' : ''; ?>>AFP</option>
-                            <option value="INP" <?php echo ($trabajador['sistema_previsional'] == 'INP') ? 'selected' : ''; ?>>INP (Ex-Caja)</option>
-                        </select>
-                    </div>
-
-                    <div class="col-md-3 mb-3" id="afp_wrapper">
-                        <label for="afp_id" class="form-label">AFP</label>
-                        <select class="form-select" id="afp_id" name="afp_id">
-                            <option value="">Seleccione...</option>
-                            <?php foreach ($afps as $afp): ?>
-                                <option value="<?php echo $afp['id']; ?>" <?php echo ($afp['id'] == $trabajador['afp_id']) ? 'selected' : ''; ?>><?php echo htmlspecialchars($afp['nombre']); ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-
-                    <div class="col-md-3 mb-3" id="inp_wrapper" style="display: none;">
-                        <label for="tasa_inp" class="form-label">Tasa INP (%)</label>
-                        <div class="input-group">
-                            <input type="number" step="0.01" class="form-control" id="tasa_inp" name="tasa_inp" value="<?php echo ($trabajador['tasa_inp_decimal'] * 100); ?>">
-                            <span class="input-group-text">%</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="row">
-                    <div class="col-md-4 mb-3">
-                        <label for="sindicato_id" class="form-label">Sindicato</label>
-                        <select class="form-select" id="sindicato_id" name="sindicato_id">
-                            <option value="">Ninguno</option>
-                            <?php foreach ($sindicatos as $s): ?>
-                                <option value="<?php echo $s['id']; ?>" <?php echo ($s['id'] == $trabajador['sindicato_id']) ? 'selected' : ''; ?>>
-                                    <?php echo htmlspecialchars($s['nombre']) . ' ($ ' . number_format($s['descuento'], 0, ',', '.') . ')'; ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-
-                    <div class="col-md-3 mb-3 d-flex align-items-center">
-                        <div class="form-check form-switch form-check-lg mt-4">
-                            <input class="form-check-input" type="checkbox" id="tiene_cargas" name="tiene_cargas" value="1" <?php echo $trabajador['tiene_cargas'] ? 'checked' : ''; ?>>
-                            <label class="form-check-label" for="tiene_cargas">¿Tiene Cargas?</label>
-                        </div>
-                    </div>
-
-                    <div class="col-md-5 mb-3" id="cargas_details_wrapper" style="display: none;">
-                        <div class="row">
-                            <div class="col-5">
-                                <label for="numero_cargas" class="form-label">N° Cargas</label>
-                                <input type="number" class="form-control" id="numero_cargas" name="numero_cargas" value="<?php echo $trabajador['numero_cargas']; ?>" min="0">
-                            </div>
-                            <div class="col-7">
-                                <label for="tramo_manual" class="form-label">Tramo (Opcional)</label>
-                                <select class="form-select" name="tramo_manual" id="tramo_manual">
-                                    <option value="" <?php echo is_null($trabajador['tramo_asignacion_manual']) ? 'selected' : ''; ?>>Automático</option>
-
-                                    <?php foreach ($tramos_bd as $t): ?>
-                                        <option value="<?php echo $t['tramo']; ?>" <?php echo ($trabajador['tramo_asignacion_manual'] == $t['tramo']) ? 'selected' : ''; ?>>
-                                            Tramo <?php echo $t['tramo']; ?> ($<?php echo number_format($t['monto_por_carga'], 0, ',', '.'); ?>)
-                                        </option>
-                                    <?php endforeach; ?>
-
-                                </select>
+                        <!-- 1. Datos Personales -->
+                        <div class="mb-5">
+                            <h6 class="text-uppercase text-xs font-weight-bold text-gray-500 mb-3 tracking-wide">
+                                Información Personal
+                            </h6>
+                            <div class="row g-4">
+                                <div class="col-md-8">
+                                    <label class="form-label text-muted small fw-bold text-uppercase">Nombre Completo</label>
+                                    <input type="text" class="form-control form-control-lg bg-light border-0" value="<?php echo htmlspecialchars($trabajador['nombre']); ?>" readonly disabled style="border-radius: 8px; opacity: 0.7;">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label text-muted small fw-bold text-uppercase">RUT</label>
+                                    <input type="text" class="form-control form-control-lg bg-light border-0" value="<?php echo htmlspecialchars($trabajador['rut']); ?>" readonly disabled style="border-radius: 8px; opacity: 0.7;">
+                                </div>
                             </div>
                         </div>
+
+                        <!-- 2. Régimen -->
+                        <div class="mb-5">
+                            <h6 class="text-uppercase text-xs font-weight-bold text-gray-500 mb-3 tracking-wide">
+                                Régimen Contractual
+                            </h6>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <input type="radio" class="btn-check" name="es_excedente" id="regimen_normal" value="0" <?php echo ($trabajador['es_excedente'] == 0) ? 'checked' : ''; ?>>
+                                    <label class="btn btn-outline-light text-dark d-flex align-items-center p-3 w-100 border text-start" for="regimen_normal" style="border-radius: 10px;">
+                                        <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 32px; height: 32px; flex-shrink: 0;">
+                                            <i class="fas fa-check fa-xs"></i>
+                                        </div>
+                                        <div>
+                                            <div class="fw-bold small">Contrato Normal</div>
+                                            <div class="text-muted" style="font-size: 0.75rem;">Con leyes sociales (AFP/Salud).</div>
+                                        </div>
+                                    </label>
+                                </div>
+                                <div class="col-md-6">
+                                    <input type="radio" class="btn-check" name="es_excedente" id="regimen_exento" value="1" <?php echo ($trabajador['es_excedente'] == 1) ? 'checked' : ''; ?>>
+                                    <label class="btn btn-outline-light text-dark d-flex align-items-center p-3 w-100 border text-start" for="regimen_exento" style="border-radius: 10px;">
+                                        <div class="bg-light text-secondary rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 32px; height: 32px; flex-shrink: 0;">
+                                            <i class="fas fa-ban fa-xs"></i>
+                                        </div>
+                                        <div>
+                                            <div class="fw-bold small">Exento / Excedente</div>
+                                            <div class="text-muted" style="font-size: 0.75rem;">Sin leyes sociales.</div>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 3. Previsión -->
+                        <div class="mb-5" id="section_prevision">
+                            <h6 class="text-uppercase text-xs font-weight-bold text-gray-500 mb-3 tracking-wide">
+                                Previsión y Salud
+                            </h6>
+                            <div class="row g-3">
+                                <div class="col-md-3">
+                                    <label for="estado_previsional" class="form-label text-muted small fw-bold text-uppercase">Estado</label>
+                                    <select class="form-select bg-light border-0" id="estado_previsional" name="estado_previsional" required style="border-radius: 8px;">
+                                        <option value="Activo" <?php echo ($trabajador['estado_previsional'] == 'Activo') ? 'selected' : ''; ?>>Activo</option>
+                                        <option value="Pensionado" <?php echo ($trabajador['estado_previsional'] == 'Pensionado') ? 'selected' : ''; ?>>Pensionado</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <div id="sistema_wrapper">
+                                        <label for="sistema_previsional" class="form-label text-muted small fw-bold text-uppercase">Sistema</label>
+                                        <select class="form-select bg-light border-0" id="sistema_previsional" name="sistema_previsional" required style="border-radius: 8px;">
+                                            <option value="AFP" <?php echo ($trabajador['sistema_previsional'] == 'AFP') ? 'selected' : ''; ?>>AFP</option>
+                                            <option value="INP" <?php echo ($trabajador['sistema_previsional'] == 'INP') ? 'selected' : ''; ?>>INP (Ex-Caja)</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-4" id="afp_wrapper">
+                                    <label for="afp_id" class="form-label text-muted small fw-bold text-uppercase">AFP</label>
+                                    <select class="form-select bg-light border-0" id="afp_id" name="afp_id" style="border-radius: 8px;">
+                                        <option value="">Seleccione...</option>
+                                        <?php foreach ($afps as $afp): ?>
+                                            <option value="<?php echo $afp['id']; ?>" <?php echo ($afp['id'] == $trabajador['afp_id']) ? 'selected' : ''; ?>>
+                                                <?php echo htmlspecialchars($afp['nombre']); ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                    <div class="invalid-feedback">Seleccione AFP.</div>
+                                </div>
+                                <div class="col-md-3" id="inp_wrapper" style="display: none;">
+                                    <label for="tasa_inp" class="form-label text-muted small fw-bold text-uppercase">Tasa INP (%)</label>
+                                    <input type="number" step="0.01" class="form-control bg-light border-0" id="tasa_inp" name="tasa_inp" value="<?php echo ($trabajador['tasa_inp_decimal'] * 100); ?>" placeholder="0.00" style="border-radius: 8px;">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 4. Extras -->
+                        <div class="mb-4">
+                            <h6 class="text-uppercase text-xs font-weight-bold text-gray-500 mb-3 tracking-wide">
+                                Extras
+                            </h6>
+                            <div class="row align-items-center g-3">
+                                <div class="col-md-4">
+                                    <label for="sindicato_id" class="form-label text-muted small fw-bold text-uppercase">Sindicato</label>
+                                    <select class="form-select bg-light border-0" id="sindicato_id" name="sindicato_id" style="border-radius: 8px;">
+                                        <option value="">No afiliado</option>
+                                        <?php foreach ($sindicatos as $sindicato): ?>
+                                            <option value="<?php echo $sindicato['id']; ?>" <?php echo ($sindicato['id'] == $trabajador['sindicato_id']) ? 'selected' : ''; ?>>
+                                                <?php echo htmlspecialchars($sindicato['nombre']) . ' ($' . number_format($sindicato['descuento'], 0, ',', '.') . ')'; ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+
+                                <div class="col-md-8">
+                                    <div class="p-3 bg-light rounded-3 d-flex align-items-center justify-content-between" style="min-height: 80px;">
+                                        <div class="form-check form-switch ps-0 ms-1">
+                                            <input class="form-check-input ms-0 me-3" type="checkbox" id="tiene_cargas" name="tiene_cargas" value="1" <?php echo $trabajador['tiene_cargas'] ? 'checked' : ''; ?> style="transform: scale(1.2);">
+                                            <label class="form-check-label fw-bold text-dark small" for="tiene_cargas">
+                                                Cargas Familiares
+                                            </label>
+                                        </div>
+
+                                        <div id="cargas_simple_input" style="display: none;">
+                                            <div class="d-flex align-items-center gap-2">
+                                                <input type="number" class="form-control text-center border-0 bg-white shadow-sm" id="numero_cargas" name="numero_cargas" value="<?php echo $trabajador['numero_cargas']; ?>" min="0" placeholder="#" style="width: 60px; border-radius: 6px;">
+                                                <select class="form-select border-0 bg-white shadow-sm text-xs" name="tramo_manual" id="tramo_manual" style="width: 200px; border-radius: 6px;">
+                                                    <option value="" <?php echo is_null($trabajador['tramo_asignacion_manual']) ? 'selected' : ''; ?>>Tramo Auto</option>
+                                                    <?php foreach ($tramos_bd as $t): ?>
+                                                        <option value="<?php echo $t['tramo']; ?>" <?php echo ($trabajador['tramo_asignacion_manual'] == $t['tramo']) ? 'selected' : ''; ?>>
+                                                            Tramo <?php echo $t['tramo']; ?> ($<?php echo number_format($t['monto_por_carga'], 0, ',', '.'); ?>)
+                                                        </option>
+                                                    <?php endforeach; ?>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Submit -->
+                        <div class="mt-5 text-end">
+                            <button type="submit" class="btn btn-dark btn-lg px-5" style="border-radius: 10px; font-weight: 600;">
+                                Actualizar Trabajador
+                            </button>
+                        </div>
+
                     </div>
                 </div>
 
-                <hr>
-                <a href="gestionar_trabajadores.php" class="btn btn-secondary">Cancelar</a>
-                <button type="submit" class="btn btn-primary">Actualizar</button>
             </form>
         </div>
     </div>
 </div>
 
 <?php require_once dirname(__DIR__) . '/app/includes/footer.php'; ?>
+
+<style>
+    /* 2026 Minimalist Tweaks */
+    .tracking-wide {
+        letter-spacing: 0.1em;
+    }
+
+    .text-xs {
+        font-size: 0.75rem;
+    }
+
+    .btn-check:checked+label {
+        background-color: #f8fafc;
+        border-color: var(--primary-color) !important;
+        box-shadow: 0 0 0 1px var(--primary-color);
+    }
+
+    .form-control:focus,
+    .form-select:focus {
+        background-color: #fff;
+        box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.05);
+        /* Very subtle focus ring */
+        border-color: #e2e8f0;
+    }
+</style>
 
 <script>
     $(document).ready(function() {
@@ -174,41 +240,56 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
         const $afpSelect = $('#afp_id');
         const $inpInput = $('#tasa_inp');
         const $estadoPrevisional = $('#estado_previsional');
+        const $sectionPrevision = $('#section_prevision');
         const $tieneCargas = $('#tiene_cargas');
-        const $cargasWrapper = $('#cargas_details_wrapper');
+        const $cargasInputWrapper = $('#cargas_simple_input');
         const $numeroCargasInput = $('#numero_cargas');
         const $tramoSelect = $('#tramo_manual');
 
-        // Lógica AFP vs INP vs Pensionado vs Exento
         function toggleSistema() {
-            // 0. Si es EXENTO: Bloquear todo
+            // 0. Si es EXENTO: Bloquear inputs específicos, pero mantener selectores principales activos (para POST)
             if ($('#regimen_exento').is(':checked')) {
+                // Visualmente "desactivar" la sección de previsión
+                $sectionPrevision.css({
+                    opacity: 0.5,
+                    pointerEvents: 'none'
+                });
+
+                // Limpiar valores dependientes
                 $afpSelect.prop('disabled', true).prop('required', false).val('');
                 $inpInput.prop('disabled', true).prop('required', false).val('');
-                $sistemaSelect.prop('disabled', true);
-                $estadoPrevisional.prop('disabled', true);
-
-                // Disable Sindicato
                 $('#sindicato_id').prop('disabled', true).val('');
 
-                // Opcional: También deshabilitar Cargas
-                $tieneCargas.prop('checked', false).prop('disabled', true);
-                toggleCargas(); // Actualizar estado visual de cargas
+                // MANTENER ACTIVOS estos campos para que se envíen en el POST
+                // El backend los necesita, aunque sean "dummy" para este caso
+                $sistemaSelect.prop('disabled', false);
+                $estadoPrevisional.prop('disabled', false);
+
+                // Opcional: Resetear a valores por defecto seguros si es necesario
+                // $sistemaSelect.val('AFP');
+                // $estadoPrevisional.val('Activo');
+
+                if ($tieneCargas.is(':checked')) $tieneCargas.trigger('click');
+                $tieneCargas.prop('disabled', true);
+
                 return;
             } else {
-                // Reactivar si vuelve a Normal
+                $sectionPrevision.css({
+                    opacity: 1,
+                    pointerEvents: 'auto'
+                });
                 $sistemaSelect.prop('disabled', false);
                 $estadoPrevisional.prop('disabled', false);
                 $tieneCargas.prop('disabled', false);
                 $('#sindicato_id').prop('disabled', false);
             }
 
-            // 1. Si es Pensionado: Deshabilitar selectores de previsión
             if ($estadoPrevisional.val() === 'Pensionado') {
                 $afpSelect.prop('disabled', true).prop('required', false);
                 $inpInput.prop('disabled', true).prop('required', false);
                 return;
             }
+
             $afpSelect.prop('disabled', false);
             $inpInput.prop('disabled', false);
 
@@ -227,11 +308,11 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
 
         function toggleCargas() {
             if ($tieneCargas.is(':checked')) {
-                $cargasWrapper.fadeIn();
+                $cargasInputWrapper.stop().fadeIn(200);
                 $numeroCargasInput.prop('disabled', false);
                 $tramoSelect.prop('disabled', false);
             } else {
-                $cargasWrapper.hide();
+                $cargasInputWrapper.stop().fadeOut(200);
                 $numeroCargasInput.prop('disabled', true);
                 $tramoSelect.prop('disabled', true);
             }
@@ -245,7 +326,6 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
         toggleSistema();
         toggleCargas();
 
-        // Validación Bootstrap
         (function() {
             'use strict'
             var forms = document.querySelectorAll('.needs-validation')

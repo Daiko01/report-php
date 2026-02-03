@@ -21,7 +21,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $tramo_manual = ($tiene_cargas == 1 && !empty($_POST['tramo_manual'])) ? $_POST['tramo_manual'] : null;
 
     // Validaciones
-    if ($estado_previsional == 'Activo' && $sistema_previsional == 'AFP' && $afp_id == null) {
+    if ($es_excedente != 1 && $estado_previsional == 'Activo' && $sistema_previsional == 'AFP' && $afp_id == null) {
         $_SESSION['flash_message'] = ['type' => 'error', 'message' => "Debe seleccionar una AFP."];
         header('Location: ' . BASE_URL . '/maestros/editar_trabajador.php?id=' . $id);
         exit;
