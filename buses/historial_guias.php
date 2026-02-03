@@ -10,6 +10,9 @@ $empleadores = $pdo->query("SELECT id, nombre FROM empleadores WHERE empresa_sis
 ?>
 <div class="d-sm-flex align-items-center justify-content-between mb-4">
     <h1 class="h3 mb-0 text-gray-800"><i class="fas fa-history text-primary me-2"></i>Historial de Guías</h1>
+    <a href="ingreso_guia.php" class="btn btn-secondary shadow-sm rounded-pill px-3">
+        <i class="fas fa-plus me-2"></i>Nueva Guía
+    </a>
 </div>
 
 <!-- FILTROS -->

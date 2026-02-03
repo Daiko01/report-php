@@ -10,6 +10,7 @@ $paginas_flota = [
     'crear_bus.php',
     'editar_bus.php',
     'ingreso_guia.php',
+    'resumen_diario.php',
     'editar_guia.php',
     'importar_produccion.php',
     'planilla_mensual.php',
@@ -127,6 +128,9 @@ $paginas_sistema = [
 
                         <li class="<?php echo ($pagina_actual == 'ingreso_guia.php') ? 'active' : ''; ?>">
                             <a href="<?php echo BASE_URL; ?>/buses/ingreso_guia.php">Recaudación Diaria</a>
+                        </li>
+                        <li class="<?php echo ($pagina_actual == 'resumen_diario.php') ? 'active' : ''; ?>">
+                            <a href="<?php echo BASE_URL; ?>/buses/resumen_diario.php">Resumen Diario</a>
                         </li>
 
                         <?php if ($user_role !== 'recaudador'): ?>

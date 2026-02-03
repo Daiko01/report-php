@@ -3,7 +3,7 @@ require_once dirname(__DIR__) . '/app/core/bootstrap.php';
 require_once dirname(__DIR__) . '/app/includes/session_check.php';
 
 // Cargar Empleadores Iniciales
-$empleadores = $pdo->query("SELECT id, nombre FROM empleadores WHERE empresa_sistema_id = " . ID_EMPRESA_SISTEMA . " ORDER BY nombre")->fetchAll();
+$empleadores = $pdo->query("SELECT id, nombre, rut FROM empleadores WHERE empresa_sistema_id = " . ID_EMPRESA_SISTEMA . " ORDER BY nombre")->fetchAll();
 
 require_once dirname(__DIR__) . '/app/includes/header.php';
 ?>
@@ -36,9 +36,12 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
 
 <div class="d-sm-flex align-items-center justify-content-between mb-4">
     <h1 class="h3 mb-0 text-gray-800"><i class="fas fa-cash-register text-primary me-2"></i>Ingreso de Guía Diaria</h1>
-    <?php if (isset($_SESSION['user_role']) && $_SESSION['user_role'] != 'recaudador'): ?>
-        <a href="cierre_mensual.php" class="btn btn-secondary btn-sm shadow-sm"><i class="fas fa-arrow-left me-1"></i> Ir a Cierres</a>
-    <?php endif; ?>
+    <div>
+        <a href="resumen_diario.php" class="btn btn-primary btn-sm shadow-sm me-2"><i class="fas fa-chart-line me-1"></i> Ver Resumen Diario</a>
+        <?php if (isset($_SESSION['user_role']) && $_SESSION['user_role'] != 'recaudador'): ?>
+            <a href="cierre_mensual.php" class="btn btn-secondary btn-sm shadow-sm"><i class="fas fa-arrow-left me-1"></i> Ir a Cierres</a>
+        <?php endif; ?>
+    </div>
 </div>
 
 <form id="formGuia" autocomplete="off">
@@ -69,7 +72,7 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
                         <select class="form-select select2" id="empleador_id" name="empleador_id" required>
                             <option value="" selected>Seleccione...</option>
                             <?php foreach ($empleadores as $e): ?>
-                                <option value="<?= $e['id'] ?>"><?= htmlspecialchars($e['nombre']) ?></option>
+                                <option value="<?= $e['id'] ?>" data-rut="<?= htmlspecialchars($e['rut']) ?>"><?= htmlspecialchars($e['nombre']) ?> (<?= htmlspecialchars($e['rut']) ?>)</option>
                             <?php endforeach; ?>
                         </select>
                     </div>
@@ -257,10 +260,44 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
 <script>
     $(document).ready(function() {
 
+        // --- 0. CUSTOM MATCHER FOR RUT ---
+        // Permite buscar RUTs con o sin puntos/guiones: 105119291 -> match 10.511.929-1
+        function rutMatcher(params, data) {
+            // If there are no search terms, return all of the data
+            if ($.trim(params.term) === '') {
+                return data;
+            }
+
+            // Do not display the item if there is no 'text' label
+            if (typeof data.text === 'undefined') {
+                return null;
+            }
+
+            // Normalize: remove dots, hyphens, and uppercase
+            const term = params.term.replace(/[\.\-]/g, '').toUpperCase();
+            const text = data.text.replace(/[\.\-]/g, '').toUpperCase();
+
+            // Chequear también el atributo data-rut si existe
+            const rutAttr = $(data.element).data('rut');
+            let rutClean = '';
+            if (rutAttr) {
+                rutClean = rutAttr.toString().replace(/[\.\-]/g, '').toUpperCase();
+            }
+
+            // Check if term is contained in text or cleaner rut
+            if (text.indexOf(term) > -1 || (rutClean && rutClean.indexOf(term) > -1)) {
+                return data;
+            }
+
+            // Return null if the term should not be displayed
+            return null;
+        }
+
         // --- 1. SETUP INICIAL ---
         $('.select2').select2({
             theme: 'bootstrap-5',
-            width: '100%'
+            width: '100%',
+            matcher: rutMatcher // Use custom matcher
         });
 
         // Cargar todos los conductores al inicio
@@ -271,7 +308,7 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
                 data.forEach(d => {
                     const empName = d.empleador_nombre ? d.empleador_nombre : 'Sin Contrato Activo';
                     const empId = d.empleador_id ? d.empleador_id : 0;
-                    opts += `<option value="${d.id}" data-emp-id="${empId}" data-emp-name="${empName}">${d.nombre} (${d.rut}) - [${empName}]</option>`;
+                    opts += `<option value="${d.id}" data-rut="${d.rut}" data-emp-id="${empId}" data-emp-name="${empName}">${d.nombre} (${d.rut}) - [${empName}]</option>`;
                 });
                 $('#conductor_id').html(opts);
             });

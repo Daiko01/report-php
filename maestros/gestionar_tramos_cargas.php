@@ -63,11 +63,13 @@ $history_raw = $stmtHist->fetchAll(PDO::FETCH_GROUP);
 require_once dirname(__DIR__) . '/app/includes/header.php';
 ?>
 
-<div class="container-fluid px-4 py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="h3 text-gray-800">Histórico Tramos Asignación Familiar</h1>
-        <form class="d-flex gap-2" method="GET">
-            <select name="anio" class="form-select w-auto" onchange="this.form.submit()">
+<div class="container-fluid">
+
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">Histórico Tramos Asignación Familiar</h1>
+        <form class="d-flex align-items-center shadow-sm bg-white rounded-pill px-3 py-1" method="GET">
+            <label class="me-2 text-gray-600 fw-bold small mb-0"><i class="fas fa-calendar-alt me-1"></i> Año:</label>
+            <select name="anio" class="form-select w-auto border-0 bg-transparent fw-bold text-primary py-1" onchange="this.form.submit()" style="box-shadow: none;">
                 <?php
                 $y = date('Y');
                 for ($i = $y - 2; $i <= $y + 1; $i++) {
@@ -80,20 +82,20 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
     </div>
 
     <!-- TABLA DE MESES -->
-    <div class="card shadow mb-4">
-        <div class="card-header py-3">
-            <h6 class="m-0 font-weight-bold text-primary">Valores Año <?= $anio_sel ?></h6>
+    <div class="card shadow border-0 mb-4">
+        <div class="card-header py-3 bg-white d-flex align-items-center">
+            <h6 class="m-0 font-weight-bold text-primary"><i class="fas fa-table me-2"></i>Valores Año <?= $anio_sel ?></h6>
         </div>
         <div class="card-body">
             <div class="table-responsive">
-                <table class="table table-bordered table-striped">
-                    <thead class="table-dark">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
                         <tr class="text-center">
                             <th>Mes</th>
-                            <th>Tramo A (Monto / Tope)</th>
-                            <th>Tramo B (Monto / Tope)</th>
-                            <th>Tramo C (Monto / Tope)</th>
-                            <th>Tramo D (Monto / Tope)</th>
+                            <th>Tramo A</th>
+                            <th>Tramo B</th>
+                            <th>Tramo C</th>
+                            <th>Tramo D</th>
                             <th style="width: 100px;">Acción</th>
                         </tr>
                     </thead>
@@ -131,48 +133,66 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
                             $currD = $tramos['D'] ?? ['monto_por_carga' => 0, 'renta_maxima' => 0];
                         ?>
                             <tr>
-                                <td class="align-middle fw-bold"><?= $nom_mes ?></td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="icon-circle bg-light text-primary me-3 text-xs" style="height: 2.5rem; width: 2.5rem; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                                            <span class="fw-bold small"><?= substr($nom_mes, 0, 3) ?></span>
+                                        </div>
+                                        <span class="fw-bold text-gray-800"><?= $nom_mes ?></span>
+                                    </div>
+                                </td>
+
                                 <td class="text-center">
                                     <?php if ($datos): ?>
-                                        <div class="small fw-bold text-success">$<?= number_format($currA['monto_por_carga'], 0, ',', '.') ?></div>
-                                        <div class="text-muted" style="font-size:0.75rem">Top: $<?= number_format($currA['renta_maxima'], 0, ',', '.') ?></div>
+                                        <span class="badge bg-success text-white rounded-pill px-3 mb-1">
+                                            $<?= number_format($currA['monto_por_carga'], 0, ',', '.') ?>
+                                        </span>
+                                        <div class="small text-muted" style="font-size: 0.7rem;">Top: $<?= number_format($currA['renta_maxima'], 0, ',', '.') ?></div>
                                     <?php else: ?>
-                                        <span class="text-muted">-</span>
+                                        <span class="text-muted small">-</span>
                                     <?php endif; ?>
                                 </td>
                                 <td class="text-center">
                                     <?php if ($datos): ?>
-                                        <div class="small fw-bold text-success">$<?= number_format($currB['monto_por_carga'], 0, ',', '.') ?></div>
-                                        <div class="text-muted" style="font-size:0.75rem">Top: $<?= number_format($currB['renta_maxima'], 0, ',', '.') ?></div>
+                                        <span class="badge bg-info text-dark rounded-pill px-3 mb-1">
+                                            $<?= number_format($currB['monto_por_carga'], 0, ',', '.') ?>
+                                        </span>
+                                        <div class="small text-muted" style="font-size: 0.7rem;">Top: $<?= number_format($currB['renta_maxima'], 0, ',', '.') ?></div>
                                     <?php else: ?>
-                                        <span class="text-muted">-</span>
+                                        <span class="text-muted small">-</span>
                                     <?php endif; ?>
                                 </td>
                                 <td class="text-center">
                                     <?php if ($datos): ?>
-                                        <div class="small fw-bold text-success">$<?= number_format($currC['monto_por_carga'], 0, ',', '.') ?></div>
-                                        <div class="text-muted" style="font-size:0.75rem">Top: $<?= number_format($currC['renta_maxima'], 0, ',', '.') ?></div>
+                                        <span class="badge bg-warning text-dark rounded-pill px-3 mb-1">
+                                            $<?= number_format($currC['monto_por_carga'], 0, ',', '.') ?>
+                                        </span>
+                                        <div class="small text-muted" style="font-size: 0.7rem;">Top: $<?= number_format($currC['renta_maxima'], 0, ',', '.') ?></div>
                                     <?php else: ?>
-                                        <span class="text-muted">-</span>
+                                        <span class="text-muted small">-</span>
                                     <?php endif; ?>
                                 </td>
                                 <td class="text-center">
                                     <?php if ($datos): ?>
-                                        <div class="small fw-bold text-success">$<?= number_format($currD['monto_por_carga'], 0, ',', '.') ?></div>
-                                        <div class="text-muted" style="font-size:0.75rem">Top: $<?= number_format($currD['renta_maxima'], 0, ',', '.') ?></div>
+                                        <span class="badge bg-danger text-white rounded-pill px-3 mb-1">
+                                            $<?= number_format($currD['monto_por_carga'], 0, ',', '.') ?>
+                                        </span>
+                                        <div class="small text-muted" style="font-size: 0.7rem;">Top: $<?= number_format($currD['renta_maxima'], 0, ',', '.') ?></div>
                                     <?php else: ?>
-                                        <span class="text-muted">-</span>
+                                        <span class="text-muted small">-</span>
                                     <?php endif; ?>
                                 </td>
                                 <td class="text-center align-middle">
-                                    <button class="btn btn-sm btn-info btn-editar-tramo"
+                                    <button class="btn btn-outline-primary btn-sm btn-editar-tramo rounded-circle"
+                                        style="width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;"
+                                        title="Editar Tramos <?= $nom_mes ?>"
                                         data-mes="<?= $num_mes ?>"
                                         data-mes-nom="<?= $nom_mes ?>"
                                         data-a-monto="<?= $currA['monto_por_carga'] ?>" data-a-tope="<?= $currA['renta_maxima'] ?>"
                                         data-b-monto="<?= $currB['monto_por_carga'] ?>" data-b-tope="<?= $currB['renta_maxima'] ?>"
                                         data-c-monto="<?= $currC['monto_por_carga'] ?>" data-c-tope="<?= $currC['renta_maxima'] ?>"
                                         data-d-monto="<?= $currD['monto_por_carga'] ?>" data-d-tope="<?= $currD['renta_maxima'] ?>">
-                                        <i class="fas fa-edit"></i>
+                                        <i class="fas fa-pencil-alt fa-sm"></i>
                                     </button>
                                 </td>
                             </tr>
@@ -186,94 +206,123 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
 
 <!-- Modal Edición -->
 <div class="modal fade" id="modalEditarTramos" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content border-0 shadow-lg">
             <form method="POST">
                 <div class="modal-header bg-primary text-white">
-                    <h5 class="modal-title">Editar Tramos - <span id="lblMes"></span> <?= $anio_sel ?></h5>
+                    <h5 class="modal-title"><i class="fas fa-edit me-2"></i>Editar Tramos - <span id="lblMes" class="fw-bold"></span> <?= $anio_sel ?></h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body">
+                <div class="modal-body bg-light">
                     <input type="hidden" name="action" value="save_tramos">
                     <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
                     <input type="hidden" name="anio" value="<?= $anio_sel ?>">
                     <input type="hidden" name="mes" id="inputMes">
 
-                    <!-- Tramo A -->
-                    <div class="mb-3 border-bottom pb-2">
-                        <label class="fw-bold mb-1">Tramo A</label>
-                        <div class="row g-2">
-                            <div class="col-6">
-                                <small>Monto Carga</small>
-                                <input type="number" class="form-control" name="tramo[A][monto]" id="valAMonto" required>
+                    <div class="row g-3">
+                        <!-- Tramo A -->
+                        <div class="col-md-6">
+                            <div class="card shadow-sm border-left-success h-100">
+                                <div class="card-body">
+                                    <h6 class="font-weight-bold text-success mb-3">Tramo A</h6>
+                                    <div class="mb-2">
+                                        <label class="small text-muted">Monto Carga ($)</label>
+                                        <input type="number" class="form-control form-control-sm" name="tramo[A][monto]" id="valAMonto" required>
+                                    </div>
+                                    <div>
+                                        <label class="small text-muted">Renta Máxima (Tope $)</label>
+                                        <input type="number" class="form-control form-control-sm" name="tramo[A][tope]" id="valATope" required>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="col-6">
-                                <small>Renta Máxima (Tope)</small>
-                                <input type="number" class="form-control" name="tramo[A][tope]" id="valATope" required>
+                        </div>
+
+                        <!-- Tramo B -->
+                        <div class="col-md-6">
+                            <div class="card shadow-sm border-left-info h-100">
+                                <div class="card-body">
+                                    <h6 class="font-weight-bold text-info mb-3">Tramo B</h6>
+                                    <div class="mb-2">
+                                        <label class="small text-muted">Monto Carga ($)</label>
+                                        <input type="number" class="form-control form-control-sm" name="tramo[B][monto]" id="valBMonto" required>
+                                    </div>
+                                    <div>
+                                        <label class="small text-muted">Renta Máxima (Tope $)</label>
+                                        <input type="number" class="form-control form-control-sm" name="tramo[B][tope]" id="valBTope" required>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Tramo C -->
+                        <div class="col-md-6">
+                            <div class="card shadow-sm border-left-warning h-100">
+                                <div class="card-body">
+                                    <h6 class="font-weight-bold text-warning mb-3">Tramo C</h6>
+                                    <div class="mb-2">
+                                        <label class="small text-muted">Monto Carga ($)</label>
+                                        <input type="number" class="form-control form-control-sm" name="tramo[C][monto]" id="valCMonto" required>
+                                    </div>
+                                    <div>
+                                        <label class="small text-muted">Renta Máxima (Tope $)</label>
+                                        <input type="number" class="form-control form-control-sm" name="tramo[C][tope]" id="valCTope" required>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Tramo D -->
+                        <div class="col-md-6">
+                            <div class="card shadow-sm border-left-danger h-100">
+                                <div class="card-body">
+                                    <h6 class="font-weight-bold text-danger mb-3">Tramo D</h6>
+                                    <div class="mb-2">
+                                        <label class="small text-muted">Monto Carga ($)</label>
+                                        <input type="number" class="form-control form-control-sm" name="tramo[D][monto]" id="valDMonto" required>
+                                    </div>
+                                    <div>
+                                        <label class="small text-muted">Renta Máxima (Tope $)</label>
+                                        <input type="number" class="form-control form-control-sm" name="tramo[D][tope]" id="valDTope" required>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
-
-                    <!-- Tramo B -->
-                    <div class="mb-3 border-bottom pb-2">
-                        <label class="fw-bold mb-1">Tramo B</label>
-                        <div class="row g-2">
-                            <div class="col-6">
-                                <small>Monto Carga</small>
-                                <input type="number" class="form-control" name="tramo[B][monto]" id="valBMonto" required>
-                            </div>
-                            <div class="col-6">
-                                <small>Renta Máxima (Tope)</small>
-                                <input type="number" class="form-control" name="tramo[B][tope]" id="valBTope" required>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Tramo C -->
-                    <div class="mb-3 border-bottom pb-2">
-                        <label class="fw-bold mb-1">Tramo C</label>
-                        <div class="row g-2">
-                            <div class="col-6">
-                                <small>Monto Carga</small>
-                                <input type="number" class="form-control" name="tramo[C][monto]" id="valCMonto" required>
-                            </div>
-                            <div class="col-6">
-                                <small>Renta Máxima (Tope)</small>
-                                <input type="number" class="form-control" name="tramo[C][tope]" id="valCTope" required>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Tramo D -->
-                    <div class="mb-3">
-                        <label class="fw-bold mb-1">Tramo D</label>
-                        <div class="row g-2">
-                            <div class="col-6">
-                                <small>Monto Carga</small>
-                                <input type="number" class="form-control" name="tramo[D][monto]" id="valDMonto" required>
-                            </div>
-                            <div class="col-6">
-                                <small>Renta Máxima (Tope)</small>
-                                <input type="number" class="form-control" name="tramo[D][tope]" id="valDTope" required>
-                            </div>
-                        </div>
-                    </div>
-
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+                <div class="modal-footer bg-white">
+                    <button type="button" class="btn btn-secondary shadow-sm" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary shadow-sm"><i class="fas fa-save me-2"></i>Guardar Cambios</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
 
+<style>
+    .border-left-success {
+        border-left: 4px solid #1cc88a !important;
+    }
+
+    .border-left-info {
+        border-left: 4px solid #36b9cc !important;
+    }
+
+    .border-left-warning {
+        border-left: 4px solid #f6c23e !important;
+    }
+
+    .border-left-danger {
+        border-left: 4px solid #e74a3b !important;
+    }
+</style>
+
 <?php require_once dirname(__DIR__) . '/app/includes/footer.php'; ?>
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        const modal = new bootstrap.Modal(document.getElementById('modalEditarTramos'));
+        // Initialize Modal
+        const modalEl = document.getElementById('modalEditarTramos');
+        const modal = new bootstrap.Modal(modalEl);
 
         document.querySelectorAll('.btn-editar-tramo').forEach(btn => {
             btn.addEventListener('click', function() {
