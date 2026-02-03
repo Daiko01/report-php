@@ -7,6 +7,8 @@
  */
 function procesar_grabado_cierre($pdo, $post_data)
 {
+    require_once dirname(__DIR__) . '/includes/calculos_cierre.php'; // Necesario para recalcular y detectar excedentes
+
 
     $bus_id = (int)$post_data['bus_id'];
     $mes = (int)$post_data['mes'];
@@ -109,6 +111,44 @@ function procesar_grabado_cierre($pdo, $post_data)
             $boleta_garantia_dos,
             $estado
         ]);
+
+        // --- SYNC EXCEDENTES (Single Bus) ---
+        // 1. Recalcular para obtener la lista actualizada de trabajadores y sus estados
+        // Nota: Esto puede ser un poco redundante pero asegura consistencia con lo que se acaba de guardar
+        $calculos = calcular_cierre_bus($pdo, $bus_id, $mes, $anio);
+
+        if (!empty($calculos['lista_trabajadores'])) {
+            foreach ($calculos['lista_trabajadores'] as $trab) {
+                if (!empty($trab['es_excedente']) && $trab['es_excedente']) {
+                    // IDEMPOTENCIA
+                    $stmtDelEx = $pdo->prepare("DELETE FROM excedentes_aportes WHERE bus_id = ? AND trabajador_id = ? AND mes = ? AND ano = ?");
+                    $stmtDelEx->execute([$bus_id, $trab['trabajador_id'], $mes, $anio]);
+
+                    // INSERT
+                    $monto_ex = (int)$trab['monto_excedente'];
+                    if ($monto_ex > 0) {
+                        $stmtInsEx = $pdo->prepare("INSERT INTO excedentes_aportes 
+                            (bus_id, trabajador_id, mes, ano, monto, origen, nro_maquina, rut_conductor, nombre_conductor, motivo)
+                            VALUES (?, ?, ?, ?, ?, 'CIERRE_MENSUAL', ?, ?, ?, 'Excedente por Exención')");
+                        // Para single bus, nro_maquina no viene facil en $trab (que viene de calculos_cierre interno)
+                        // Pero update: calculos_cierre updated to include 'nro_maquina' in $trab list? 
+                        // Let's verify `calculos_cierre.php` update... 
+                        // Yes, I added 'nro_maquina' => $busVis['numero_maquina'] in Step 562.
+
+                        $stmtInsEx->execute([
+                            $bus_id,
+                            $trab['trabajador_id'],
+                            $mes,
+                            $anio,
+                            $monto_ex,
+                            $trab['nro_maquina'] ?? '??',
+                            $trab['rut'],
+                            $trab['nombre']
+                        ]);
+                    }
+                }
+            }
+        }
 
         return [
             'success' => true,

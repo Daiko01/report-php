@@ -33,7 +33,7 @@ try {
 
     echo json_encode([
         'folios' => $folios,
-        'gastos' => [] // Empty array as requested
+        'gastos' => [] // Always empty query
     ]);
 } catch (Exception $e) {
     http_response_code(500);

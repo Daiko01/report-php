@@ -8,6 +8,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $nombre = trim($_POST['nombre']);
     $rut = trim($_POST['rut']);
     $estado_previsional = trim($_POST['estado_previsional']);
+    $es_excedente = isset($_POST['es_excedente']) ? (int)$_POST['es_excedente'] : 0; // Default 0
 
     // Campos Previsionales
     $sistema_previsional = $_POST['sistema_previsional'];
@@ -45,7 +46,16 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     }
 
     // Limpieza lógica
-    if ($estado_previsional == 'Pensionado') {
+    if ($es_excedente == 1) {
+        $estado_previsional = 'Activo'; // Mantener como activo visualmente o crear estado 'Exento'? 
+        // User dijo: "Opción recomendada: Agregar flag booleano para no romper procesos que dependan del estado 'Activo'"
+        // Asi que lo dejamos como viene (probablemente 'Activo' hidden o disabled)
+        // FORCE NULLs
+        $afp_id = null;
+        $tasa_inp = 0;
+        $sindicato_id = null;
+        $sistema_previsional = 'AFP'; // Dummy value to satisfy ENUM/NOT NULL if exists, or NULL if allowed. Worker has ENUM('AFP','INP').
+    } elseif ($estado_previsional == 'Pensionado') {
         $afp_id = null;
         $tasa_inp = 0;
     }
@@ -54,10 +64,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         // INSERT ACTUALIZADO: Incluye 'tramo_asignacion_manual'
         $sql = "INSERT INTO trabajadores (
                     rut, nombre, sistema_previsional, tasa_inp_decimal, estado_previsional, 
-                    afp_id, sindicato_id, tiene_cargas, numero_cargas, tramo_asignacion_manual
+                    afp_id, sindicato_id, tiene_cargas, numero_cargas, tramo_asignacion_manual, es_excedente
                 ) VALUES (
                     :rut, :nombre, :sistema, :tasa, :estado, 
-                    :afp, :sindicato, :tiene, :numero, :tramo
+                    :afp, :sindicato, :tiene, :numero, :tramo, :excedente
                 )";
 
         $stmt = $pdo->prepare($sql);
@@ -71,7 +81,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             ':sindicato' => $sindicato_id,
             ':tiene' => $tiene_cargas,
             ':numero' => $numero_cargas,
-            ':tramo' => $tramo_manual // Guardamos el valor (A, B, C, D o NULL)
+            ':numero' => $numero_cargas,
+            ':tramo' => $tramo_manual, // Guardamos el valor (A, B, C, D o NULL)
+            ':excedente' => $es_excedente
         ]);
 
 

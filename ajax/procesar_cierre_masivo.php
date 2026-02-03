@@ -92,6 +92,37 @@ try {
             $defs['boleta_garantia_dos']
         ]);
         $count++;
+
+        // 4. PROCESAR EXCEDENTES (Exempt Workers)
+        // La funcion calcular_cierre_bus ya nos devolvió la lista de trabajadores con el flag 'es_excedente'
+        if (!empty($calculos['lista_trabajadores'])) {
+            foreach ($calculos['lista_trabajadores'] as $trab) {
+                if (!empty($trab['es_excedente']) && $trab['es_excedente']) {
+
+                    // IDEMPOTENCIA: Borrar registro previo de este trabajador para este mes/bus
+                    $stmtDelEx = $pdo->prepare("DELETE FROM excedentes_aportes WHERE bus_id = ? AND trabajador_id = ? AND mes = ? AND ano = ?");
+                    $stmtDelEx->execute([$bus_id, $trab['trabajador_id'], $mes, $anio]);
+
+                    // INSERTAR NUEVO
+                    $monto_ex = (int)$trab['monto_excedente'];
+                    if ($monto_ex > 0) {
+                        $stmtInsEx = $pdo->prepare("INSERT INTO excedentes_aportes 
+                            (bus_id, trabajador_id, mes, ano, monto, origen, nro_maquina, rut_conductor, nombre_conductor, motivo)
+                            VALUES (?, ?, ?, ?, ?, 'CIERRE_MENSUAL', ?, ?, ?, 'Excedente por Exención')");
+                        $stmtInsEx->execute([
+                            $bus_id,
+                            $trab['trabajador_id'],
+                            $mes,
+                            $anio,
+                            $monto_ex,
+                            $calc_nro_maquina = $trab['nro_maquina'] ?? $bus_id, // Usar el nro_maquina que viene de calculos, o fallback ID
+                            $trab['rut'],
+                            $trab['nombre']
+                        ]);
+                    }
+                }
+            }
+        }
     }
 
     echo json_encode([

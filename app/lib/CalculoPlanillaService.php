@@ -41,7 +41,8 @@ class CalculoPlanillaService
                 tasa_inp_decimal, 
                 tiene_cargas, 
                 numero_cargas,
-                tramo_asignacion_manual
+                tramo_asignacion_manual,
+                es_excedente
             FROM trabajadores 
             WHERE id = ?
         ");
@@ -130,6 +131,24 @@ class CalculoPlanillaService
         }
 
         $sueldo_imponible = (int)$fila_planilla['sueldo_imponible'];
+
+        // --- EXENCIÓN TOTAL ---
+        if (!empty($trabajador['es_excedente']) && $trabajador['es_excedente'] == 1) {
+            return [
+                'descuento_afp' => 0,
+                'descuento_salud' => 0,
+                'seguro_cesantia' => 0,
+                'sindicato' => 0,
+                'asignacion_familiar_calculada' => 0,
+                'afp_historico_nombre' => null,
+                'tipo_asignacion_familiar' => 'NONE',
+                'tramo_asignacion_familiar' => null,
+
+                // Extra flags para debug si fuese necesario
+                'es_excedente' => true,
+                'imponible_forzado' => 0 // El servicio no retorna imponible, pero si modificara algo, seria aqui.
+            ];
+        }
 
         $base_afp = min($sueldo_imponible, self::TOPE_IMPONIBLE_AFP);
         $base_salud = min($sueldo_imponible, self::TOPE_IMPONIBLE_SALUD);

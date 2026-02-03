@@ -49,6 +49,26 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
 
                 <hr>
 
+                <h5 class="mb-3 text-primary">Régimen Contractual</h5>
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label d-block text-gray-800 fw-bold">Tipo de Contratación</label>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="es_excedente" id="regimen_normal" value="0" checked>
+                            <label class="form-check-label" for="regimen_normal">Normal (Con Leyes Sociales)</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="es_excedente" id="regimen_exento" value="1">
+                            <label class="form-check-label text-danger fw-bold" for="regimen_exento">Exento / Excedente</label>
+                        </div>
+                        <div class="form-text small mt-2">
+                            <i class="fas fa-info-circle"></i> Los trabajadores <strong>Exentos</strong> registran producción pero <strong>NO generan leyes sociales</strong>. Sus aportes van a "Excedentes".
+                        </div>
+                    </div>
+                </div>
+
+                <hr>
+
                 <h5 class="mb-3 text-primary">Información Previsional</h5>
                 <div class="row">
                     <div class="col-md-3 mb-3">
@@ -163,8 +183,30 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
         const $numeroCargasInput = $('#numero_cargas');
         const $tramoSelect = $('#tramo_manual');
 
-        // Lógica AFP vs INP vs Pensionado
+        // Lógica AFP vs INP vs Pensionado vs Exento
         function toggleSistema() {
+            // 0. Si es EXENTO: Bloquear todo
+            if ($('#regimen_exento').is(':checked')) {
+                $afpSelect.prop('disabled', true).prop('required', false).val('');
+                $inpInput.prop('disabled', true).prop('required', false).val('');
+                $sistemaSelect.prop('disabled', true);
+                $estadoPrevisional.prop('disabled', true);
+
+                // Disable Sindicato
+                $('#sindicato_id').prop('disabled', true).val('');
+
+                // Opcional: También deshabilitar Cargas
+                $tieneCargas.prop('checked', false).prop('disabled', true);
+                toggleCargas(); // Actualizar estado visual de cargas
+                return;
+            } else {
+                // Reactivar si vuelve a Normal
+                $sistemaSelect.prop('disabled', false);
+                $estadoPrevisional.prop('disabled', false);
+                $tieneCargas.prop('disabled', false);
+                $('#sindicato_id').prop('disabled', false);
+            }
+
             // 1. Si es Pensionado: Deshabilitar selectores de previsión
             if ($estadoPrevisional.val() === 'Pensionado') {
                 $afpSelect.prop('disabled', true).prop('required', false);
@@ -212,6 +254,7 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
         }
 
         // Listeners
+        $('input[name="es_excedente"]').on('change', toggleSistema);
         $sistemaSelect.on('change', toggleSistema);
         $estadoPrevisional.on('change', toggleSistema);
         $tieneCargas.on('change', toggleCargas);

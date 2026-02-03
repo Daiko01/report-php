@@ -53,7 +53,7 @@ function calcular_cierre_bus($pdo, $bus_id, $mes, $anio, $parametros_mensuales =
     $calc_exp_vida = 0;
     $lista_trabajadores = [];
 
-    $stmtBusCfg = $pdo->prepare("SELECT empleador_id FROM buses WHERE id = ?");
+    $stmtBusCfg = $pdo->prepare("SELECT empleador_id, numero_maquina FROM buses WHERE id = ?");
     $stmtBusCfg->execute([$bus_id]);
     $busInfo = $stmtBusCfg->fetch(PDO::FETCH_ASSOC);
 
@@ -142,6 +142,10 @@ function calcular_cierre_bus($pdo, $bus_id, $mes, $anio, $parametros_mensuales =
                     $dias_trabajados = 30; // Cap de seguridad
                 }
 
+                // --- EXENCIÓN (Excedente) CHECK ---
+                $es_excedente = (!empty($trabajador['es_excedente']) && $trabajador['es_excedente'] == 1);
+
+                // Si es excedente, sueldo imponible es irrelevante (0), pero calculamos producción para registro
                 $sueldo_produccion = round($ingreso_conductor * 0.22);
                 $sueldo_minimo_legal = 539000;
 
@@ -156,6 +160,11 @@ function calcular_cierre_bus($pdo, $bus_id, $mes, $anio, $parametros_mensuales =
                     $imponible = $piso_legal_proporcional;
                 } else {
                     $imponible = $sueldo_produccion;
+                }
+
+                // OVERRIDE if Excedente (Just to be safe, though Service handles it)
+                if ($es_excedente) {
+                    $imponible = 0;
                 }
 
                 $stmtCont = $pdo->prepare("SELECT tipo_contrato FROM contratos WHERE trabajador_id = ? AND empleador_id = ? AND fecha_inicio <= ? AND (fecha_termino IS NULL OR fecha_termino >= ?) LIMIT 1");
@@ -207,19 +216,38 @@ function calcular_cierre_bus($pdo, $bus_id, $mes, $anio, $parametros_mensuales =
                 }
 
                 // DATA DISPLAY (Estimado Individual)
-                $costo_emp_estimado = ($desc_total_row - $calcs['sindicato'])
-                    + floor($imponible * $tasa_mutual)
-                    + (($trabajador['sistema_previsional'] == 'AFP' && $trabajador['estado_previsional'] == 'Activo') ? floor($imponible * $tasa_sis) : 0)
-                    + $costo_sc_row
-                    + (($trabajador['sistema_previsional'] == 'AFP' && $trabajador['estado_previsional'] == 'Activo') ? floor($imponible * ($TASA_CAP_IND_CONST + $TASA_EXP_VIDA_CONST)) : 0)
-                    - $calcs['asignacion_familiar_calculada'];
+                // DATA DISPLAY (Estimado Individual)
+                if (!$es_excedente) {
+                    $costo_emp_estimado = ($desc_total_row - $calcs['sindicato'])
+                        + floor($imponible * $tasa_mutual)
+                        + (($trabajador['sistema_previsional'] == 'AFP' && $trabajador['estado_previsional'] == 'Activo') ? floor($imponible * $tasa_sis) : 0)
+                        + $costo_sc_row
+                        + (($trabajador['sistema_previsional'] == 'AFP' && $trabajador['estado_previsional'] == 'Activo') ? floor($imponible * ($TASA_CAP_IND_CONST + $TASA_EXP_VIDA_CONST)) : 0)
+                        - $calcs['asignacion_familiar_calculada'];
+                } else {
+                    // Si es excedente, el costo empresa "previsional" es 0 (no se paga a previred), 
+                    // pero el dinero descontado en guias se va a Excedentes.
+                    /* 
+                       Logic Decision: 
+                       Should this 'costo_emp_estimado' show the Surplus amount? 
+                       Usually this column is "Costo Leyes Sociales". For Excedente, it's 0.
+                       The Surplus is a separate pot. Let's keep it 0 here to reflect "No Law Payment".
+                    */
+                    $costo_emp_estimado = 0;
+                }
 
                 $lista_trabajadores[] = [
+                    'trabajador_id' => $tid, // Needed for processor
+                    'rut' => $trabajador['rut'],
                     'nombre' => $trabajador['nombre'],
                     'dias' => $dias_trabajados,
                     'guias' => $d['num_guias'],
                     'imponible' => $imponible,
-                    'costo_total' => $costo_emp_estimado
+                    'costo_total' => $costo_emp_estimado,
+                    'es_excedente' => $es_excedente,
+                    'monto_excedente' => ($es_excedente ? $aporte_real_guias : 0),
+                    'nro_maquina' => $busInfo['numero_maquina'] ?? '??',
+                    'bus_id' => $bus_id
                 ];
             }
 
