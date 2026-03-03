@@ -28,7 +28,7 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
                     <h6 class="m-0 font-weight-bold"><i class="fas fa-plus-circle me-2"></i>Registrar Nueva Tasa</h6>
                 </div>
                 <div class="card-body bg-light">
-                    <form action="../ajax/guardar_sis.php" method="POST">
+                    <form action="<?php echo BASE_URL; ?>/ajax/guardar_sis.php" method="POST">
                         <?php csrf_field(); ?>
                         <input type="hidden" name="accion" value="crear">
 
@@ -176,7 +176,7 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
                 if (result.isConfirmed) {
                     const csrfToken = $('input[name="csrf_token"]').val();
 
-                    fetch('../ajax/guardar_sis.php', {
+                    fetch('<?php echo BASE_URL; ?>/ajax/guardar_sis.php', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json'

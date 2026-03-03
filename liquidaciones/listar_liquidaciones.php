@@ -36,7 +36,7 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
         <h1 class="h3 mb-0 text-gray-800">Liquidaciones Generadas</h1>
         <div>
             <!-- NUEVO: Descargar PDF Consolidado -->
-            <a href="descargar_todas_pdf.php?mes=<?= $mes ?>&ano=<?= $ano ?>&empleador=<?= $empleador_id ?>"
+            <a href="<?php echo BASE_URL; ?>/liquidaciones/descargar_todas_pdf.php?mes=<?= $mes ?>&ano=<?= $ano ?>&empleador=<?= $empleador_id ?>"
                 target="_blank" class="btn btn-danger shadow-sm me-2">
                 <i class="fas fa-file-pdf fa-sm text-white-50"></i> Descargar Todo (PDF)
             </a>
@@ -53,7 +53,7 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
                 </button>
             <?php endif; ?>
 
-            <a href="generar_liquidacion.php" class="btn btn-primary shadow-sm">
+            <a href="<?php echo BASE_URL; ?>/generar-liquidacion" class="btn btn-primary shadow-sm">
                 <i class="fas fa-plus fa-sm text-white-50"></i> Generar Nuevas
             </a>
         </div>
@@ -115,7 +115,7 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
                                 <td><?php echo htmlspecialchars($l['trab_rut']); ?></td>
                                 <td class="text-right text-success font-weight-bold">$<?php echo number_format($l['sueldo_liquido'], 0, ',', '.'); ?></td>
                                 <td class="text-center">
-                                    <a href="ver_pdf_liquidacion.php?id=<?php echo $l['id']; ?>" target="_blank" class="btn btn-info btn-sm" title="Ver PDF">
+                                    <a href="<?php echo BASE_URL; ?>/liquidaciones/ver_pdf_liquidacion.php?id=<?php echo $l['id']; ?>" target="_blank" class="btn btn-info btn-sm" title="Ver PDF">
                                         <i class="fas fa-file-invoice-dollar"></i>
                                     </a>
                                     <?php if (isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'admin'): ?>

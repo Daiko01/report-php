@@ -95,7 +95,7 @@ $paginas_sistema = [
     <div class="wrapper">
         <nav id="sidebar">
             <div class="sidebar-header d-flex align-items-center">
-                <a href="<?php echo BASE_URL; ?>/index.php" class="d-flex align-items-center text-decoration-none text-white">
+                <a href="<?php echo BASE_URL; ?>/dashboard" class="d-flex align-items-center text-decoration-none text-white">
                     <img src="<?php echo BASE_URL; ?>/public/assets/img/isotipo_transreport.svg" alt="TransReport" style="height: 32px; width: auto;" class="me-2">
                     <h3 class="h5 mb-0 fw-bold">TransReport BP</h3>
                 </a>
@@ -107,7 +107,7 @@ $paginas_sistema = [
 
                 <?php if ($user_role !== 'recaudador'): ?>
                     <li class="<?php echo ($pagina_actual == 'index.php') ? 'active' : ''; ?>">
-                        <a href="<?php echo BASE_URL; ?>/index.php"><i class="fas fa-tachometer-alt me-2"></i> Dashboard</a>
+                        <a href="<?php echo BASE_URL; ?>/dashboard"><i class="fas fa-tachometer-alt me-2"></i> Dashboard</a>
                     </li>
                 <?php endif; ?>
 
@@ -119,28 +119,28 @@ $paginas_sistema = [
 
                         <?php if ($user_role !== 'recaudador'): ?>
                             <li class="<?php echo ($pagina_actual == 'configuracion.php') ? 'active' : ''; ?>">
-                                <a href="<?php echo BASE_URL; ?>/buses/configuracion.php">Parámetros Mensuales</a>
+                                <a href="<?php echo BASE_URL; ?>/configuracion-parametros">Parámetros Mensuales</a>
                             </li>
                             <li class="<?php echo ($pagina_actual == 'gestionar_buses.php') ? 'active' : ''; ?>">
-                                <a href="<?php echo BASE_URL; ?>/maestros/gestionar_buses.php">Listado de Buses</a>
+                                <a href="<?php echo BASE_URL; ?>/listado-buses">Listado de Buses</a>
                             </li>
                         <?php endif; ?>
 
                         <li class="<?php echo ($pagina_actual == 'ingreso_guia.php') ? 'active' : ''; ?>">
-                            <a href="<?php echo BASE_URL; ?>/buses/ingreso_guia.php">Recaudación Diaria</a>
+                            <a href="<?php echo BASE_URL; ?>/ingreso-guia">Recaudación Diaria</a>
                         </li>
                         <li class="<?php echo ($pagina_actual == 'resumen_diario.php') ? 'active' : ''; ?>">
-                            <a href="<?php echo BASE_URL; ?>/buses/resumen_diario.php">Resumen Diario</a>
+                            <a href="<?php echo BASE_URL; ?>/resumen-diario">Resumen Diario</a>
                         </li>
 
                         <?php if ($user_role !== 'recaudador'): ?>
 
 
                             <li class="<?php echo ($pagina_actual == 'cierre_mensual.php') ? 'active' : ''; ?>">
-                                <a href="<?php echo BASE_URL; ?>/buses/cierre_mensual.php">Cierre Mensual de Flota</a>
+                                <a href="<?php echo BASE_URL; ?>/cierre-mensual">Cierre Mensual de Flota</a>
                             </li>
                             <li class="<?php echo ($pagina_actual == 'seleccionar_reporte.php') ? 'active' : ''; ?>">
-                                <a href="<?php echo BASE_URL; ?>/buses/seleccionar_reporte.php">Informes Operacionales</a>
+                                <a href="<?php echo BASE_URL; ?>/reportes-flota">Informes Operacionales</a>
                             </li>
                         <?php endif; ?>
                     </ul>
@@ -155,48 +155,48 @@ $paginas_sistema = [
 
                             <div class="sidebar-heading">Personal</div>
                             <li class="<?php echo ($pagina_actual == 'gestionar_trabajadores.php') ? 'active' : ''; ?>">
-                                <a href="<?php echo BASE_URL; ?>/maestros/gestionar_trabajadores.php">Registro de Trabajadores</a>
+                                <a href="<?php echo BASE_URL; ?>/trabajadores">Registro de Trabajadores</a>
                             </li>
                             <li class="<?php echo ($pagina_actual == 'gestionar_empleadores.php') ? 'active' : ''; ?>">
-                                <a href="<?php echo BASE_URL; ?>/maestros/gestionar_empleadores.php">Empleadores</a>
+                                <a href="<?php echo BASE_URL; ?>/empleadores">Empleadores</a>
                             </li>
                             <li class="<?php echo ($pagina_actual == 'gestionar_contratos.php') ? 'active' : ''; ?>">
-                                <a href="<?php echo BASE_URL; ?>/contratos/gestionar_contratos.php">Contratos de Trabajo</a>
+                                <a href="<?php echo BASE_URL; ?>/listado-contratos">Contratos de Trabajo</a>
                             </li>
                             <li class="<?php echo ($pagina_actual == 'gestionar_licencias.php') ? 'active' : ''; ?>">
-                                <a href="<?php echo BASE_URL; ?>/maestros/gestionar_licencias.php">Licencias Médicas</a>
+                                <a href="<?php echo BASE_URL; ?>/licencias">Licencias Médicas</a>
                             </li>
 
                             <div class="sidebar-heading">Remuneraciones</div>
 
                             <li class="<?php echo ($pagina_actual == 'generacion_masiva.php') ? 'active' : ''; ?>">
-                                <a href="<?php echo BASE_URL; ?>/planillas/generacion_masiva.php">Generación Aportes Patronales</a>
+                                <a href="<?php echo BASE_URL; ?>/planillas-masivas">Generación Aportes Patronales</a>
                             </li>
                             <li class="<?php echo ($pagina_actual == 'dashboard_mensual.php') ? 'active' : ''; ?>">
-                                <a href="<?php echo BASE_URL; ?>/planillas/dashboard_mensual.php">Aportes Patronales</a>
+                                <a href="<?php echo BASE_URL; ?>/dashboard-mensual">Aportes Patronales</a>
                             </li>
 
                             <?php if (isset($_SESSION['user_role']) && ($_SESSION['user_role'] == 'admin')): ?>
                                 <li class="<?php echo ($pagina_actual == 'cierres_mensuales.php') ? 'active' : ''; ?>">
-                                    <a href="<?php echo BASE_URL; ?>/planillas/cierres_mensuales.php">Cierre de Remuneraciones</a>
+                                    <a href="<?php echo BASE_URL; ?>/control-cierres">Cierre de Remuneraciones</a>
                                 </li>
                             <?php endif; ?>
 
                             <div class="sidebar-heading">Liquidaciones de Sueldos</div>
                             <li class="<?php echo ($pagina_actual == 'generar_liquidacion.php') ? 'active' : ''; ?>">
-                                <a href="<?php echo BASE_URL; ?>/liquidaciones/generar_liquidacion.php">Emisión de Liquidaciones</a>
+                                <a href="<?php echo BASE_URL; ?>/generar-liquidacion">Emisión de Liquidaciones</a>
                             </li>
                             <li class="<?php echo ($pagina_actual == 'listar_liquidaciones.php') ? 'active' : ''; ?>">
-                                <a href="<?php echo BASE_URL; ?>/liquidaciones/listar_liquidaciones.php">Historial de Liquidaciones</a>
+                                <a href="<?php echo BASE_URL; ?>/listado-liquidaciones">Historial de Liquidaciones</a>
                             </li>
 
                             <div class="sidebar-heading">Informes y Reportes</div>
 
                             <li class="<?php echo ($pagina_actual == 'reportes_especiales.php') ? 'active' : ''; ?>">
-                                <a href="<?php echo BASE_URL; ?>/reportes/reportes_especiales.php">Informes Especiales</a>
+                                <a href="<?php echo BASE_URL; ?>/reportes-especiales">Informes Especiales</a>
                             </li>
                             <li class="<?php echo ($pagina_actual == 'ver_excedentes.php') ? 'active' : ''; ?>">
-                                <a href="<?php echo BASE_URL; ?>/aportes/ver_excedentes.php">Control de Excedentes</a>
+                                <a href="<?php echo BASE_URL; ?>/ver-excedentes">Control de Excedentes</a>
                             </li>
                         </ul>
                     </li>
@@ -209,21 +209,21 @@ $paginas_sistema = [
 
                             <?php if (isset($_SESSION['user_role']) && $_SESSION['user_role'] == 'admin'): ?>
                                 <li class="<?php echo ($pagina_actual == 'gestionar_usuarios.php') ? 'active' : ''; ?>">
-                                    <a href="<?php echo BASE_URL; ?>/admin/gestionar_usuarios.php"><i class="fas fa-user-shield me-2"></i> Usuarios y Perfiles</a>
+                                    <a href="<?php echo BASE_URL; ?>/usuarios"><i class="fas fa-user-shield me-2"></i> Usuarios y Perfiles</a>
                                 </li>
                                 <li class="<?php echo ($pagina_actual == 'gestionar_sis.php') ? 'active' : ''; ?>">
-                                    <a href="<?php echo BASE_URL; ?>/admin/gestionar_sis.php"><i class="fas fa-chart-line me-2"></i> Indicadores SIS</a>
+                                    <a href="<?php echo BASE_URL; ?>/indicadores-sis"><i class="fas fa-chart-line me-2"></i> Indicadores SIS</a>
                                 </li>
                                 <li class="<?php echo ($pagina_actual == 'gestionar_tramos_cargas.php') ? 'active' : ''; ?>">
-                                    <a href="<?php echo BASE_URL; ?>/maestros/gestionar_tramos_cargas.php"><i class="fas fa-child me-2"></i> Asignación Familiar (Tramos)</a>
+                                    <a href="<?php echo BASE_URL; ?>/cargas-familiares"><i class="fas fa-child me-2"></i> Asignación Familiar (Tramos)</a>
                                 </li>
                             <?php endif; ?>
 
                             <li class="<?php echo ($pagina_actual == 'gestionar_sindicatos.php') ? 'active' : ''; ?>">
-                                <a href="<?php echo BASE_URL; ?>/maestros/gestionar_sindicatos.php">Sindicatos</a>
+                                <a href="<?php echo BASE_URL; ?>/sindicatos">Sindicatos</a>
                             </li>
                             <li class="<?php echo ($pagina_actual == 'gestionar_afps.php') ? 'active' : ''; ?>">
-                                <a href="<?php echo BASE_URL; ?>/maestros/gestionar_afps.php">AFP y Comisiones</a>
+                                <a href="<?php echo BASE_URL; ?>/afps">AFP y Comisiones</a>
                             </li>
                         </ul>
                     </li>
@@ -236,7 +236,7 @@ $paginas_sistema = [
                     DEVELOPER BY <strong>DAIKO SYSTEMS</strong>
                 </small>
                 <div class="text-white-50 mt-1" style="font-size: 0.65rem;">
-                    Beta 1.5.2
+                    Beta 1.5.6
                 </div>
             </div>
 
@@ -258,7 +258,7 @@ $paginas_sistema = [
                         <div class="ms-3 d-none d-md-block">
                             <nav aria-label="breadcrumb">
                                 <ol class="breadcrumb mb-0">
-                                    <li class="breadcrumb-item"><a href="<?php echo BASE_URL; ?>" class="text-decoration-none text-muted">Inicio</a></li>
+                                    <li class="breadcrumb-item"><a href="<?php echo BASE_URL; ?>/dashboard" class="text-decoration-none text-muted">Inicio</a></li>
                                     <?php
                                     // mapeo de nombres de archivos a títulos de barra lateral
                                     $page_titles = [
@@ -376,11 +376,11 @@ $paginas_sistema = [
                                 </div>
                             </a>
                             <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 mt-2" aria-labelledby="userDropdown">
-                                <li><a class="dropdown-item py-2" href="<?php echo BASE_URL; ?>/perfil.php"><i class="fas fa-user-circle me-2 text-primary"></i> Mi Perfil</a></li>
+                                <li><a class="dropdown-item py-2" href="<?php echo BASE_URL; ?>/perfil"><i class="fas fa-user-circle me-2 text-primary"></i> Mi Perfil</a></li>
                                 <li>
                                     <hr class="dropdown-divider">
                                 </li>
-                                <li><a class="dropdown-item py-2 text-danger" href="<?php echo BASE_URL; ?>/logout.php"><i class="fas fa-sign-out-alt me-2"></i> Cerrar Sesión</a></li>
+                                <li><a class="dropdown-item py-2 text-danger" href="<?php echo BASE_URL; ?>/logout"><i class="fas fa-sign-out-alt me-2"></i> Cerrar Sesión</a></li>
                             </ul>
                         </div>
 

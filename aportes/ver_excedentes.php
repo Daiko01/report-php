@@ -16,7 +16,8 @@ $sql = "SELECT
             SUM(p.gasto_imposiciones) as monto,
             b.numero_maquina,
             t.rut,
-            t.nombre as nombre_conductor
+            t.nombre as nombre_conductor,
+            t.es_excedente
         FROM produccion_buses p
         JOIN buses b ON p.bus_id = b.id
         JOIN trabajadores t ON p.conductor_id = t.id
@@ -76,7 +77,7 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
             <h6 class="m-0 font-weight-bold text-primary">Listado de Excedentes Acumulados</h6>
 
             <?php if (!empty($excedentes)): ?>
-                <a href="generar_pdf_excedentes_db.php?mes=<?= $mes ?>&ano=<?= $ano ?>" target="_blank" class="btn btn-danger">
+                <a href="<?php echo BASE_URL; ?>/reporte-excedentes?mes=<?= $mes ?>&ano=<?= $ano ?>" target="_blank" class="btn btn-danger">
                     <i class="fas fa-file-pdf me-2"></i> Imprimir Reporte (Cierre)
                 </a>
             <?php endif; ?>
@@ -186,7 +187,7 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
             modal.show();
 
             // Fetch
-            fetch(`../ajax/get_detalle_excedentes.php?bus_id=${busId}&conductor_id=${condId}&mes=${mes}&ano=${ano}`)
+            fetch(`<?php echo BASE_URL; ?>/ajax/get_detalle_excedentes.php?bus_id=${busId}&conductor_id=${condId}&mes=${mes}&ano=${ano}`)
                 .then(r => r.json())
                 .then(res => {
                     if (res.success) {

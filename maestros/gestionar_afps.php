@@ -41,7 +41,7 @@ try {
                                     </div>
                                 </td>
                                 <td class="text-center">
-                                    <a href="gestionar_comisiones_afp.php?id=<?php echo $afp['id']; ?>" class="btn btn-outline-primary btn-sm rounded-pill px-3">
+                                    <a href="<?php echo BASE_URL; ?>/comisiones-afp?id=<?php echo $afp['id']; ?>" class="btn btn-outline-primary btn-sm rounded-pill px-3">
                                         <i class="fas fa-history me-1"></i> Ver Historial de Comisiones
                                     </a>
                                 </td>

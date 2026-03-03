@@ -2,7 +2,11 @@
 // ajax/procesar_generacion_masiva.php
 require_once dirname(__DIR__) . '/app/core/bootstrap.php';
 require_once dirname(__DIR__) . '/app/includes/session_check.php';
+require_once dirname(__DIR__) . '/app/includes/session_check.php';
 require_once dirname(__DIR__) . '/app/lib/CalculoPlanillaService.php';
+
+// Turn on output buffering
+ob_start();
 
 // Validar método
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -104,6 +108,7 @@ try {
               AND c.fecha_inicio <= :ultimo_dia
               AND (c.fecha_termino IS NULL OR c.fecha_termino >= :primer_dia)
               AND (c.fecha_finiquito IS NULL OR c.fecha_finiquito >= :primer_dia)
+            ORDER BY c.fecha_inicio DESC
         ";
         $stmt_c = $pdo->prepare($sql_contratos);
         $stmt_c->execute(['eid' => $empleador_id, 'ultimo_dia' => $ultimo_dia, 'primer_dia' => $primer_dia]);
@@ -116,6 +121,8 @@ try {
         }
 
         // Aplicar lógica histórica de anexos
+        $trabajadores_procesados_temp = [];
+
         foreach ($contratos as &$contrato) {
             $datos_historicos = obtener_datos_contrato_vigente($pdo, (int)$contrato['id'], $ultimo_dia);
             if ($datos_historicos) {
@@ -127,6 +134,12 @@ try {
         unset($contrato);
 
         foreach ($contratos as $contrato) {
+            // Evitar duplicados (mismo trabajador con múltiples contratos activos)
+            if (in_array($contrato['trabajador_id'], $trabajadores_procesados_temp)) {
+                continue;
+            }
+            $trabajadores_procesados_temp[] = $contrato['trabajador_id'];
+
             // 4. Calcular Días Trabajados (Delegado al Servicio)
             $dias_trabajados = $calculoService->calcularDiasTrabajados($contrato['fecha_inicio'], $contrato['fecha_termino'] ?? null, $mes, $ano);
 
@@ -145,6 +158,9 @@ try {
             $stmtGuides = $pdo->prepare("SELECT COUNT(id) as num_guias, SUM(ingreso) as to_ingreso FROM produccion_buses WHERE conductor_id = ? AND MONTH(fecha) = ? AND YEAR(fecha) = ?");
             $stmtGuides->execute([$contrato['trabajador_id'], $mes, $ano]);
             $guideData = $stmtGuides->fetch(PDO::FETCH_ASSOC);
+
+            // Snapshot inicial (antes de ajuste conductor)
+            $sueldo_contractual_completo = (int)$contrato['sueldo_imponible'];
 
             $es_conductor = ($guideData['num_guias'] > 0);
 
@@ -180,7 +196,6 @@ try {
                 $contrato['sueldo_imponible'] = $nuevo_sueldo_imponible;
             } else {
                 // PRORRATEO SUELDO (Delegado al Servicio) para NO conductores o sin guias
-                $sueldo_contractual_completo = (int)$contrato['sueldo_imponible'];
                 $contrato['sueldo_imponible'] = $calculoService->calcularProporcional($sueldo_contractual_completo, $dias_trabajados);
             }
             // ---------------------------------------------

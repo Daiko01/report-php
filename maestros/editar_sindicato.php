@@ -8,7 +8,7 @@ require_once dirname(__DIR__) . '/app/includes/session_check.php';
 
 if (!isset($_GET['id'])) {
 
-    header('Location: ' . BASE_URL . '/maestros/gestionar_sindicatos.php');
+    header('Location: ' . BASE_URL . '/sindicatos');
 
     exit;
 }
@@ -39,7 +39,7 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
 
         <div class="card-body">
 
-            <form action="editar_sindicato_process.php" method="POST">
+            <form action="<?php echo BASE_URL; ?>/maestros/editar_sindicato_process.php" method="POST">
 
                 <input type="hidden" name="id" value="<?php echo $sindicato['id']; ?>">
 
@@ -71,7 +71,7 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
 
                 <hr>
 
-                <a href="gestionar_sindicatos.php" class="btn btn-secondary">Cancelar</a>
+                <a href="<?php echo BASE_URL; ?>/sindicatos" class="btn btn-secondary">Cancelar</a>
 
                 <button type="submit" class="btn btn-primary">Guardar Cambios</button>
 

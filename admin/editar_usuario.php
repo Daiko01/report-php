@@ -19,7 +19,7 @@ if ($_SESSION['user_role'] != 'admin') {
 
 if (!isset($_GET['id'])) {
 
-    header('Location: ' . BASE_URL . '/admin/gestionar_usuarios.php');
+    header('Location: ' . BASE_URL . '/usuarios');
 
     exit;
 }
@@ -44,7 +44,7 @@ try {
 
     $_SESSION['flash_message'] = ['type' => 'error', 'message' => $e->getMessage()];
 
-    header('Location: ' . BASE_URL . '/admin/gestionar_usuarios.php');
+    header('Location: ' . BASE_URL . '/usuarios');
 
     exit;
 }
@@ -77,7 +77,7 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
 
 
 
-            <form action="editar_usuario_process.php" method="POST">
+            <form action="<?php echo BASE_URL; ?>/admin/editar_usuario_process.php" method="POST">
                 <?php csrf_field(); ?>
 
                 <input type="hidden" name="id" value="<?php echo $user_id; ?>">
@@ -158,7 +158,7 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
 
                 <hr>
 
-                <a href="gestionar_usuarios.php" class="btn btn-secondary">Cancelar</a>
+                <a href="<?php echo BASE_URL; ?>/usuarios" class="btn btn-secondary">Cancelar</a>
 
                 <button type="submit" class="btn btn-primary">Guardar Cambios</button>
 

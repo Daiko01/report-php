@@ -3,7 +3,7 @@ require_once dirname(__DIR__) . '/app/core/bootstrap.php';
 require_once dirname(__DIR__) . '/app/includes/session_check.php';
 
 if (!isset($_GET['id'])) {
-    header('Location: gestionar_empleadores.php');
+    header('Location: ' . BASE_URL . '/empleadores');
     exit;
 }
 $id = (int)$_GET['id'];
@@ -17,7 +17,7 @@ try {
 
     if (!$empleador) {
         // Si el ID no existe o pertenece a la otra empresa, redirigimos por seguridad
-        header('Location: gestionar_empleadores.php');
+        header('Location: ' . BASE_URL . '/empleadores');
         exit;
     }
 
@@ -42,7 +42,7 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
             <h6 class="m-0 font-weight-bold">Editando: <?php echo htmlspecialchars($empleador['nombre']); ?></h6>
         </div>
         <div class="card-body">
-            <form action="editar_empleador_process.php" method="POST" class="needs-validation" novalidate>
+            <form action="<?php echo BASE_URL; ?>/maestros/editar_empleador_process.php" method="POST" class="needs-validation" novalidate>
                 <input type="hidden" name="id" value="<?php echo $empleador['id']; ?>">
 
                 <input type="hidden" name="empresa_sistema_id" value="<?php echo ID_EMPRESA_SISTEMA; ?>">
@@ -98,7 +98,7 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
 
                 <hr>
                 <div class="text-end">
-                    <a href="gestionar_empleadores.php" class="btn btn-secondary me-2">Cancelar</a>
+                    <a href="<?php echo BASE_URL; ?>/empleadores" class="btn btn-secondary me-2">Cancelar</a>
                     <button type="submit" class="btn btn-info px-4 fw-bold text-white shadow-sm">
                         <i class="fas fa-sync-alt me-1"></i> Actualizar Empleador
                     </button>

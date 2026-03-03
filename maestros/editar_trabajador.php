@@ -3,7 +3,7 @@ require_once dirname(__DIR__) . '/app/core/bootstrap.php';
 require_once dirname(__DIR__) . '/app/includes/session_check.php';
 
 if (!isset($_GET['id'])) {
-    header('Location: gestionar_trabajadores.php');
+    header('Location: ' . BASE_URL . '/trabajadores');
     exit;
 }
 $id = $_GET['id'];
@@ -13,7 +13,7 @@ try {
     $stmt->execute(['id' => $id]);
     $trabajador = $stmt->fetch();
     if (!$trabajador) {
-        header('Location: gestionar_trabajadores.php');
+        header('Location: ' . BASE_URL . '/trabajadores');
         exit;
     }
 
@@ -40,14 +40,14 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
             <h1 class="h3 mb-1 text-gray-900 fw-bold">Editar Trabajador</h1>
             <p class="mb-0 text-muted small">Modificando ficha de: <strong><?php echo htmlspecialchars($trabajador['nombre']); ?></strong></p>
         </div>
-        <a href="gestionar_trabajadores.php" class="btn btn-light btn-sm text-secondary border">
+        <a href="<?php echo BASE_URL; ?>/trabajadores" class="btn btn-light btn-sm text-secondary border">
             <i class="fas fa-times me-1"></i> Cancelar
         </a>
     </div>
 
     <div class="row justify-content-center">
         <div class="col-xl-9 col-lg-10">
-            <form action="editar_trabajador_process.php" method="POST" class="needs-validation" novalidate>
+            <form action="<?php echo BASE_URL; ?>/maestros/editar_trabajador_process.php" method="POST" class="needs-validation" novalidate>
                 <input type="hidden" name="id" value="<?php echo $trabajador['id']; ?>">
 
                 <!-- Main Card (Minimalist) -->

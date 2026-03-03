@@ -49,7 +49,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $_SESSION['flash_message'] = ['type' => 'error', 'message' => "Error al guardar: " . $e->getMessage()];
     }
 
-    header("Location: gestionar_tramos_cargas.php?anio=$p_anio");
+    header("Location: " . BASE_URL . "/cargas-familiares?anio=$p_anio");
     exit;
 }
 

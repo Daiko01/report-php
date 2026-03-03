@@ -32,7 +32,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $count = $stmt->rowCount();
             $_SESSION['flash_message'] = ['type' => 'success', 'message' => "$count bus(es) eliminado(s) correctamente."];
         }
-        header('Location: gestionar_buses.php');
+        header('Location: ' . BASE_URL . '/listado-buses');
         exit;
     }
 
@@ -87,7 +87,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         } catch (Exception $e) {
             $_SESSION['flash_message'] = ['type' => 'error', 'message' => 'Error: ' . $e->getMessage()];
         }
-        header('Location: gestionar_buses.php');
+        header('Location: ' . BASE_URL . '/listado-buses');
         exit;
     }
 
@@ -120,6 +120,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 $num_uni = trim($data[4] ?? '');
                 $nom_ter = trim($data[5] ?? '');
 
+                // Normalizar número de unidad: remover prefijos como "UN" → "16"
+                $num_uni_norm = preg_replace('/^[^0-9]+/', '', $num_uni);
+
                 if (empty($nro)) {
                     $errores[] = "Línea $linea: Falta Número de Máquina.";
                     continue;
@@ -142,13 +145,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     $emp_id = null;
                 }
 
-                // 2. Buscar Unidad por número y sistema
+                // 2. Buscar Unidad por número (normalizado) y sistema
                 $uni = $pdo->prepare("SELECT id FROM unidades WHERE numero = ? AND empresa_asociada_id = ? LIMIT 1");
-                $uni->execute([$num_uni, ID_EMPRESA_SISTEMA]);
+                $uni->execute([$num_uni_norm, ID_EMPRESA_SISTEMA]);
                 $uni_id = $uni->fetchColumn();
 
                 if (!$uni_id) {
-                    $errores[] = "Línea $linea: Unidad '$num_uni' no encontrada.";
+                    $errores[] = "Línea $linea: Unidad '$num_uni' (buscada como '$num_uni_norm') no encontrada en el sistema.";
                     continue;
                 }
 
@@ -204,7 +207,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $pdo->rollBack();
             $_SESSION['flash_message'] = ['type' => 'error', 'message' => 'Error Crítico CSV: ' . $e->getMessage()];
         }
-        header('Location: gestionar_buses.php');
+        header('Location: ' . BASE_URL . '/listado-buses');
         exit;
     }
 }
@@ -246,7 +249,7 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
     <div class="d-sm-flex align-items-center justify-content-between mb-4">
         <h1 class="h3 mb-0 text-gray-800"><i class="fas fa-bus text-primary me-2"></i>Directorio de Flota - <?php echo NOMBRE_SISTEMA; ?></h1>
         <div class="d-flex align-items-center">
-            <a href="../buses/exportar_buses.php" class="btn btn-outline-primary shadow-sm me-2">
+            <a href="<?php echo BASE_URL; ?>/buses/exportar_buses.php" class="btn btn-outline-primary shadow-sm me-2">
                 <i class="fas fa-file-excel me-1"></i> Exportar Flota (.xlsx)
             </a>
             <button class="btn btn-outline-success shadow-sm" data-bs-toggle="modal" data-bs-target="#csvModal">
@@ -661,7 +664,7 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
             const id = $(this).data('id');
             if (confirm('¿Está seguro de eliminar este bus?')) {
                 // Create a dynamic form to submit generic delete
-                const form = $('<form method="POST" action="gestionar_buses.php">' +
+                const form = $('<form method="POST" action="<?php echo BASE_URL; ?>/listado-buses">' +
                     '<input type="hidden" name="csrf_token" value="<?php echo csrf_token(); ?>">' +
                     '<input type="hidden" name="action" value="delete">' +
                     '<input type="hidden" name="id" value="' + id + '">' +

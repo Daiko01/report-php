@@ -100,7 +100,7 @@ foreach ($guias as $g) {
 
     echo "<td>
             <button class='btn btn-xs btn-outline-info' onclick='reprint(${g['id']})' title='Reimprimir'><i class='fas fa-print'></i></button>
-            <a href='editar_guia.php?id=${g['id']}' class='btn btn-xs btn-outline-warning' title='Editar'><i class='fas fa-pen'></i></a>";
+            <a href='" . BASE_URL . "/editar-guia/" . $g['id'] . "' class='btn btn-xs btn-outline-warning' title='Editar'><i class='fas fa-pen'></i></a>";
 
     // Individual Action Buttons
     if (!$isMesCerrado) {

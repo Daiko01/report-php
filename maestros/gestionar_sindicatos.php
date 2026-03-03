@@ -47,7 +47,7 @@ try {
                                     </span>
                                 </td>
                                 <td class="text-center">
-                                    <a href="editar_sindicato.php?id=<?php echo $s['id']; ?>" class="btn btn-outline-warning btn-sm rounded-circle" title="Editar Descuento" style="width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center;">
+                                    <a href="<?php echo BASE_URL; ?>/editar-sindicato/<?php echo $s['id']; ?>" class="btn btn-outline-warning btn-sm rounded-circle" title="Editar Descuento" style="width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center;">
                                         <i class="fas fa-pencil-alt fa-sm"></i>
                                     </a>
                                 </td>

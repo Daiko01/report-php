@@ -240,7 +240,7 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
                         <td><code><?= htmlspecialchars($r['empleador_rut']) ?></code></td>
                         <td><span class="badge bg-light text-primary border px-2 py-1"><?= $meses[$r['mes']] . ' ' . $r['ano'] ?></span></td>
                         <td class="text-end pe-4">
-                            <a href="ver_pdf.php?id=<?= $r['empleador_id'] ?>&mes=<?= $r['mes'] ?>&ano=<?= $r['ano'] ?>" target="_blank" class="btn btn-sm btn-outline-primary border-0 rounded-circle">
+                            <a href="<?php echo BASE_URL; ?>/ver-planilla-cotizaciones/<?= $r['empleador_id'] ?>/<?= $r['mes'] ?>/<?= $r['ano'] ?>" target="_blank" class="btn btn-sm btn-outline-primary border-0 rounded-circle">
                                 <i class="fas fa-external-link-alt"></i>
                             </a>
                         </td>

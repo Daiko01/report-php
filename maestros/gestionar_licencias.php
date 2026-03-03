@@ -131,7 +131,7 @@ WHERE l.id = ? AND e.empresa_sistema_id = ?
             $_SESSION['flash_message'] = ['type' => 'error', 'message' => $e->getMessage()];
         }
 
-        header("Location: gestionar_licencias.php");
+        header("Location: " . BASE_URL . "/licencias");
         exit;
     }
 }

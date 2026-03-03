@@ -39,7 +39,7 @@ $meses = [
                     </h6>
                 </div>
                 <div class="card-body">
-                    <form action="ver_reporte_especial.php" method="GET" target="_blank">
+                    <form action="<?php echo BASE_URL; ?>/reportes/ver_reporte_especial.php" method="GET" target="_blank">
 
                         <input type="hidden" name="empresa" value="<?php echo (ID_EMPRESA_SISTEMA == 1) ? 'BUSES BP' : 'SOC. INV. SOL DEL PACIFICO'; ?>">
 

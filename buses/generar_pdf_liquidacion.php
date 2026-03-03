@@ -42,14 +42,17 @@ try {
     $bus_id = isset($_REQUEST['bus_id']) ? (int)$_REQUEST['bus_id'] : 0;
     $empleador_id = isset($_REQUEST['empleador_id']) ? (int)$_REQUEST['empleador_id'] : 0;
 
+    // Subsidio Masivo
+    $aplicar_subsidio = isset($_REQUEST['aplicar_subsidio']) ? (int)$_REQUEST['aplicar_subsidio'] : 0;
+
     // 4. PREPARACIÓN DE MPDF
     $mpdf = new \Mpdf\Mpdf([
         'mode' => 'utf-8',
         'format' => 'A4-L',
-        'margin_left' => 5,
-        'margin_right' => 5,
-        'margin_top' => 5,
-        'margin_bottom' => 5
+        'margin_left' => 4,
+        'margin_right' => 4,
+        'margin_top' => 3,
+        'margin_bottom' => 3
     ]);
     $mpdf->SetTitle("Liquidacion_Buses_{$mes}_{$anio}");
     $mpdf->SetAuthor('Sistema Gestión');
@@ -172,7 +175,7 @@ try {
 
         // Datos Producción
         $stmtProd = $pdo->prepare("
-            SELECT p.*, t.nombre as nombre_conductor_real 
+            SELECT p.*, t.nombre as nombre_conductor_real, t.es_excedente 
             FROM produccion_buses p
             LEFT JOIN trabajadores t ON p.conductor_id = t.id
             WHERE p.bus_id = ? AND MONTH(p.fecha) = ? AND YEAR(p.fecha) = ? 
@@ -202,7 +205,7 @@ try {
         </table><hr style="margin: 2px 0;">';
         $mpdf->WriteHTML($htmlHeader);
 
-        // TABLA DETALLE
+        // TABLA DETALLE (siempre se muestra; en modo subsidio solo aparecen los encabezados sin filas)
         $htmlTable = '
         <style>
             table.det { border-collapse: collapse; width: 100%; font-family: sans-serif; font-size: 10px; }
@@ -231,48 +234,49 @@ try {
 
         $sum = ['ing' => 0, 'pet' => 0, 'bol' => 0, 'adm' => 0, 'ase' => 0, 'via' => 0, 'pag' => 0, 'apo' => 0, 'var' => 0, 'ext' => 0];
 
-        foreach ($produccion as $row) {
-            $ing = $row['ingreso'] ?? 0;
-            $pet = $row['gasto_petroleo'] ?? 0;
-            $bol = $row['gasto_boletos'] ?? 0;
-            $adm = $row['gasto_administracion'] ?? 0;
-            $ase = $row['gasto_aseo'] ?? 0;
-            $via = $row['gasto_viatico'] ?? 0;
-            $pag = $row['pago_conductor'] ?? 0;
-            // MAPPING: Aportes (Legacy/CSV) > Imposiciones (New)
-            $apo = $row['aporte_previsional'] ?: ($row['gasto_imposiciones'] ?? 0);
-            $var = $row['gasto_varios'] ?? 0;
-            $ext = $row['gasto_cta_extra'] ?? 0;
-            // PREFERIR NOMBRE DE DATABASE (ID), SINO CSV, SINO VACIO
-            $nom = $row['nombre_conductor_real'] ?? ($row['conductor_nombre_csv'] ?? '---');
+        // Solo iterar filas de producción si NO estamos en modo subsidio
+        if ($aplicar_subsidio != 1) {
+            foreach ($produccion as $row) {
+                $ing = $row['ingreso'] ?? 0;
+                $pet = $row['gasto_petroleo'] ?? 0;
+                $bol = $row['gasto_boletos'] ?? 0;
+                $adm = $row['gasto_administracion'] ?? 0;
+                $ase = $row['gasto_aseo'] ?? 0;
+                $via = $row['gasto_viatico'] ?? 0;
+                $pag = $row['pago_conductor'] ?? 0;
+                $apo = $row['aporte_previsional'] ?: ($row['gasto_imposiciones'] ?? 0);
+                $var = $row['gasto_varios'] ?? 0;
+                $ext = $row['gasto_cta_extra'] ?? 0;
+                $nom = $row['nombre_conductor_real'] ?? ($row['conductor_nombre_csv'] ?? '---');
+                if (!empty($row['es_excedente']) && $row['es_excedente'] == 1) $nom .= ' (EXENTO)';
 
-            $sum['ing'] += $ing;
-            $sum['pet'] += $pet;
-            $sum['bol'] += $bol;
-            $sum['adm'] += $adm;
-            $sum['ase'] += $ase;
-            $sum['via'] += $via;
-            $sum['pag'] += $pag;
-            $sum['apo'] += $apo;
-            $sum['var'] += $var;
-            $sum['ext'] += $ext;
+                $sum['ing'] += $ing;
+                $sum['pet'] += $pet;
+                $sum['bol'] += $bol;
+                $sum['adm'] += $adm;
+                $sum['ase'] += $ase;
+                $sum['via'] += $via;
+                $sum['pag'] += $pag;
+                $sum['apo'] += $apo;
+                $sum['var'] += $var;
+                $sum['ext'] += $ext;
 
-            $dia = date('d', strtotime($row['fecha']));
-
-            $htmlTable .= '<tr>
-                <td align="center">' . $dia . '</td>
-                <td align="center">' . ($row['nro_guia'] ?? '') . '</td>
-                <td align="right">' . number_format($ing, 0, ',', '.') . '</td>
-                <td align="right">' . number_format($pet, 0, ',', '.') . '</td>
-                <td align="right">' . number_format($bol, 0, ',', '.') . '</td>
-                <td align="right">' . number_format($adm, 0, ',', '.') . '</td>
-                <td align="right">' . number_format($ase, 0, ',', '.') . '</td>
-                <td align="right">' . number_format($via, 0, ',', '.') . '</td>
-                <td align="right">' . number_format($pag, 0, ',', '.') . '</td>
-                <td align="right">' . number_format($apo, 0, ',', '.') . '</td>
-                <td align="right">' . number_format($var, 0, ',', '.') . '</td>
-                <td>' . $nom . '</td>
-            </tr>';
+                $dia = date('d', strtotime($row['fecha']));
+                $htmlTable .= '<tr>
+                    <td align="center">' . $dia . '</td>
+                    <td align="center">' . ($row['nro_guia'] ?? '') . '</td>
+                    <td align="right">' . number_format($ing, 0, ',', '.') . '</td>
+                    <td align="right">' . number_format($pet, 0, ',', '.') . '</td>
+                    <td align="right">' . number_format($bol, 0, ',', '.') . '</td>
+                    <td align="right">' . number_format($adm, 0, ',', '.') . '</td>
+                    <td align="right">' . number_format($ase, 0, ',', '.') . '</td>
+                    <td align="right">' . number_format($via, 0, ',', '.') . '</td>
+                    <td align="right">' . number_format($pag, 0, ',', '.') . '</td>
+                    <td align="right">' . number_format($apo, 0, ',', '.') . '</td>
+                    <td align="right">' . number_format($var, 0, ',', '.') . '</td>
+                    <td>' . $nom . '</td>
+                </tr>';
+            }
         }
 
         $htmlTable .= '<tr class="tot">
@@ -291,11 +295,33 @@ try {
 
         $mpdf->WriteHTML($htmlTable);
 
+        // Obtener subsidio si el switch está ON
+        $monto_subsidio_op = 0;
+        $sub_descuento_gps = 0;
+        $sub_descuento_boleta = 0;
+        if ($aplicar_subsidio == 1) {
+            $stmtSub = $pdo->prepare("SELECT monto_subsidio, descuento_gps, descuento_boleta FROM subsidios_operacionales WHERE bus_id = ? AND mes = ? AND anio = ?");
+            $stmtSub->execute([$bus['bus_id'], $mes, $anio]);
+            $resSub = $stmtSub->fetch();
+            if ($resSub) {
+                $monto_subsidio_op = (int)$resSub['monto_subsidio']; // Bruto: GPS y Boleta se descuentan por separado
+                $sub_descuento_gps = (int)($resSub['descuento_gps'] ?? 0);
+                $sub_descuento_boleta = (int)($resSub['descuento_boleta'] ?? 0);
+            }
+        }
+
         // Variables Cierre
+        // Con switch OFF, el subsidio viene del campo ingresado en el cierre mensual
+        $sub_val = ($aplicar_subsidio == 1)
+            ? $monto_subsidio_op
+            : (int)($cierre['subsidio_operacional'] ?? 0);
+
         $v = [
-            'sub' => (int)($cierre['subsidio_operacional'] ?? 0),
+            'sub' => $sub_val,
             'min' => (int)($cierre['devolucion_minutos'] ?? 0),
             'ot1' => (int)($cierre['otros_ingresos_1'] ?? 0),
+            'ot2' => (int)($cierre['otros_ingresos_2'] ?? 0),
+            'ot3' => (int)($cierre['otros_ingresos_3'] ?? 0),
             'ant' => (int)($cierre['anticipo'] ?? 0),
             'asg' => (int)($cierre['asignacion_familiar'] ?? 0),
             'pmi' => (int)($cierre['pago_minutos'] ?? 0),
@@ -318,7 +344,30 @@ try {
         $vvd = (int)($cierre['valor_vueltas_directo'] ?? 0);
         $cvl = (int)($cierre['cant_vueltas_local'] ?? 0);
         $vvl = (int)($cierre['valor_vueltas_local'] ?? 0);
-        $total_vueltas = ($cvd * $vvd) + ($cvl * $vvl);
+        $total_vueltas = ($cvd * $vvd) + ($cvl * $vvl); // Solo informativo, NO entra en descuentos
+
+        // MODO SUBSIDIO: Si el switch está ON, anular TODOS los cargos.
+        // El subsidio es un pago independiente, no debe incluir admin, leyes ni cargos del mes.
+        // Excepción: GPS y Boleta Garantía se toman del descuento registrado en subsidios_operacionales.
+        if ($aplicar_subsidio == 1) {
+            $v['min'] = 0;
+            $v['ot1'] = 0;
+            $v['ant'] = 0;
+            $v['asg'] = 0;
+            $v['pmi'] = 0;
+            $v['san'] = 0;
+            $v['amu'] = 0;
+            $v['gru'] = 0;
+            $v['pol'] = 0;
+            $v['ley'] = 0;
+            $v['adm_app'] = 0;
+            $v['der_loz'] = 0;
+            $v['seg_car'] = 0;
+            $v['gps'] = $sub_descuento_gps;
+            $v['bol_gar'] = $sub_descuento_boleta;
+            $v['bol_ga2'] = 0;
+            $total_vueltas = 0;
+        }
 
         // --------------------------------------------------------------------------
         // CÁLCULO LAZY SAVE DE LEYES SOCIALES (USANDO LA NUEVA LÓGICA DE DETECCIÓN)
@@ -422,9 +471,10 @@ try {
             $dev_bol = $sum['bol'] - (($sum['bol'] / 5000) * 1095);
         }
 
-        $haberes = $sum['adm'] + $v['sub'] + $v['min'] + $dev_bol + $v['ot1'];
+        $haberes = $sum['adm'] + $v['sub'] + $v['min'] + $dev_bol + $v['ot1'] + $v['ot2'] + $v['ot3'];
         $total_nuevos_cargos = $v['der_loz'] + $v['seg_car'] + $v['gps'] + $v['bol_gar'] + $v['bol_ga2'];
-        $descuentos = $v['adm_app'] + $v['ley'] + $total_vueltas + $v['ant'] + $v['pmi'] + $v['san'] + $v['amu'] + $v['gru'] + $v['pol'] + $v['asg'] + $total_nuevos_cargos;
+        // total_vueltas es solo informativo, NO se descuenta del saldo
+        $descuentos = $v['adm_app'] + $v['ley'] + $v['ant'] + $v['pmi'] + $v['san'] + $v['amu'] + $v['gru'] + $v['pol'] + $v['asg'] + $total_nuevos_cargos;
 
         $saldo_final = $haberes - $descuentos;
 
@@ -439,7 +489,7 @@ try {
                     <tr><td>Subsidio Operacional</td><td align="right">' . number_format($v['sub'], 0, ',', '.') . '</td></tr>
                     <tr><td>Devolución Minutos</td><td align="right">' . number_format($v['min'], 0, ',', '.') . '</td></tr>
                     <tr><td>Devolución Boletos</td><td align="right">' . number_format($dev_bol, 0, ',', '.') . '</td></tr>
-                    <tr><td>Otros Ingresos</td><td align="right">' . number_format($v['ot1'], 0, ',', '.') . '</td></tr>
+                    <tr><td>Otros Ingresos</td><td align="right">' . number_format($v['ot1'] + $v['ot2'] + $v['ot3'], 0, ',', '.') . '</td></tr>
                     <tr bgcolor="#ddd"><td><b>TOTAL HABERES</b></td><td align="right"><b>' . number_format($haberes, 0, ',', '.') . '</b></td></tr>
                 </table>
             </td>
@@ -449,11 +499,13 @@ try {
                     <tr bgcolor="#eee"><th colspan="2">DESC. / CARGOS VARIOS</th></tr>
                     <tr><td>Administración</td><td align="right">' . number_format($v['adm_app'], 0, ',', '.') . '</td></tr>
                     <tr><td>Leyes Sociales</td><td align="right">' . number_format($v['ley'], 0, ',', '.') . '</td></tr>
-                    <tr><td>Control Vueltas</td><td align="right">' . number_format($total_vueltas, 0, ',', '.') . '</td></tr>
                     <tr><td>Anticipos</td><td align="right">' . number_format($v['ant'], 0, ',', '.') . '</td></tr>
                     <tr><td>Asignación Familiar</td><td align="right">' . number_format($v['asg'], 0, ',', '.') . '</td></tr>
                     <tr><td>Ayuda Mutua / Saldo Ant</td><td align="right">' . number_format($v['amu'] + $v['san'], 0, ',', '.') . '</td></tr>
                     <tr><td>Varios (Seguro/Grúa/Etc)</td><td align="right">' . number_format($v['pol'] + $v['gru'] + $v['pmi'], 0, ',', '.') . '</td></tr>
+                    <tr bgcolor="#e8f4e8"><td colspan="2" style="font-size:8px; color:#555; padding-top:3px;"><b>Control Vueltas (Solo Ref.)</b></td></tr>
+                    <tr bgcolor="#f0faf0"><td style="font-size:8px;">Dir: ' . $cvd . ' x $' . number_format($vvd, 0, ',', '.') . '</td><td align="right" style="font-size:8px;">$' . number_format($cvd * $vvd, 0, ',', '.') . '</td></tr>
+                    <tr bgcolor="#f0faf0"><td style="font-size:8px;">Loc: ' . $cvl . ' x $' . number_format($vvl, 0, ',', '.') . '</td><td align="right" style="font-size:8px;">$' . number_format($cvl * $vvl, 0, ',', '.') . '</td></tr>
                 </table>
             </td>
 

@@ -23,7 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     // Validaciones
     if ($es_excedente != 1 && $estado_previsional == 'Activo' && $sistema_previsional == 'AFP' && $afp_id == null) {
         $_SESSION['flash_message'] = ['type' => 'error', 'message' => "Debe seleccionar una AFP."];
-        header('Location: ' . BASE_URL . '/maestros/editar_trabajador.php?id=' . $id);
+        header('Location: ' . BASE_URL . '/editar-trabajador/' . $id);
         exit;
     }
 
@@ -67,11 +67,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         ]);
 
         $_SESSION['flash_message'] = ['type' => 'success', 'message' => '¡Trabajador actualizado exitosamente!'];
-        header('Location: ' . BASE_URL . '/maestros/gestionar_trabajadores.php');
+        header('Location: ' . BASE_URL . '/trabajadores');
         exit;
     } catch (PDOException $e) {
         $_SESSION['flash_message'] = ['type' => 'error', 'message' => 'Error BD: ' . $e->getMessage()];
-        header('Location: ' . BASE_URL . '/maestros/editar_trabajador.php?id=' . $id);
+        header('Location: ' . BASE_URL . '/editar-trabajador/' . $id);
         exit;
     }
 }

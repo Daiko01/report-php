@@ -54,7 +54,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
         ];
 
-        header('Location: ' . BASE_URL . '/admin/editar_usuario.php?id=' . $id);
+        header('Location: ' . BASE_URL . '/editar-usuario/' . $id);
 
         exit;
     }
@@ -105,7 +105,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
         ];
 
-        header('Location: ' . BASE_URL . '/admin/gestionar_usuarios.php');
+        header('Location: ' . BASE_URL . '/usuarios');
 
         exit;
     } catch (PDOException $e) {
@@ -118,13 +118,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
         ];
 
-        header('Location: ' . BASE_URL . '/admin/editar_usuario.php?id=' . $id);
+        header('Location: ' . BASE_URL . '/editar-usuario/' . $id);
 
         exit;
     }
 } else {
 
-    header('Location: ' . BASE_URL . '/admin/gestionar_usuarios.php');
+    header('Location: ' . BASE_URL . '/usuarios');
 
     exit;
 }

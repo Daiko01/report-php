@@ -42,7 +42,7 @@ try {
 
         <h1 class="h3 mb-0 text-gray-800">Gestión de Trabajadores</h1>
 
-        <a href="crear_trabajador.php" class="btn btn-primary shadow-sm">
+        <a href="<?php echo BASE_URL; ?>/crear-trabajador" class="btn btn-primary shadow-sm">
 
             <i class="fas fa-plus fa-sm text-white-50"></i> Crear Nuevo Trabajador
 
@@ -165,7 +165,7 @@ try {
 
                                 <td>
 
-                                    <a href="editar_trabajador.php?id=<?php echo $t['id']; ?>" class="btn btn-warning btn-circle btn-sm" title="Editar">
+                                    <a href="<?php echo BASE_URL; ?>/editar-trabajador/<?php echo $t['id']; ?>" class="btn btn-warning btn-circle btn-sm" title="Editar">
 
                                         <i class="fas fa-pencil-alt"></i>
 

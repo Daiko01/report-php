@@ -6,9 +6,9 @@ try {
     // Cargar listas para los select
     $trabajadores = $pdo->query("SELECT id, nombre, rut FROM trabajadores ORDER BY nombre")->fetchAll();
     $empleadores = $pdo->query("SELECT id, nombre, rut FROM empleadores ORDER BY nombre")->fetchAll();
-} catch (PDOException $e) { 
-    $trabajadores = []; 
-    $empleadores = []; 
+} catch (PDOException $e) {
+    $trabajadores = [];
+    $empleadores = [];
 }
 
 require_once dirname(__DIR__) . '/app/includes/header.php';
@@ -22,8 +22,8 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
             <h6 class="m-0 font-weight-bold text-primary">Ficha del Contrato</h6>
         </div>
         <div class="card-body">
-            <form action="crear_contrato_process.php" method="POST" id="form-contrato">
-                
+            <form action="<?php echo BASE_URL; ?>/contratos/crear_contrato_process.php" method="POST" id="form-contrato">
+
                 <h5 class="mb-3 text-primary"><i class="fas fa-users me-2"></i>Las Partes</h5>
                 <div class="row mb-4">
                     <div class="col-md-6">
@@ -57,7 +57,7 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
                             <option value="Fijo">Plazo Fijo</option>
                         </select>
                     </div>
-                    
+
                     <div class="col-md-3">
                         <label for="fecha_inicio" class="form-label fw-bold">Fecha Inicio</label>
                         <input type="date" class="form-control" id="fecha_inicio" name="fecha_inicio" required>
@@ -87,7 +87,7 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
                             <input type="number" class="form-control" id="sueldo_imponible" name="sueldo_imponible" required placeholder="0">
                         </div>
                     </div>
-                    
+
                     <div class="col-md-4">
                         <label for="pacto_colacion" class="form-label">Asignación Colación (Fijo)</label>
                         <div class="input-group">
@@ -95,7 +95,7 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
                             <input type="number" class="form-control" id="pacto_colacion" name="pacto_colacion" value="0">
                         </div>
                     </div>
-                    
+
                     <div class="col-md-4">
                         <label for="pacto_movilizacion" class="form-label">Asignación Movilización (Fijo)</label>
                         <div class="input-group">
@@ -104,9 +104,9 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="mt-4 d-flex justify-content-end">
-                    <a href="gestionar_contratos.php" class="btn btn-secondary me-2">
+                    <a href="<?php echo BASE_URL; ?>/listado-contratos" class="btn btn-secondary me-2">
                         <i class="fas fa-times me-1"></i> Cancelar
                     </a>
                     <button type="submit" class="btn btn-success btn-lg">
@@ -121,30 +121,30 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
 <?php require_once dirname(__DIR__) . '/app/includes/footer.php'; ?>
 
 <script>
-$(document).ready(function() {
-    // Inicializar Select2 solo en los buscadores de personas
-    $('.select2').select2({
-        theme: 'bootstrap-5',
-        width: '100%'
-    });
+    $(document).ready(function() {
+        // Inicializar Select2 solo en los buscadores de personas
+        $('.select2').select2({
+            theme: 'bootstrap-5',
+            width: '100%'
+        });
 
-    const $tipoContrato = $('#tipo_contrato');
-    const $wrapperFechaTermino = $('#wrapper-fecha-termino');
-    const $inputFechaTermino = $('#fecha_termino');
+        const $tipoContrato = $('#tipo_contrato');
+        const $wrapperFechaTermino = $('#wrapper-fecha-termino');
+        const $inputFechaTermino = $('#fecha_termino');
 
-    function toggleFields() {
-        if ($tipoContrato.val() === 'Fijo') {
-            // Si es Fijo, mostramos y hacemos requerida la fecha
-            $wrapperFechaTermino.fadeIn();
-            $inputFechaTermino.prop('required', true);
-        } else {
-            // Si es Indefinido, ocultamos y limpiamos
-            $wrapperFechaTermino.hide();
-            $inputFechaTermino.prop('required', false).val('');
+        function toggleFields() {
+            if ($tipoContrato.val() === 'Fijo') {
+                // Si es Fijo, mostramos y hacemos requerida la fecha
+                $wrapperFechaTermino.fadeIn();
+                $inputFechaTermino.prop('required', true);
+            } else {
+                // Si es Indefinido, ocultamos y limpiamos
+                $wrapperFechaTermino.hide();
+                $inputFechaTermino.prop('required', false).val('');
+            }
         }
-    }
 
-    $tipoContrato.on('change', toggleFields);
-    toggleFields(); // Ejecutar al cargar
-});
+        $tipoContrato.on('change', toggleFields);
+        toggleFields(); // Ejecutar al cargar
+    });
 </script>

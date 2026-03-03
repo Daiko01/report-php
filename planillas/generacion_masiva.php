@@ -38,7 +38,7 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1 class="h3 text-gray-800">Generación Masiva de Planillas</h1>
-        <a href="cargar_selector.php" class="btn btn-secondary btn-sm"><i class="fas fa-arrow-left"></i> Volver</a>
+        <a href="<?php echo BASE_URL; ?>/planillas/cargar_selector.php" class="btn btn-secondary btn-sm"><i class="fas fa-arrow-left"></i> Volver</a>
     </div>
 
     <!-- Filtro de Periodo -->
@@ -192,7 +192,7 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
                     }
                 });
 
-                fetch('../ajax/procesar_generacion_masiva.php', {
+                fetch('<?php echo BASE_URL; ?>/ajax/procesar_generacion_masiva.php', {
                         method: 'POST',
                         body: formData
                     })
@@ -201,7 +201,7 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
                         if (data.success) {
                             Swal.fire('Éxito', data.message, 'success').then(() => {
                                 // Redirigir al Dashboard
-                                window.location.href = 'dashboard_mensual.php?mes=' + formData.get('mes') + '&ano=' + formData.get('ano');
+                                window.location.href = '<?php echo BASE_URL; ?>/dashboard-mensual?mes=' + formData.get('mes') + '&ano=' + formData.get('ano');
                             });
                         } else {
                             Swal.fire('Error', data.message, 'error');

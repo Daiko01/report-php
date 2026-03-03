@@ -45,7 +45,7 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
 
 
 
-            <form action="crear_usuario_process.php" method="POST" class="needs-validation" novalidate>
+            <form action="<?php echo BASE_URL; ?>/admin/crear_usuario_process.php" method="POST" class="needs-validation" novalidate>
                 <?php csrf_field(); ?>
 
                 <div class="row">
@@ -144,7 +144,7 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
 
                 <hr>
 
-                <a href="gestionar_usuarios.php" class="btn btn-secondary">Cancelar</a>
+                <a href="<?php echo BASE_URL; ?>/usuarios" class="btn btn-secondary">Cancelar</a>
 
                 <button type="submit" class="btn btn-primary">Guardar Usuario</button>
 

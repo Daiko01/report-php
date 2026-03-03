@@ -7,7 +7,7 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
 
 <div class="d-sm-flex align-items-center justify-content-between mb-4">
     <h1 class="h3 mb-0 text-gray-800"><i class="fas fa-file-invoice-dollar text-primary me-2"></i>Resumen Diario de Guías (Cuadratura)</h1>
-    <a href="ingreso_guia.php" class="btn btn-secondary btn-sm shadow-sm">
+    <a href="<?php echo BASE_URL; ?>/ingreso-guia" class="btn btn-secondary btn-sm shadow-sm">
         <i class="fas fa-arrow-left me-1"></i> Volver a Ingreso
     </a>
 </div>
@@ -111,7 +111,7 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
 
             Swal.showLoading();
 
-            fetch(`../ajax/get_resumen_diario.php?fecha=${fecha}`)
+            fetch(`<?php echo BASE_URL; ?>/ajax/get_resumen_diario.php?fecha=${fecha}`)
                 .then(r => r.json())
                 .then(res => {
                     Swal.close();
@@ -172,7 +172,7 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
         window.openPrintWindow = function() {
             const fecha = $('#filtroFecha').val();
             // Open clean voucher file in new tab
-            const url = `imprimir_resumen_diario.php?fecha=${fecha}`;
+            const url = `<?php echo BASE_URL; ?>/buses/imprimir_resumen_diario.php?fecha=${fecha}`;
             window.open(url, '_blank');
         }
 

@@ -6,7 +6,7 @@ require_once dirname(__DIR__) . '/app/includes/session_check.php';
 
 // Solo aceptar POST
 if ($_SERVER['REQUEST_METHOD'] != 'POST') {
-    header('Location: gestionar_contratos.php');
+    header('Location: ' . BASE_URL . '/contratos');
     exit;
 }
 
@@ -30,12 +30,12 @@ $es_part_time = isset($_POST['es_part_time']) ? 1 : 0;
 if ($tipo_contrato == 'Fijo') {
     if ($fecha_termino == null) {
         $_SESSION['flash_message'] = ['type' => 'error', 'message' => 'Error: Un contrato a Plazo Fijo DEBE tener una Fecha de Término.'];
-        header('Location: crear_contrato.php');
+        header('Location: ' . BASE_URL . '/crear-contrato');
         exit;
     }
     if ($fecha_termino <= $fecha_inicio) {
         $_SESSION['flash_message'] = ['type' => 'error', 'message' => 'Error: La fecha de término debe ser posterior a la fecha de inicio.'];
-        header('Location: crear_contrato.php');
+        header('Location: ' . BASE_URL . '/crear-contrato');
         exit;
     }
 }
@@ -105,7 +105,7 @@ foreach ($contratos_existentes as $c) {
             'type' => 'error',
             'message' => "Error: Las fechas se solapan con un contrato existente (Inicia: $fecha_inicio_msg, Termina: $fecha_fin_msg). El nuevo contrato debe comenzar después de la fecha de término del anterior."
         ];
-        header('Location: crear_contrato.php');
+        header('Location: ' . BASE_URL . '/crear-contrato');
         exit;
     }
 }
@@ -143,10 +143,10 @@ try {
 
 
     $_SESSION['flash_message'] = ['type' => 'success', 'message' => '¡Contrato creado exitosamente!'];
-    header('Location: gestionar_contratos.php');
+    header('Location: ' . BASE_URL . '/listado-contratos');
     exit;
 } catch (PDOException $e) {
     $_SESSION['flash_message'] = ['type' => 'error', 'message' => 'Error de Base de Datos: ' . $e->getMessage()];
-    header('Location: crear_contrato.php');
+    header('Location: ' . BASE_URL . '/crear-contrato');
     exit;
 }

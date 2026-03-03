@@ -150,7 +150,7 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
             <h1 class="h4 mb-0 text-gray-800 fw-bold">Gestión de Contratos</h1>
             <p class="small text-muted mb-0">Mostrando <span class="badge bg-dark rounded-pill"><?php echo $total_records; ?></span> resultados</p>
         </div>
-        <a href="crear_contrato.php" class="btn btn-primary btn-sm px-4 fw-bold shadow-sm rounded-pill">
+        <a href="<?php echo BASE_URL; ?>/crear-contrato" class="btn btn-primary btn-sm px-4 fw-bold shadow-sm rounded-pill">
             <i class="fas fa-plus me-1"></i> NUEVO CONTRATO
         </a>
     </div>
@@ -266,7 +266,7 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
                             <div class="text-muted" style="font-size: 0.6rem;"><?php echo $sub; ?></div>
                         </td>
                         <td class="text-end pe-4">
-                            <a href="editar_contrato.php?id=<?php echo $c['id']; ?>" class="btn btn-warning btn-sm btn-circle shadow-sm" title="Editar Contrato">
+                            <a href="<?php echo BASE_URL; ?>/editar-contrato/<?php echo $c['id']; ?>" class="btn btn-warning btn-sm btn-circle shadow-sm" title="Editar Contrato">
                                 <i class="fas fa-pencil-alt"></i>
                             </a>
                         </td>

@@ -3,7 +3,7 @@ require_once dirname(__DIR__) . '/app/core/bootstrap.php';
 require_once dirname(__DIR__) . '/app/includes/session_check.php';
 
 if (!isset($_GET['id'])) {
-    header('Location: ' . BASE_URL . '/maestros/gestionar_afps.php');
+    header('Location: ' . BASE_URL . '/afps');
     exit;
 }
 $afp_id = (int)$_GET['id'];
@@ -25,7 +25,7 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
 
     <div class="d-sm-flex align-items-center justify-content-between mb-4">
         <h1 class="h3 mb-0 text-gray-800">Historial de Comisiones</h1>
-        <a href="gestionar_afps.php" class="btn btn-secondary shadow-sm rounded-pill px-3">
+        <a href="<?php echo BASE_URL; ?>/afps" class="btn btn-secondary shadow-sm rounded-pill px-3">
             <i class="fas fa-arrow-left me-2"></i>Volver a Lista de AFPs
         </a>
     </div>
@@ -55,7 +55,7 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
             <h6 class="m-0 font-weight-bold text-primary"><i class="fas fa-plus-circle me-2"></i>Agregar Nueva Comisión Vigente</h6>
         </div>
         <div class="card-body">
-            <form action="agregar_comision_process.php" method="POST" class="row g-3">
+            <form action="<?php echo BASE_URL; ?>/maestros/agregar_comision_process.php" method="POST" class="row g-3">
                 <?php csrf_field(); ?>
                 <input type="hidden" name="afp_id" value="<?php echo $afp_id; ?>">
 

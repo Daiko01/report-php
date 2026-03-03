@@ -4,7 +4,9 @@ require_once dirname(__DIR__) . '/app/includes/session_check.php';
 
 try {
     $empleadores = $pdo->query("SELECT id, nombre, rut FROM empleadores ORDER BY nombre")->fetchAll();
-} catch (PDOException $e) { $empleadores = []; }
+} catch (PDOException $e) {
+    $empleadores = [];
+}
 
 require_once dirname(__DIR__) . '/app/includes/header.php';
 ?>
@@ -20,13 +22,13 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
                 </div>
                 <div class="card-body">
                     <div class="alert alert-info">
-                        <i class="fas fa-info-circle"></i> 
+                        <i class="fas fa-info-circle"></i>
                         El sistema generará las liquidaciones basándose en las <strong>Planillas Mensuales</strong> ya guardadas.
                         Si selecciona "Todos", se procesarán todas las empresas que tengan planilla para ese mes.
                     </div>
 
-                    <form action="procesar_generacion.php" method="POST">
-                        
+                    <form action="<?php echo BASE_URL; ?>/liquidaciones/procesar_generacion.php" method="POST">
+
                         <div class="mb-3">
                             <label class="form-label fw-bold">Empleador</label>
                             <select class="form-select" name="empleador_id" required>
@@ -43,8 +45,8 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
                             <div class="col-6">
                                 <label class="form-label">Mes</label>
                                 <select class="form-select" name="mes" required>
-                                    <?php 
-                                    $meses = [1=>'Enero', 2=>'Febrero', 3=>'Marzo', 4=>'Abril', 5=>'Mayo', 6=>'Junio', 7=>'Julio', 8=>'Agosto', 9=>'Septiembre', 10=>'Octubre', 11=>'Noviembre', 12=>'Diciembre'];
+                                    <?php
+                                    $meses = [1 => 'Enero', 2 => 'Febrero', 3 => 'Marzo', 4 => 'Abril', 5 => 'Mayo', 6 => 'Junio', 7 => 'Julio', 8 => 'Agosto', 9 => 'Septiembre', 10 => 'Octubre', 11 => 'Noviembre', 12 => 'Diciembre'];
                                     foreach ($meses as $num => $nombre): ?>
                                         <option value="<?php echo $num; ?>" <?php echo ($num == date('n')) ? 'selected' : ''; ?>><?php echo $nombre; ?></option>
                                     <?php endforeach; ?>

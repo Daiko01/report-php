@@ -10,7 +10,7 @@ $empleadores = $pdo->query("SELECT id, nombre FROM empleadores WHERE empresa_sis
 ?>
 <div class="d-sm-flex align-items-center justify-content-between mb-4">
     <h1 class="h3 mb-0 text-gray-800"><i class="fas fa-history text-primary me-2"></i>Historial de Guías</h1>
-    <a href="ingreso_guia.php" class="btn btn-secondary shadow-sm rounded-pill px-3">
+    <a href="<?php echo BASE_URL; ?>/ingreso-guia" class="btn btn-secondary shadow-sm rounded-pill px-3">
         <i class="fas fa-plus me-2"></i>Nueva Guía
     </a>
 </div>
@@ -106,7 +106,7 @@ $empleadores = $pdo->query("SELECT id, nombre FROM empleadores WHERE empresa_sis
             $bus.html('<option value="">Todos</option>').prop('disabled', true);
 
             if (empId) {
-                fetch(`../ajax/get_buses_por_empleador.php?empleador_id=${empId}`)
+                fetch(`<?php echo BASE_URL; ?>/ajax/get_buses_por_empleador.php?empleador_id=${empId}`)
                     .then(r => r.json())
                     .then(data => {
                         let opts = '<option value="">Todos</option>';
@@ -121,7 +121,7 @@ $empleadores = $pdo->query("SELECT id, nombre FROM empleadores WHERE empresa_sis
         });
 
         // Cargar Conductores (All)
-        fetch('../ajax/get_todos_conductores.php')
+        fetch('<?php echo BASE_URL; ?>/ajax/get_todos_conductores.php')
             .then(r => r.json())
             .then(data => {
                 let opts = '<option value="">Todos</option>';
@@ -176,10 +176,10 @@ $empleadores = $pdo->query("SELECT id, nombre FROM empleadores WHERE empresa_sis
                     data: null,
                     className: 'text-center',
                     render: function(data, type, row) {
-                        let btns = `<button class="btn btn-xs btn-outline-info me-1" onclick="window.open('imprimir_voucher.php?id=${row.id}', '_blank')"><i class="fas fa-print"></i></button>`;
+                        let btns = `<button class="btn btn-xs btn-outline-info me-1" onclick="window.open('<?php echo BASE_URL; ?>/imprimir-voucher/${row.id}', '_blank')"><i class="fas fa-print"></i></button>`;
 
                         if (row.can_edit) {
-                            btns += `<a href="editar_guia.php?id=${row.id}" class="btn btn-xs btn-outline-warning me-1"><i class="fas fa-pen"></i></a>`;
+                            btns += `<a href="<?php echo BASE_URL; ?>/editar-guia/${row.id}" class="btn btn-xs btn-outline-warning me-1"><i class="fas fa-pen"></i></a>`;
                             btns += `<button class="btn btn-xs btn-outline-secondary" onclick="cerrarGuia(${row.id})"><i class="fas fa-lock"></i></button>`;
                         } else if (row.mes_cerrado) {
                             // No actions on month closed
@@ -209,7 +209,7 @@ $empleadores = $pdo->query("SELECT id, nombre FROM empleadores WHERE empresa_sis
 
             const params = new URLSearchParams(new FormData(document.getElementById('formFiltros')));
 
-            fetch(`../ajax/buscar_guias.php?${params.toString()}`)
+            fetch(`<?php echo BASE_URL; ?>/ajax/buscar_guias.php?${params.toString()}`)
                 .then(r => r.json())
                 .then(res => {
                     Swal.close();
@@ -254,7 +254,7 @@ $empleadores = $pdo->query("SELECT id, nombre FROM empleadores WHERE empresa_sis
             const formData = new FormData();
             formData.append('ids[]', id);
 
-            const endpoint = (action === 'cerrar') ? '../ajax/procesar_cierre_guia.php' : '../ajax/procesar_reabrir_guia.php';
+            const endpoint = (action === 'cerrar') ? '<?php echo BASE_URL; ?>/ajax/procesar_cierre_guia.php' : '<?php echo BASE_URL; ?>/ajax/procesar_reabrir_guia.php';
 
             fetch(endpoint, {
                     method: 'POST',

@@ -30,14 +30,14 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
             <h1 class="h3 mb-1 text-gray-900 fw-bold">Nuevo Trabajador</h1>
             <p class="mb-0 text-muted small">Complete la ficha para registrar un nuevo colaborador.</p>
         </div>
-        <a href="gestionar_trabajadores.php" class="btn btn-light btn-sm text-secondary border">
+        <a href="<?php echo BASE_URL; ?>/trabajadores" class="btn btn-light btn-sm text-secondary border">
             <i class="fas fa-times me-1"></i> Cancelar
         </a>
     </div>
 
     <div class="row justify-content-center">
         <div class="col-xl-9 col-lg-10">
-            <form action="crear_trabajador_process.php" method="POST" class="needs-validation" novalidate>
+            <form action="<?php echo BASE_URL; ?>/maestros/crear_trabajador_process.php" method="POST" class="needs-validation" novalidate>
 
                 <!-- Main Card (Minimalist) -->
                 <div class="card shadow-sm border-0 mb-5" style="border-radius: 12px; background: #fff;">

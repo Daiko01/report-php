@@ -19,7 +19,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     // 1. Validación básica de RUT
     if (!validarRUT($rut)) {
         $_SESSION['flash_message'] = ['type' => 'error', 'message' => 'RUT inválido.'];
-        header('Location: editar_empleador.php?id=' . $id);
+        header('Location: ' . BASE_URL . '/editar-empleador/' . $id);
         exit;
     }
     $rut_formateado = formatearRUT($rut);
@@ -29,7 +29,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $stmt_check->execute([$rut_formateado, $id, $empresa_sistema_id]);
     if ($stmt_check->fetch()) {
         $_SESSION['flash_message'] = ['type' => 'error', 'message' => 'El RUT ya está registrado por otro empleador en este sistema.'];
-        header('Location: editar_empleador.php?id=' . $id);
+        header('Location: ' . BASE_URL . '/editar-empleador/' . $id);
         exit;
     }
 
@@ -64,14 +64,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         }
 
         $_SESSION['flash_message'] = ['type' => 'success', 'message' => 'Empleador actualizado exitosamente.'];
-        header('Location: gestionar_empleadores.php');
+        header('Location: ' . BASE_URL . '/empleadores');
         exit;
     } catch (Exception $e) {
         $_SESSION['flash_message'] = ['type' => 'error', 'message' => 'Error al actualizar: ' . $e->getMessage()];
-        header('Location: editar_empleador.php?id=' . $id);
+        header('Location: ' . BASE_URL . '/editar-empleador/' . $id);
         exit;
     }
 } else {
-    header('Location: gestionar_empleadores.php');
+    header('Location: ' . BASE_URL . '/empleadores');
     exit;
 }

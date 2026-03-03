@@ -62,7 +62,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
         ];
 
-        header('Location: ' . BASE_URL . '/admin/crear_usuario.php');
+        header('Location: ' . BASE_URL . '/crear-usuario');
 
         exit;
     }
@@ -87,7 +87,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
         ];
 
-        header('Location: ' . BASE_URL . '/admin/crear_usuario.php');
+        header('Location: ' . BASE_URL . '/crear-usuario');
 
         exit;
     }
@@ -106,7 +106,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
         ];
 
-        header('Location: ' . BASE_URL . '/admin/crear_usuario.php');
+        header('Location: ' . BASE_URL . '/crear-usuario');
 
         exit;
     }
@@ -157,7 +157,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
         ];
 
-        header('Location: ' . BASE_URL . '/admin/gestionar_usuarios.php');
+        header('Location: ' . BASE_URL . '/usuarios');
 
         exit;
     } catch (PDOException $e) {
@@ -178,7 +178,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
     // Si no es POST, redirigir
 
-    header('Location: ' . BASE_URL . '/admin/gestionar_usuarios.php');
+    header('Location: ' . BASE_URL . '/usuarios');
 
     exit;
 }

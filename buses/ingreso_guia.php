@@ -37,9 +37,9 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
 <div class="d-sm-flex align-items-center justify-content-between mb-4">
     <h1 class="h3 mb-0 text-gray-800"><i class="fas fa-cash-register text-primary me-2"></i>Ingreso de Guía Diaria</h1>
     <div>
-        <a href="resumen_diario.php" class="btn btn-primary btn-sm shadow-sm me-2"><i class="fas fa-chart-line me-1"></i> Ver Resumen Diario</a>
+        <a href="<?php echo BASE_URL; ?>/resumen-diario" class="btn btn-primary btn-sm shadow-sm me-2"><i class="fas fa-chart-line me-1"></i> Ver Resumen Diario</a>
         <?php if (isset($_SESSION['user_role']) && $_SESSION['user_role'] != 'recaudador'): ?>
-            <a href="cierre_mensual.php" class="btn btn-secondary btn-sm shadow-sm"><i class="fas fa-arrow-left me-1"></i> Ir a Cierres</a>
+            <a href="<?php echo BASE_URL; ?>/cierre-mensual" class="btn btn-secondary btn-sm shadow-sm"><i class="fas fa-arrow-left me-1"></i> Ir a Cierres</a>
         <?php endif; ?>
     </div>
 </div>
@@ -210,7 +210,7 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
     <div class="card-header py-2 bg-gray-200 d-flex justify-content-between align-items-center">
         <div class="d-flex align-items-center gap-2">
             <h6 class="m-0 fw-bold text-dark small text-uppercase">Últimos Ingresos</h6>
-            <a href="historial_guias.php" class="btn btn-sm btn-primary shadow-sm"><i class="fas fa-list me-1"></i> Ver Historial Completo</a>
+            <a href="<?php echo BASE_URL; ?>/historial-guias" class="btn btn-sm btn-primary shadow-sm"><i class="fas fa-list me-1"></i> Ver Historial Completo</a>
             <button id="btnCerrarSeleccionadas" class="btn btn-sm btn-danger shadow-sm d-none" onclick="cerrarGuiasMasivo()">
                 <i class="fas fa-lock me-1"></i> Cerrar Seleccionadas
             </button>
@@ -301,14 +301,15 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
         });
 
         // Cargar todos los conductores al inicio
-        fetch('../ajax/get_todos_conductores.php')
+        fetch('<?php echo BASE_URL; ?>/ajax/get_todos_conductores.php')
             .then(r => r.json())
             .then(data => {
                 let opts = '<option value="">Seleccione Conductor...</option>';
                 data.forEach(d => {
-                    const empName = d.empleador_nombre ? d.empleador_nombre : 'Sin Contrato Activo';
+                    const empName = d.empleador_nombre ? d.empleador_nombre : 'SIN CONTRATO VIGENTE';
+                    const empClass = d.empleador_nombre ? '' : 'text-danger fw-bold';
                     const empId = d.empleador_id ? d.empleador_id : 0;
-                    opts += `<option value="${d.id}" data-rut="${d.rut}" data-emp-id="${empId}" data-emp-name="${empName}">${d.nombre} (${d.rut}) - [${empName}]</option>`;
+                    opts += `<option value="${d.id}" data-rut="${d.rut}" data-emp-id="${empId}" data-emp-name="${empName}" class="${empClass}">${d.nombre} (${d.rut}) - [${empName}]</option>`;
                 });
                 $('#conductor_id').html(opts);
             });
@@ -350,7 +351,7 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
             calculateTotals(); // Reset
 
             if (empId) {
-                fetch(`../ajax/get_buses_por_empleador.php?empleador_id=${empId}`)
+                fetch(`<?php echo BASE_URL; ?>/ajax/get_buses_por_empleador.php?empleador_id=${empId}`)
                     .then(r => r.json())
                     .then(buses => {
                         let opts = '<option value="">Seleccione Bus...</option>';
@@ -383,7 +384,7 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
             // Efecto visual de carga
             $('.folio-inicio').addClass('bg-warning bg-opacity-10');
 
-            fetch(`../ajax/get_ultimos_folios.php?bus_id=${currentBusId}`)
+            fetch(`<?php echo BASE_URL; ?>/ajax/get_ultimos_folios.php?bus_id=${currentBusId}`)
                 .then(r => r.json())
                 .then(data => {
                     const folios = data.folios || {};
@@ -489,7 +490,7 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
                 didOpen: () => Swal.showLoading()
             });
 
-            fetch('guardar_guia_process.php', {
+            fetch('<?php echo BASE_URL; ?>/buses/guardar_guia_process.php', {
                     method: 'POST',
                     body: formData
                 })
@@ -516,7 +517,7 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
 
                                 // PRINT ACTION
                                 bPrint.addEventListener('click', () => {
-                                    window.open(`imprimir_voucher.php?id=${res.data.id}`, '_blank');
+                                    window.open(`<?php echo BASE_URL; ?>/imprimir-voucher/${res.data.id}`, '_blank');
                                 });
                                 // NEW ACTION
                                 bNew.addEventListener('click', () => {
@@ -560,7 +561,7 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
         window.loadHistory = function() {
             const fecha = $('#filtroFechaHistorial').val();
 
-            fetch(`get_historial_guia.php?fecha=${fecha}`)
+            fetch(`<?php echo BASE_URL; ?>/buses/get_historial_guia.php?fecha=${fecha}`)
                 .then(r => r.text())
                 .then(html => {
                     // Destroy if existing
@@ -597,7 +598,7 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
 
         // REPRINT LOGIC
         window.reprint = function(id) {
-            window.open(`imprimir_voucher.php?id=${id}`, '_blank');
+            window.open(`<?php echo BASE_URL; ?>/imprimir-voucher/${id}`, '_blank');
         };
         // DELETE LOGIC
         window.eliminarGuia = function(id) {
@@ -612,7 +613,7 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
                 cancelButtonText: 'Cancelar'
             }).then((result) => {
                 if (result.isConfirmed) {
-                    fetch('../ajax/eliminar_guia_prod.php', {
+                    fetch('<?php echo BASE_URL; ?>/ajax/eliminar_guia_prod.php', {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/x-www-form-urlencoded'
@@ -720,7 +721,7 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
             const formData = new FormData();
             ids.forEach(id => formData.append('ids[]', id));
 
-            fetch('../ajax/procesar_cierre_guia.php', {
+            fetch('<?php echo BASE_URL; ?>/ajax/procesar_cierre_guia.php', {
                     method: 'POST',
                     body: formData
                 })
@@ -840,7 +841,7 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
             }
 
             // Consultar AJAX (Bus no requerido para check global)
-            fetch(`../ajax/get_guia_data.php?check_exists=1&nro_guia=${nro}`)
+            fetch(`<?php echo BASE_URL; ?>/ajax/get_guia_data.php?check_exists=1&nro_guia=${nro}`)
                 .then(r => r.json())
                 .then(data => {
                     if (data.exists) {

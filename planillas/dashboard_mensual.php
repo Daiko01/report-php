@@ -120,7 +120,7 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
             <p class="text-muted small mb-0">Listado detallado de cotizaciones y archivos PDF</p>
         </div>
         <div class="d-flex gap-2">
-            <a href="generacion_masiva.php" class="btn btn-primary btn-sm px-4 fw-bold shadow-sm rounded-pill">
+            <a href="<?php echo BASE_URL; ?>/planillas-masivas" class="btn btn-primary btn-sm px-4 fw-bold shadow-sm rounded-pill">
                 <i class="fas fa-magic me-1"></i> GENERACIÓN MASIVA
             </a>
         </div>
@@ -169,7 +169,7 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
                     <button type="button" class="btn btn-success btn-sm px-3 fw-bold shadow-sm" id="btnZipMasivo">
                         <i class="fas fa-file-archive me-1"></i> DESCARGAR ZIP
                     </button>
-                    <a href="dashboard_mensual.php" class="btn btn-light btn-sm text-muted ms-1 border" title="Limpiar"><i class="fas fa-sync-alt"></i></a>
+                    <a href="<?php echo BASE_URL; ?>/dashboard-mensual" class="btn btn-light btn-sm text-muted ms-1 border" title="Limpiar"><i class="fas fa-sync-alt"></i></a>
                 </div>
             </form>
         </div>
@@ -204,11 +204,11 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
                                 </td>
                                 <td class="text-center pe-4">
                                     <div class="d-flex justify-content-center gap-2">
-                                        <a href="../reportes/ver_pdf.php?id=<?= $row['empleador_id'] ?>&mes=<?= $row['mes'] ?>&ano=<?= $row['ano'] ?>"
+                                        <a href="<?php echo BASE_URL; ?>/ver-planilla-cotizaciones/<?= $row['empleador_id'] ?>/<?= $row['mes'] ?>/<?= $row['ano'] ?>"
                                             target="_blank" class="btn btn-outline-danger btn-sm border-0" title="Ver PDF">
                                             <i class="fas fa-file-pdf fa-lg"></i>
                                         </a>
-                                        <form action="cargar_grid.php" method="POST" style="display:inline;">
+                                        <form action="<?php echo BASE_URL; ?>/planillas/cargar_grid.php" method="POST" style="display:inline;">
                                             <input type="hidden" name="empleador_id" value="<?= $row['empleador_id'] ?>">
                                             <input type="hidden" name="mes" value="<?= $row['mes'] ?>">
                                             <input type="hidden" name="ano" value="<?= $row['ano'] ?>">

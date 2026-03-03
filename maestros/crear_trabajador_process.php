@@ -28,20 +28,20 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     // Validaciones
     if (!validarRUT($rut)) {
         $_SESSION['flash_message'] = ['type' => 'error', 'message' => 'El RUT ingresado no es válido.'];
-        header('Location: ' . BASE_URL . '/maestros/crear_trabajador.php');
+        header('Location: ' . BASE_URL . '/crear-trabajador');
         exit;
     }
     $rut_formateado = formatearRUT($rut);
 
     if (!esUnico($pdo, $rut_formateado, 'trabajadores', 'rut')) {
         $_SESSION['flash_message'] = ['type' => 'error', 'message' => "El RUT ya está registrado."];
-        header('Location: ' . BASE_URL . '/maestros/crear_trabajador.php');
+        header('Location: ' . BASE_URL . '/crear-trabajador');
         exit;
     }
 
     if ($estado_previsional == 'Activo' && $sistema_previsional == 'AFP' && $afp_id == null) {
         $_SESSION['flash_message'] = ['type' => 'error', 'message' => "Debe seleccionar una AFP."];
-        header('Location: ' . BASE_URL . '/maestros/crear_trabajador.php');
+        header('Location: ' . BASE_URL . '/crear-trabajador');
         exit;
     }
 
@@ -90,11 +90,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
 
         $_SESSION['flash_message'] = ['type' => 'success', 'message' => '¡Trabajador creado exitosamente!'];
-        header('Location: ' . BASE_URL . '/maestros/gestionar_trabajadores.php');
+        header('Location: ' . BASE_URL . '/trabajadores');
         exit;
     } catch (PDOException $e) {
         $_SESSION['flash_message'] = ['type' => 'error', 'message' => 'Error BD: ' . $e->getMessage()];
-        header('Location: ' . BASE_URL . '/maestros/crear_trabajador.php');
+        header('Location: ' . BASE_URL . '/crear-trabajador');
         exit;
     }
 }

@@ -192,7 +192,7 @@ $months_list = [1 => 'Enero', 2 => 'Febrero', 3 => 'Marzo', 4 => 'Abril', 5 => '
                 <div class="row align-items-end">
                     <div class="col-md-3">
                         <label class="form-label fw-bold">Mes</label>
-                        <select class="form-select" onchange="window.location.href='configuracion.php?anio=<?= $anio_sel ?>&mes='+this.value">
+                        <select class="form-select" onchange="window.location.href='<?php echo BASE_URL; ?>/configuracion-parametros?anio=<?= $anio_sel ?>&mes='+this.value">
                             <?php foreach ($months_list as $k => $v): ?>
                                 <option value="<?= $k ?>" <?= $k == $mes_sel ? 'selected' : '' ?>><?= $v ?></option>
                             <?php endforeach; ?>
@@ -201,7 +201,7 @@ $months_list = [1 => 'Enero', 2 => 'Febrero', 3 => 'Marzo', 4 => 'Abril', 5 => '
                     </div>
                     <div class="col-md-3">
                         <label class="form-label fw-bold">Año</label>
-                        <input type="number" class="form-control" value="<?= $anio_sel ?>" onchange="window.location.href='configuracion.php?mes=<?= $mes_sel ?>&anio='+this.value">
+                        <input type="number" class="form-control" value="<?= $anio_sel ?>" onchange="window.location.href='<?php echo BASE_URL; ?>/configuracion-parametros?mes=<?= $mes_sel ?>&anio='+this.value">
                         <input type="hidden" name="anio" value="<?= $anio_sel ?>">
                     </div>
                     <div class="col-md-6 text-end text-muted align-self-center">

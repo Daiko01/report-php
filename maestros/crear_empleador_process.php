@@ -19,14 +19,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     // 2. Validaciones de RUT (Mantenemos tus utilidades intactas)
     if (!validarRUT($rut)) {
         $_SESSION['flash_message'] = ['type' => 'error', 'message' => 'RUT inválido.'];
-        header('Location: crear_empleador.php');
+        header('Location: ' . BASE_URL . '/crear-empleador');
         exit;
     }
     $rut_formateado = formatearRUT($rut);
 
     if (!esUnico($pdo, $rut_formateado, 'empleadores', 'rut')) {
         $_SESSION['flash_message'] = ['type' => 'error', 'message' => 'El RUT ya existe en el sistema.'];
-        header('Location: crear_empleador.php');
+        header('Location: ' . BASE_URL . '/crear-empleador');
         exit;
     }
 
@@ -51,15 +51,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         ]);
 
         $_SESSION['flash_message'] = ['type' => 'success', 'message' => 'Empleador creado exitosamente.'];
-        header('Location: gestionar_empleadores.php');
+        header('Location: ' . BASE_URL . '/empleadores');
         exit;
     } catch (Exception $e) {
         $_SESSION['flash_message'] = ['type' => 'error', 'message' => 'Error de Base de Datos: ' . $e->getMessage()];
-        header('Location: crear_empleador.php');
+        header('Location: ' . BASE_URL . '/crear-empleador');
         exit;
     }
 } else {
     // Si intentan entrar por URL sin POST
-    header('Location: gestionar_empleadores.php');
+    header('Location: ' . BASE_URL . '/empleadores');
     exit;
 }

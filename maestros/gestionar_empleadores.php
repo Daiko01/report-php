@@ -27,7 +27,7 @@ try {
         <h1 class="h3 mb-0 text-gray-800">
             <i class="fas fa-building text-primary me-2"></i>Gestión de Empleadores - <?php echo NOMBRE_SISTEMA; ?>
         </h1>
-        <a href="crear_empleador.php" class="btn btn-primary shadow-sm fw-bold">
+        <a href="<?php echo BASE_URL; ?>/crear-empleador" class="btn btn-primary shadow-sm fw-bold">
             <i class="fas fa-plus fa-sm text-white-50 me-1"></i> Crear Nuevo Empleador
         </a>
     </div>
@@ -88,7 +88,7 @@ try {
                                 <td><?php echo htmlspecialchars($e['nombre_mutual']); ?></td>
                                 <td class="text-center"><?php echo number_format($e['tasa_mutual_decimal'] * 100, 2, ',', '.'); ?>%</td>
                                 <td class="text-center">
-                                    <a href="editar_empleador.php?id=<?php echo $e['id']; ?>" class="btn btn-primary btn-sm rounded-pill px-3" title="Editar">
+                                    <a href="<?php echo BASE_URL; ?>/editar-empleador/<?php echo $e['id']; ?>" class="btn btn-primary btn-sm rounded-pill px-3" title="Editar">
                                         <i class="fas fa-pencil-alt me-1"></i> Editar
                                     </a>
 

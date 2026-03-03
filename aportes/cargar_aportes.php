@@ -14,14 +14,14 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
                     <h6 class="m-0 font-weight-bold text-primary">Subir Archivo CSV</h6>
                 </div>
                 <div class="card-body">
-                    <form action="procesar_carga.php" method="POST" enctype="multipart/form-data">
-                        
+                    <form action="<?php echo BASE_URL; ?>/aportes/procesar_carga.php" method="POST" enctype="multipart/form-data">
+
                         <div class="row mb-3">
                             <div class="col-6">
                                 <label class="form-label">Mes</label>
                                 <select class="form-select" name="mes" required>
-                                    <?php 
-                                    $meses = [1=>'Enero', 2=>'Febrero', 3=>'Marzo', 4=>'Abril', 5=>'Mayo', 6=>'Junio', 7=>'Julio', 8=>'Agosto', 9=>'Septiembre', 10=>'Octubre', 11=>'Noviembre', 12=>'Diciembre'];
+                                    <?php
+                                    $meses = [1 => 'Enero', 2 => 'Febrero', 3 => 'Marzo', 4 => 'Abril', 5 => 'Mayo', 6 => 'Junio', 7 => 'Julio', 8 => 'Agosto', 9 => 'Septiembre', 10 => 'Octubre', 11 => 'Noviembre', 12 => 'Diciembre'];
                                     foreach ($meses as $num => $nombre): ?>
                                         <option value="<?php echo $num; ?>" <?php echo ($num == date('n')) ? 'selected' : ''; ?>><?php echo $nombre; ?></option>
                                     <?php endforeach; ?>
@@ -61,7 +61,7 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
                 <div class="card-body">
                     <h5 class="card-title">Gestión de Excedentes</h5>
                     <p class="card-text">Revise los registros que no pudieron ser asignados a un contrato vigente (máquina no existe o conductor sin contrato).</p>
-                    <a href="ver_excedentes.php" class="btn btn-warning">
+                    <a href="<?php echo BASE_URL; ?>/ver-excedentes" class="btn btn-warning">
                         <i class="fas fa-list-ul me-2"></i> Ver Historial de Excedentes
                     </a>
                 </div>

@@ -25,7 +25,7 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
 
     <div class="d-sm-flex align-items-center justify-content-between mb-4">
         <h1 class="h3 mb-0 text-gray-800">Gestión de Usuarios</h1>
-        <a href="crear_usuario.php" class="btn btn-primary shadow-sm rounded-pill px-3">
+        <a href="<?php echo BASE_URL; ?>/crear-usuario" class="btn btn-primary shadow-sm rounded-pill px-3">
             <i class="fas fa-user-plus fa-sm text-white-50 me-2"></i>Crear Nuevo Usuario
         </a>
     </div>
@@ -87,7 +87,7 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
                                 </td>
                                 <td class="text-center">
                                     <div class="btn-group" role="group">
-                                        <a href="editar_usuario.php?id=<?php echo $u['id']; ?>" class="btn btn-outline-primary btn-sm" title="Editar" style="border-radius: 50%; width: 32px; height: 32px; padding: 0; display: flex; align-items: center; justify-content: center; margin-right: 5px;">
+                                        <a href="<?php echo BASE_URL; ?>/editar-usuario/<?php echo $u['id']; ?>" class="btn btn-outline-primary btn-sm" title="Editar" style="border-radius: 50%; width: 32px; height: 32px; padding: 0; display: flex; align-items: center; justify-content: center; margin-right: 5px;">
                                             <i class="fas fa-pencil-alt fa-xs"></i>
                                         </a>
 
@@ -160,7 +160,7 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
                         didOpen: () => Swal.showLoading()
                     });
 
-                    fetch('../ajax/actualizar_usuario_estado.php', {
+                    fetch('<?php echo BASE_URL; ?>/ajax/actualizar_usuario_estado.php', {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json'

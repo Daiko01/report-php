@@ -4,7 +4,7 @@ require_once dirname(__DIR__) . '/app/includes/session_check.php';
 
 // Validate ID
 if (!isset($_GET['id'])) {
-    header('Location: ingreso_guia.php');
+    header('Location: ' . BASE_URL . '/ingreso-guia');
     exit;
 }
 $guia_id = (int)$_GET['id'];
@@ -84,7 +84,7 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
                 <span class="badge bg-success ms-2"><i class="fas fa-check-circle me-1"></i> ABIERTA</span>
             <?php endif; ?>
         </h1>
-        <a href="ingreso_guia.php" class="btn btn-secondary btn-sm shadow-sm"><i class="fas fa-arrow-left me-1"></i> Cancelar</a>
+        <a href="<?php echo BASE_URL; ?>/ingreso-guia" class="btn btn-secondary btn-sm shadow-sm"><i class="fas fa-arrow-left me-1"></i> Cancelar</a>
     </div>
 
     <!-- Alert for Closed State -->
@@ -261,7 +261,7 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
         const driverIdInit = <?= $guia['conductor_id'] ?>;
 
         // 1. Load Drivers
-        fetch('../ajax/get_todos_conductores.php').then(r => r.json()).then(data => {
+        fetch('<?php echo BASE_URL; ?>/ajax/get_todos_conductores.php').then(r => r.json()).then(data => {
             let opts = '';
             data.forEach(d => opts += `<option value="${d.id}" ${d.id == driverIdInit ? 'selected' : ''}>${d.nombre}</option>`);
             $('#conductor_id').html(opts);
@@ -270,7 +270,7 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
         // 2. Load Buses for current employer
         const empId = $('#empleador_id').val();
         const isReadOnly = <?= $isClosed ? 'true' : 'false' ?>;
-        fetch(`../ajax/get_buses_por_empleador.php?empleador_id=${empId}`).then(r => r.json()).then(buses => {
+        fetch(`<?php echo BASE_URL; ?>/ajax/get_buses_por_empleador.php?empleador_id=${empId}`).then(r => r.json()).then(buses => {
             let opts = '';
             buses.forEach(b => opts += `<option value="${b.id}" ${b.id == busIdInit ? 'selected' : ''}>${b.numero_maquina}</option>`);
             $('#bus_id').html(opts);
@@ -347,7 +347,7 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
                 didOpen: () => Swal.showLoading()
             });
 
-            fetch('guardar_guia_process.php', {
+            fetch('<?php echo BASE_URL; ?>/buses/guardar_guia_process.php', {
                     method: 'POST',
                     body: formData
                 })

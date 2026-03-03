@@ -4,7 +4,7 @@ require_once dirname(__DIR__) . '/app/includes/session_check.php';
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     verify_csrf_token();
-    
+
     $afp_id = (int)$_POST['afp_id'];
     $mes_inicio = (int)$_POST['mes_inicio'];
     $ano_inicio = (int)$_POST['ano_inicio'];
@@ -24,11 +24,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         ]);
 
         $_SESSION['flash_message'] = ['type' => 'success', 'message' => '¡Nueva tasa agregada al historial!'];
-        header('Location: ' . BASE_URL . '/maestros/gestionar_comisiones_afp.php?id=' . $afp_id);
+        header('Location: ' . BASE_URL . '/comisiones-afp?id=' . $afp_id);
         exit;
     } catch (PDOException $e) {
         $_SESSION['flash_message'] = ['type' => 'error', 'message' => 'Error: ' . $e->getMessage()];
-        header('Location: ' . BASE_URL . '/maestros/gestionar_comisiones_afp.php?id=' . $afp_id);
+        header('Location: ' . BASE_URL . '/comisiones-afp?id=' . $afp_id);
         exit;
     }
 }

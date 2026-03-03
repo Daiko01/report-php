@@ -4,7 +4,7 @@ require_once dirname(__DIR__) . '/app/includes/session_check.php';
 require_once dirname(__DIR__) . '/app/lib/LiquidacionService.php';
 
 if ($_SERVER['REQUEST_METHOD'] != 'POST') {
-    header('Location: generar_liquidacion.php');
+    header('Location: ' . BASE_URL . '/generar-liquidacion');
     exit;
 }
 
@@ -47,7 +47,7 @@ foreach ($lista_empleadores as $empleador_id) {
     if (!$stmt_check->fetch()) {
         if ($seleccion_empleador !== 'todos') {
             $_SESSION['flash_message'] = ['type' => 'error', 'message' => "Error: No existe planilla para el empleador seleccionado en este período."];
-            header('Location: generar_liquidacion.php');
+            header('Location: ' . BASE_URL . '/generar-liquidacion');
             exit;
         }
         continue; // Saltar al siguiente empleador
@@ -226,5 +226,5 @@ if (!empty($errores)) {
     // O redirigir a una página de log.
 }
 
-header('Location: listar_liquidaciones.php?mes=' . $mes . '&ano=' . $ano);
+header('Location: ' . BASE_URL . '/listado-liquidaciones?mes=' . $mes . '&ano=' . $ano);
 exit;

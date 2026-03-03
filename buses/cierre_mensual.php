@@ -185,7 +185,7 @@ function val($key, $default = 0)
     <div class="d-sm-flex align-items-center justify-content-between mb-4">
         <h1 class="h3 mb-0 text-gray-800">
             <?php if ($bus_id > 0): ?>
-                <a href="cierre_mensual.php?mes=<?= $mes_sel ?>&anio=<?= $anio_sel ?>" class="btn btn-sm btn-secondary me-2"><i class="fas fa-arrow-left"></i> Volver al Panel</a>
+                <a href="<?php echo BASE_URL; ?>/cierre-mensual?mes=<?= $mes_sel ?>&anio=<?= $anio_sel ?>" class="btn btn-sm btn-secondary me-2"><i class="fas fa-arrow-left"></i> Volver al Panel</a>
                 Cierre Mensual Máquina
             <?php else: ?>
                 <i class="fas fa-file-invoice-dollar"></i> Panel de Cierres Mensuales
@@ -334,7 +334,7 @@ function val($key, $default = 0)
                                             <?php endif; ?>
                                         </td>
                                         <td class="text-end pe-4">
-                                            <a href="cierre_mensual.php?bus_id=<?= $m['id'] ?>&mes=<?= $mes_sel ?>&anio=<?= $anio_sel ?>"
+                                            <a href="<?php echo BASE_URL; ?>/cierre-mensual?bus_id=<?= $m['id'] ?>&mes=<?= $mes_sel ?>&anio=<?= $anio_sel ?>"
                                                 class="btn btn-sm shadow-sm <?= $cerrado ? 'btn-outline-secondary' : 'btn-success text-white' ?> rounded-pill px-3">
                                                 <?= $cerrado ? '<i class="fas fa-eye me-1"></i> Ver / Reabrir' : '<i class="fas fa-edit me-1"></i> Gestionar' ?>
                                             </a>
@@ -463,11 +463,35 @@ function val($key, $default = 0)
                             <h6 class="m-0 font-weight-bold text-primary">Datos Financieros del Cierre</h6>
                         </div>
                         <div class="card-body">
+                            <h6 class="text-secondary border-bottom pb-2 mb-3"><i class="fas fa-sync-alt"></i> Control de Vueltas</h6>
+                            <div class="row mb-3 bg-light py-2 rounded">
+                                <div class="col-md-3">
+                                    <label class="small">Cant. Directo</label>
+                                    <input type="number" name="cant_vueltas_directo" id="cant_vueltas_directo" class="form-control form-control-sm js-vueltas" value="<?= val('cant_vueltas_directo') ?>" <?= $readonlyAttr ?>>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="small">Valor Directo</label>
+                                    <input type="number" name="valor_vueltas_directo" id="valor_vueltas_directo" class="form-control form-control-sm js-vueltas" value="<?= val('valor_vueltas_directo') ?>" <?= $readonlyAttr ?>>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="small">Cant. Local</label>
+                                    <input type="number" name="cant_vueltas_local" id="cant_vueltas_local" class="form-control form-control-sm js-vueltas" value="<?= val('cant_vueltas_local') ?>" <?= $readonlyAttr ?>>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="small">Valor Local</label>
+                                    <input type="number" name="valor_vueltas_local" id="valor_vueltas_local" class="form-control form-control-sm js-vueltas" value="<?= val('valor_vueltas_local') ?>" <?= $readonlyAttr ?>>
+                                </div>
+                            </div>
+
                             <h6 class="text-success border-bottom pb-2 mb-3"><i class="fas fa-plus-circle"></i> Ingresos Adicionales</h6>
                             <div class="row mb-3">
                                 <div class="col-md-4 mb-2">
-                                    <label class="small fw-bold">Subsidio Operacional</label>
-                                    <input type="number" name="subsidio_operacional" class="form-control" value="<?= val('subsidio_operacional') ?>" <?= $readonlyAttr ?>>
+                                    <label class="small fw-bold">
+                                        Subsidio Operacional
+                                        <span id="badge-subsidio-auto" class="badge bg-success ms-1 d-none" style="font-size:0.65rem;">Auto</span>
+                                    </label>
+                                    <input type="number" name="subsidio_operacional" id="input_subsidio_operacional" class="form-control" value="<?= val('subsidio_operacional') ?>" <?= $readonlyAttr ?>>
+                                    <small class="text-muted" style="font-size:0.7rem;"><i class="fas fa-info-circle"></i> Se calcula desde control de vueltas</small>
                                 </div>
                                 <div class="col-md-4 mb-2">
                                     <label class="small fw-bold">Devolución Minutos</label>
@@ -550,25 +574,6 @@ function val($key, $default = 0)
                                 </div>
                             </div>
 
-                            <h6 class="text-secondary border-bottom pb-2 mt-4 mb-3"><i class="fas fa-sync-alt"></i> Control de Vueltas</h6>
-                            <div class="row mb-3 bg-light py-2 rounded">
-                                <div class="col-md-3">
-                                    <label class="small">Cant. Directo</label>
-                                    <input type="number" name="cant_vueltas_directo" class="form-control form-control-sm" value="<?= val('cant_vueltas_directo') ?>" <?= $readonlyAttr ?>>
-                                </div>
-                                <div class="col-md-3">
-                                    <label class="small">Valor Directo</label>
-                                    <input type="number" name="valor_vueltas_directo" class="form-control form-control-sm" value="<?= val('valor_vueltas_directo') ?>" <?= $readonlyAttr ?>>
-                                </div>
-                                <div class="col-md-3">
-                                    <label class="small">Cant. Local</label>
-                                    <input type="number" name="cant_vueltas_local" class="form-control form-control-sm" value="<?= val('cant_vueltas_local') ?>" <?= $readonlyAttr ?>>
-                                </div>
-                                <div class="col-md-3">
-                                    <label class="small">Valor Local</label>
-                                    <input type="number" name="valor_vueltas_local" class="form-control form-control-sm" value="<?= val('valor_vueltas_local') ?>" <?= $readonlyAttr ?>>
-                                </div>
-                            </div>
 
                             <div class="alert alert-primary mt-4 border-0 shadow-sm">
                                 <div class="row align-items-center">
@@ -722,7 +727,7 @@ function val($key, $default = 0)
                 formData.append('mes', '<?= $mes_sel ?>');
                 formData.append('anio', '<?= $anio_sel ?>');
 
-                fetch('../ajax/procesar_cierre_masivo.php', {
+                fetch('<?php echo BASE_URL; ?>/ajax/procesar_cierre_masivo.php', {
                         method: 'POST',
                         body: formData
                     })
@@ -769,11 +774,14 @@ function val($key, $default = 0)
         const mes = <?php echo $mes_sel; ?>;
         const anio = <?php echo $anio_sel; ?>;
 
-        fetch(`../ajax/calcular_leyes_cierre.php?bus_id=${busId}&mes=${mes}&anio=${anio}`)
+        fetch(`<?php echo BASE_URL; ?>/ajax/calcular_leyes_cierre.php?bus_id=${busId}&mes=${mes}&anio=${anio}`)
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
                     document.getElementById('input_monto_leyes_sociales').value = data.monto_leyes_sociales;
+                    if (typeof window.clpFormatInput === 'function') {
+                        window.clpFormatInput(document.getElementById('input_monto_leyes_sociales'));
+                    }
                     const formattedMonto = new Intl.NumberFormat('es-CL').format(data.monto_leyes_sociales);
 
                     // Construir tabla HTML de detalle
@@ -818,4 +826,129 @@ function val($key, $default = 0)
             });
     });
 </script>
+
+<?php if ($bus_id > 0 && !$isClosed): ?>
+    <script>
+        // Auto-cálculo del Subsidio Operacional desde Control de Vueltas
+        (function() {
+            const inputs = ['cant_vueltas_directo', 'valor_vueltas_directo', 'cant_vueltas_local', 'valor_vueltas_local'];
+            const inputSubsidio = document.getElementById('input_subsidio_operacional');
+            const badge = document.getElementById('badge-subsidio-auto');
+
+            if (!inputSubsidio) return; // No estamos en modo edición
+
+            function getRaw(id) {
+                const el = document.getElementById(id);
+                if (!el) return 0;
+                return parseFloat(el.value.replace(/[^\d]/g, '')) || 0;
+            }
+
+            function calcularSubsidio() {
+                const cantDir = getRaw('cant_vueltas_directo');
+                const valDir = getRaw('valor_vueltas_directo');
+                const cantLoc = getRaw('cant_vueltas_local');
+                const valLoc = getRaw('valor_vueltas_local');
+
+                const total = Math.round((cantDir * valDir) + (cantLoc * valLoc));
+
+                if (total > 0) {
+                    inputSubsidio.value = total;
+                    if (typeof window.clpFormatInput === 'function') window.clpFormatInput(inputSubsidio);
+                    inputSubsidio.classList.add('border-success');
+                    inputSubsidio.classList.remove('border-secondary');
+                    if (badge) badge.classList.remove('d-none');
+                } else {
+                    inputSubsidio.classList.remove('border-success');
+                    if (badge) badge.classList.add('d-none');
+                }
+            }
+
+            // Escuchar cambios en los 4 campos de vueltas
+            inputs.forEach(function(id) {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.addEventListener('input', calcularSubsidio);
+                    el.addEventListener('change', calcularSubsidio);
+                }
+            });
+
+            // Calcular al cargar si ya hay valores guardados
+            calcularSubsidio();
+        })();
+    </script>
+<?php endif; ?>
+
+<?php if ($bus_id > 0): ?>
+    <script>
+        // ============================================================
+        // FORMATO CLP ($) para inputs de dinero del Cierre Mensual
+        // ============================================================
+        (function() {
+            // Campos de dinero (excluye cant_vueltas_directo y cant_vueltas_local que son contadores)
+            const moneyFields = [
+                'monto_administracion_aplicado',
+                'subsidio_operacional', 'devolucion_minutos',
+                'otros_ingresos_1', 'otros_ingresos_2', 'otros_ingresos_3',
+                'anticipo', 'asignacion_familiar', 'pago_minutos', 'saldo_anterior',
+                'ayuda_mutua', 'servicio_grua', 'poliza_seguro',
+                'derechos_loza', 'seguro_cartolas', 'gps', 'boleta_garantia', 'boleta_garantia_dos',
+                'monto_leyes_sociales',
+                'valor_vueltas_directo', 'valor_vueltas_local'
+            ];
+
+            function formatClp(raw) {
+                const n = parseInt(String(raw).replace(/[^\d]/g, ''));
+                if (isNaN(n) || n === 0) return '';
+                return '$ ' + n.toLocaleString('es-CL');
+            }
+
+            // Exportar para uso desde otros scripts
+            window.clpFormatInput = function(el) {
+                if (!el) return;
+                const raw = el.value.replace(/[^\d]/g, '');
+                el.value = raw ? formatClp(raw) : '';
+            };
+
+            moneyFields.forEach(function(name) {
+                const el = document.querySelector('input[name="' + name + '"]');
+                if (!el) return;
+
+                // Cambiar a tipo texto para soporte de formato
+                const rawInit = el.value;
+                el.type = 'text';
+                el.inputMode = 'numeric';
+                el.placeholder = '$ 0';
+
+                // Formato inicial si tiene valor guardado
+                if (rawInit && rawInit !== '0') el.value = formatClp(rawInit);
+
+                // Si es readonly/disabled, solo mostrar formato y salir
+                if (el.readOnly || el.disabled) return;
+
+                // Formatear mientras escribe
+                el.addEventListener('input', function() {
+                    const raw = this.value.replace(/[^\d]/g, '');
+                    this.value = raw ? formatClp(raw) : '';
+                    // Mover cursor al final
+                    const len = this.value.length;
+                    this.setSelectionRange(len, len);
+                    // Disparar evento para auto-calc subsidio
+                    this.dispatchEvent(new Event('clpinput', {
+                        bubbles: true
+                    }));
+                });
+            });
+
+            // Limpiar formato antes de enviar el form
+            document.querySelector('form')?.addEventListener('submit', function() {
+                moneyFields.forEach(function(name) {
+                    const el = document.querySelector('input[name="' + name + '"]');
+                    if (el) el.value = el.value.replace(/[^\d]/g, '') || '0';
+                });
+            }, true);
+
+        })();
+    </script>
+<?php endif; ?>
+
 <?php require_once dirname(__DIR__) . '/app/includes/footer.php'; ?>

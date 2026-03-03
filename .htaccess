@@ -1,0 +1,90 @@
+RewriteEngine On
+RewriteBase /transreport_bp/
+
+# Dashboard / Home
+RewriteRule ^dashboard$ index.php [L]
+RewriteRule ^home$ index.php [L]
+
+# Maestros - Trabajadores
+RewriteRule ^trabajadores$ maestros/gestionar_trabajadores.php [L]
+RewriteRule ^crear-trabajador$ maestros/crear_trabajador.php [L]
+RewriteRule ^editar-trabajador/([0-9]+)$ maestros/editar_trabajador.php?id=$1 [L]
+
+# Maestros - Empleadores
+RewriteRule ^empleadores$ maestros/gestionar_empleadores.php [L]
+RewriteRule ^crear-empleador$ maestros/crear_empleador.php [L]
+RewriteRule ^editar-empleador/([0-9]+)$ maestros/editar_empleador.php?id=$1 [L]
+
+# Maestros - Buses
+RewriteRule ^listado-buses$ maestros/gestionar_buses.php [L]
+
+# Licencias
+RewriteRule ^licencias$ maestros/gestionar_licencias.php [L]
+
+# Maestros - Otros
+RewriteRule ^sindicatos$ maestros/gestionar_sindicatos.php [L]
+RewriteRule ^editar-sindicato/([0-9]+)$ maestros/editar_sindicato.php?id=$1 [L]
+
+RewriteRule ^afps$ maestros/gestionar_afps.php [L]
+RewriteRule ^comisiones-afp$ maestros/gestionar_comisiones_afp.php [L]
+
+RewriteRule ^cargas-familiares$ maestros/gestionar_tramos_cargas.php [L]
+
+# Contratos
+RewriteRule ^listado-contratos$ contratos/gestionar_contratos.php [L]
+RewriteRule ^crear-contrato$ contratos/crear_contrato.php [L]
+RewriteRule ^editar-contrato/([0-9]+)$ contratos/editar_contrato.php?id=$1 [L]
+
+# Administración
+RewriteRule ^usuarios$ admin/gestionar_usuarios.php [L]
+RewriteRule ^crear-usuario$ admin/crear_usuario.php [L]
+RewriteRule ^editar-usuario/([0-9]+)$ admin/editar_usuario.php?id=$1 [L]
+
+RewriteRule ^indicadores-sis$ admin/gestionar_sis.php [L]
+
+# Operaciones (Buses)
+RewriteRule ^ingreso-guia$ buses/ingreso_guia.php [L]
+RewriteRule ^editar-guia/([0-9]+)$ buses/editar_guia.php?id=$1 [L]
+RewriteRule ^historial-guias$ buses/historial_guias.php [L]
+RewriteRule ^resumen-diario$ buses/resumen_diario.php [L]
+RewriteRule ^reportes-flota$ buses/seleccionar_reporte.php [L]
+RewriteRule ^cierre-mensual$ buses/cierre_mensual.php [L]
+RewriteRule ^configuracion-parametros$ buses/configuracion.php [L]
+
+# Liquidaciones
+RewriteRule ^listado-liquidaciones$ liquidaciones/listar_liquidaciones.php [L]
+RewriteRule ^listado-liquidaciones$ liquidaciones/listar_liquidaciones.php [L]
+RewriteRule ^generar-liquidacion$ liquidaciones/generar_liquidacion.php [L]
+
+# Legacy Support (Redireccionamiento para archivos accedidos desde la raíz)
+RewriteRule ^editar_guia\.php$ buses/editar_guia.php [L,QSA]
+RewriteRule ^ingreso_guia\.php$ buses/ingreso_guia.php [L,QSA]
+RewriteRule ^resumen_diario\.php$ buses/resumen_diario.php [L,QSA]
+
+
+# Planillas
+RewriteRule ^planillas-masivas$ planillas/generacion_masiva.php [L]
+RewriteRule ^control-cierres$ planillas/cierres_mensuales.php [L]
+RewriteRule ^dashboard-mensual$ planillas/dashboard_mensual.php [L]
+
+# Aportes y Excedentes
+RewriteRule ^cargar-aportes$ aportes/cargar_aportes.php [L]
+RewriteRule ^ver-excedentes$ aportes/ver_excedentes.php [L]
+
+# Reportes
+RewriteRule ^reportes-especiales$ reportes/reportes_especiales.php [L]
+RewriteRule ^reporte-excedentes$ aportes/generar_pdf_excedentes_db.php [L,QSA]
+
+# Impresiones
+RewriteRule ^imprimir-voucher/([0-9]+)$ buses/imprimir_voucher.php?id=$1 [L]
+RewriteRule ^descargar-liquidacion-pdf$ buses/generar_pdf_liquidacion.php [L,QSA]
+RewriteRule ^descargar-resumen-excel$ buses/exportar_excel_resumen.php [L,QSA]
+RewriteRule ^ver-planilla-cotizaciones/([0-9]+)/([0-9]+)/([0-9]+)$ reportes/ver_pdf.php?id=$1&mes=$2&ano=$3 [L]
+
+# ----------------------------------------------------------------------
+# If the request is not a directory
+RewriteCond %{REQUEST_FILENAME} !-d
+# And the file with .php extension exists
+RewriteCond %{REQUEST_FILENAME}.php -f
+# Rewrite to the .php file
+RewriteRule ^(.*)$ $1.php [L]
