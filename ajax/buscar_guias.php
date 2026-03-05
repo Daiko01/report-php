@@ -96,6 +96,7 @@ try {
         // Roles
         $role = $_SESSION['user_role'] ?? '';
         $can_reopen = ($role === 'admin' || $role === 'contador');
+        $is_admin = ($role === 'admin');
 
         $data[] = [
             'id' => $g['id'],
@@ -110,7 +111,8 @@ try {
             'estado' => $g['estado'],
             'mes_cerrado' => $mes_cerrado,
             'can_edit' => $editable,
-            'can_reopen' => $can_reopen
+            'can_reopen' => $can_reopen,
+            'is_admin' => $is_admin
         ];
     }
 

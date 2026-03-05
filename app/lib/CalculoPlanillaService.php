@@ -10,6 +10,7 @@ class CalculoPlanillaService
 
     // CACHE DATA
     private $cache_afp_comisiones = [];
+    private $cache_afp_nombres = [];   // FIX #2: Evitar query por trabajador
     private $cache_sindicatos = [];
     private $cache_cargado = false;
 
@@ -83,6 +84,10 @@ class CalculoPlanillaService
         $stmt_s = $this->pdo->query("SELECT id, descuento FROM sindicatos");
         $sindicatos = $stmt_s->fetchAll(PDO::FETCH_KEY_PAIR); // [id => descuento]
         $this->cache_sindicatos = $sindicatos;
+
+        // 3. FIX #2: Cargar nombres de AFP para evitar query por trabajador en calcularFila()
+        $stmt_afp_nombres = $this->pdo->query("SELECT id, nombre FROM afps");
+        $this->cache_afp_nombres = $stmt_afp_nombres->fetchAll(PDO::FETCH_KEY_PAIR); // [id => nombre]
 
         $this->cache_cargado = true;
     }
@@ -168,12 +173,15 @@ class CalculoPlanillaService
                 // === CASO AFP ===
                 if ($trabajador['afp_id']) {
                     $comision_afp = 0.0;
-                    $nombre_afp_snapshot = '';
 
-                    // Obtener nombre de la AFP (Snapshot)
-                    $stmt_nombre_afp = $this->pdo->prepare("SELECT nombre FROM afps WHERE id = ?");
-                    $stmt_nombre_afp->execute([$trabajador['afp_id']]);
-                    $nombre_afp_snapshot = $stmt_nombre_afp->fetchColumn();
+                    // FIX #2: Usar caché de nombres para evitar query por trabajador
+                    $nombre_afp_snapshot = $this->cache_afp_nombres[$trabajador['afp_id']] ?? '';
+                    if (empty($nombre_afp_snapshot)) {
+                        // Fallback si el caché no está cargado
+                        $stmt_nombre_afp = $this->pdo->prepare("SELECT nombre FROM afps WHERE id = ?");
+                        $stmt_nombre_afp->execute([$trabajador['afp_id']]);
+                        $nombre_afp_snapshot = $stmt_nombre_afp->fetchColumn();
+                    }
 
                     if ($this->cache_cargado && isset($this->cache_afp_comisiones[$trabajador['afp_id']])) {
                         // Usar CACHE

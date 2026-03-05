@@ -180,12 +180,17 @@ $empleadores = $pdo->query("SELECT id, nombre FROM empleadores WHERE empresa_sis
 
                         if (row.can_edit) {
                             btns += `<a href="<?php echo BASE_URL; ?>/editar-guia/${row.id}" class="btn btn-xs btn-outline-warning me-1"><i class="fas fa-pen"></i></a>`;
-                            btns += `<button class="btn btn-xs btn-outline-secondary" onclick="cerrarGuia(${row.id})"><i class="fas fa-lock"></i></button>`;
+                            btns += `<button class="btn btn-xs btn-outline-secondary me-1" onclick="cerrarGuia(${row.id})"><i class="fas fa-lock"></i></button>`;
                         } else if (row.mes_cerrado) {
                             // No actions on month closed
                         } else if (row.estado === 'Cerrada' && row.can_reopen) {
-                            btns += `<button class="btn btn-xs btn-outline-danger" onclick="reabrirGuia(${row.id})"><i class="fas fa-unlock"></i></button>`;
+                            btns += `<button class="btn btn-xs btn-outline-warning me-1" onclick="reabrirGuia(${row.id})"><i class="fas fa-unlock"></i></button>`;
                         }
+
+                        if (row.is_admin) {
+                            btns += `<button class="btn btn-xs btn-outline-danger" onclick="eliminarGuia(${row.id})" title="Eliminar registro"><i class="fas fa-trash"></i></button>`;
+                        }
+
                         return btns;
                     }
                 }
@@ -247,6 +252,39 @@ $empleadores = $pdo->query("SELECT id, nombre FROM empleadores WHERE empresa_sis
                 confirmButtonText: 'Sí, Reabrir'
             }).then((res) => {
                 if (res.isConfirmed) procesarAccion(id, 'reabrir');
+            });
+        };
+
+        window.eliminarGuia = function(id) {
+            Swal.fire({
+                title: '¿Eliminar Guía?',
+                text: "Esta acción es IRREVERSIBLE. El registro será eliminado permanentemente de la base de datos.",
+                icon: 'error',
+                showCancelButton: true,
+                confirmButtonColor: '#e74a3b',
+                cancelButtonColor: '#858796',
+                confirmButtonText: '<i class="fas fa-trash me-1"></i> Sí, eliminar',
+                cancelButtonText: 'Cancelar',
+                reverseButtons: true
+            }).then((res) => {
+                if (res.isConfirmed) {
+                    const formData = new FormData();
+                    formData.append('id', id);
+                    fetch('<?php echo BASE_URL; ?>/ajax/eliminar_guia.php', {
+                            method: 'POST',
+                            body: formData
+                        })
+                        .then(r => r.json())
+                        .then(res => {
+                            if (res.success) {
+                                Swal.fire('Eliminada', res.message, 'success');
+                                loadData();
+                            } else {
+                                Swal.fire('Error', res.message, 'error');
+                            }
+                        })
+                        .catch(() => Swal.fire('Error', 'Fallo de conexión', 'error'));
+                }
             });
         };
 

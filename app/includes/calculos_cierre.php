@@ -78,23 +78,59 @@ function calcular_cierre_bus($pdo, $bus_id, $mes, $anio, $parametros_mensuales =
         if ($es_pagador) {
             $eid = $busInfo['empleador_id'];
 
-            // NUEVA LÓGICA (Requerimiento: "Todos los trabajadores que han hecho guías para esa máquina")
-            // 1. Buscar conductores con producción en ESTE bus, mes y año
-            // Requerimiento Usuario (Step 264): "una guia es un dia si hay dos guias en un mismo dias cuenta como dos dias"
-            $sql_drivers = "SELECT conductor_id, SUM(ingreso) as total_ingreso, COUNT(id) as dias_trabajados, COUNT(id) as num_guias
-                            FROM produccion_buses
-                            WHERE bus_id = ? AND MONTH(fecha) = ? AND YEAR(fecha) = ?
-                            GROUP BY conductor_id";
-            $stmtDrivers = $pdo->prepare($sql_drivers);
-            $stmtDrivers->execute([$bus_id, $mes, $anio]);
+            // FIX #1: Consolidar N+1 queries en una sola consulta JOIN
+            // Antes: SELECT conductor_id por bus + SELECT trabajador por conductor
+            //        + SELECT contrato por conductor + SELECT aportes por conductor
+            // Ahora: 1 query única trae producción + trabajador + contrato + aportes
+            $fin_mes    = date("Y-m-t", strtotime("$anio-$mes-01"));
+            $inicio_mes = "$anio-$mes-01";
+
+            $sql_drivers_full = "
+                SELECT
+                    pb.conductor_id,
+                    SUM(pb.ingreso)            AS total_ingreso,
+                    COUNT(pb.id)               AS dias_trabajados,
+                    COUNT(pb.id)               AS num_guias,
+                    SUM(pb.gasto_imposiciones) AS aporte_real_guias,
+                    t.rut, t.nombre, t.afp_id, t.sindicato_id,
+                    t.estado_previsional, t.sistema_previsional,
+                    t.tasa_inp_decimal, t.tiene_cargas, t.numero_cargas,
+                    t.tramo_asignacion_manual, t.es_excedente,
+                    COALESCE(
+                        (SELECT c2.tipo_contrato
+                         FROM contratos c2
+                         WHERE c2.trabajador_id = pb.conductor_id
+                           AND c2.empleador_id  = :eid_sub
+                           AND c2.fecha_inicio  <= :fin_mes
+                           AND (c2.fecha_termino IS NULL OR c2.fecha_termino >= :inicio_mes)
+                         ORDER BY c2.fecha_inicio DESC
+                         LIMIT 1),
+                        'Fijo'
+                    ) AS tipo_contrato
+                FROM produccion_buses pb
+                JOIN trabajadores t ON t.id = pb.conductor_id
+                WHERE pb.bus_id  = :bus_id
+                  AND MONTH(pb.fecha) = :mes
+                  AND YEAR(pb.fecha)  = :anio
+                GROUP BY pb.conductor_id
+            ";
+            $stmtDrivers = $pdo->prepare($sql_drivers_full);
+            $stmtDrivers->execute([
+                'bus_id'     => $bus_id,
+                'mes'        => $mes,
+                'anio'       => $anio,
+                'eid_sub'    => $eid,
+                'fin_mes'    => $fin_mes,
+                'inicio_mes' => $inicio_mes,
+            ]);
             $drivers_data = $stmtDrivers->fetchAll(PDO::FETCH_ASSOC);
 
-            // Fetch tasa Mutual Empleador
+            // Fetch tasa Mutual Empleador (una sola vez por bus-pagador)
             $stmt_emp = $pdo->prepare("SELECT tasa_mutual_decimal FROM empleadores WHERE id = ?");
             $stmt_emp->execute([$eid]);
             $tasa_mutual = (float)($stmt_emp->fetchColumn() ?: 0.0);
 
-            // Fetch Tasa SIS
+            // Fetch Tasa SIS (una sola vez por bus-pagador)
             $stmt_sis = $pdo->prepare("SELECT tasa_sis_decimal FROM sis_historico WHERE (ano_inicio < :ano OR (ano_inicio = :ano AND mes_inicio <= :mes)) ORDER BY ano_inicio DESC, mes_inicio DESC LIMIT 1");
             $stmt_sis->execute(['ano' => $anio, 'mes' => $mes]);
             $tasa_sis = (float)($stmt_sis->fetchColumn() ?: 0.0154);
@@ -111,8 +147,8 @@ function calcular_cierre_bus($pdo, $bus_id, $mes, $anio, $parametros_mensuales =
 
             // Bases Acumuladas
             $total_imponible_global = 0;
-            $total_imponible_sis = 0; // Solo AFP y Activos
-            $total_seguro_cesantia_patronal = 0; // Suma directa (es por trabajador)
+            $total_imponible_sis = 0;
+            $total_seguro_cesantia_patronal = 0;
 
             // Servicio para cálculos internos
             $calculoService = new CalculoPlanillaService($pdo);
@@ -121,12 +157,15 @@ function calcular_cierre_bus($pdo, $bus_id, $mes, $anio, $parametros_mensuales =
             foreach ($drivers_data as $d) {
                 $tid = $d['conductor_id'];
 
-                // Fetch datos trabajador
-                $stmtT = $pdo->prepare("SELECT * FROM trabajadores WHERE id = ?");
-                $stmtT->execute([$tid]);
-                $trabajador = $stmtT->fetch(PDO::FETCH_ASSOC);
+                // $d ya contiene todos los campos del trabajador (JOIN en la query principal)
+                $trabajador    = $d;
+                $tipo_contrato = $d['tipo_contrato'] ?: 'Fijo';
 
-                if (!$trabajador) continue;
+                if (empty($trabajador['rut'])) continue; // trabajador no encontrado (JOIN falló)
+
+                // Los aportes ya vienen sumados desde la query principal
+                $aporte_real_guias = (int)($d['aporte_real_guias'] ?? 0);
+
 
                 // 2. Calcular Base Imponible
                 $ingreso_conductor = (int)$d['total_ingreso'];
@@ -167,10 +206,7 @@ function calcular_cierre_bus($pdo, $bus_id, $mes, $anio, $parametros_mensuales =
                     $imponible = 0;
                 }
 
-                $stmtCont = $pdo->prepare("SELECT tipo_contrato FROM contratos WHERE trabajador_id = ? AND empleador_id = ? AND fecha_inicio <= ? AND (fecha_termino IS NULL OR fecha_termino >= ?) LIMIT 1");
-                $fin_mes = date("Y-m-t", strtotime("$anio-$mes-01"));
-                $stmtCont->execute([$tid, $eid, $fin_mes, "$anio-$mes-01"]);
-                $tipo_contrato = $stmtCont->fetchColumn() ?: 'Fijo';
+                // tipo_contrato ya viene desde la query JOIN principal (línea 162)
 
                 // 3. Calcular Leyes (Trabajador)
                 $fila_mock = [
@@ -187,10 +223,7 @@ function calcular_cierre_bus($pdo, $bus_id, $mes, $anio, $parametros_mensuales =
                 $sum_sindicato += $calcs['sindicato'];
                 $sum_asig_fam += $calcs['asignacion_familiar_calculada'];
 
-                // Aportes Reales
-                $stmtAportes = $pdo->prepare("SELECT SUM(gasto_imposiciones) FROM produccion_buses WHERE bus_id = ? AND conductor_id = ? AND MONTH(fecha) = ? AND YEAR(fecha) = ?");
-                $stmtAportes->execute([$bus_id, $tid, $mes, $anio]);
-                $aporte_real_guias = (int)$stmtAportes->fetchColumn();
+                // Aportes Reales (ya calculados en la query JOIN principal)
                 $sum_aportes += $aporte_real_guias;
 
                 $saldo_row = ($aporte_real_guias + $calcs['asignacion_familiar_calculada']) - $desc_total_row;

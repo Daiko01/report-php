@@ -83,7 +83,7 @@ $paginas_sistema = [
     <link href="https://cdn.datatables.net/2.0.8/css/dataTables.bootstrap5.min.css" rel="stylesheet">
     <link href="https://cdn.datatables.net/responsive/3.0.2/css/responsive.bootstrap5.min.css" rel="stylesheet">
 
-    <link href="<?php echo BASE_URL; ?>/public/assets/css/style.css?v=<?php echo time(); ?>" rel="stylesheet">
+    <link href="<?php echo BASE_URL; ?>/public/assets/css/style.css?v=<?php echo filemtime($_SERVER['DOCUMENT_ROOT'] . '/transreport_bp/public/assets/css/style.css'); ?>" rel="stylesheet">
 
 
 </head>

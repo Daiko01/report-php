@@ -16,18 +16,24 @@ class Database
     }
 
 
+
     public function connect()
     {
-        $this->conn = null;
+        // Singleton: reutilizar conexión dentro del mismo request
+        if ($this->conn !== null) {
+            return $this->conn;
+        }
 
         try {
-            $dsn = 'mysql:host=' . $this->host . ';dbname=' . $this->db_name . ';charset=utf8';
-            $this->conn = new PDO($dsn, $this->username, $this->password);
-            $this->conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-            $this->conn->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
+            // utf8mb4 para soporte Unicode completo; EMULATE_PREPARES=false para prepared statements reales en MySQL
+            $dsn = 'mysql:host=' . $this->host . ';dbname=' . $this->db_name . ';charset=utf8mb4';
+            $this->conn = new PDO($dsn, $this->username, $this->password, [
+                PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                PDO::ATTR_EMULATE_PREPARES   => false,
+            ]);
         } catch (PDOException $e) {
             error_log('Database Connection Error: ' . $e->getMessage());
-            // En producción, no mostrar el mensaje detallado
             die('Lo sentimos, estamos experimentando problemas técnicos. Por favor, intente más tarde.');
         }
 

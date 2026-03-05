@@ -5,8 +5,21 @@ require_once '../app/includes/session_check.php';
 
 header('Content-Type: application/json');
 
+// FIX #4: Caché de sesión para evitar 3 queries por carga de página
+// Las notificaciones se recalculan máximo una vez cada 5 minutos por usuario
+$cache_key  = 'notif_cache_' . ($_SESSION['user_id'] ?? 'anon');
+$cache_ttl  = 300; // 5 minutos
+
+if (
+    isset($_SESSION[$cache_key], $_SESSION[$cache_key]['ts'], $_SESSION[$cache_key]['data']) &&
+    (time() - $_SESSION[$cache_key]['ts']) < $cache_ttl
+) {
+    echo json_encode($_SESSION[$cache_key]['data']);
+    exit;
+}
+
 // Fecha hoy y límite 5 días
-$hoy = date('Y-m-d');
+$hoy   = date('Y-m-d');
 $limite = date('Y-m-d', strtotime('+5 days'));
 
 $notifications = [];
@@ -71,7 +84,7 @@ try {
         if ($dia_actual >= 25) {
             $mes_actual = date('m');
             $ano_actual = date('Y');
-            
+
             // Contar planillas abiertas del mes actual
             // Una planilla está abierta si existe en planillas_mensuales pero NO en cierres_mensuales con esta_cerrado=1
             $sqlCierre = "SELECT COUNT(DISTINCT p.empleador_id) as abiertas
@@ -81,14 +94,14 @@ try {
                                                         AND p.ano = c.ano
                           WHERE p.mes = :mes AND p.ano = :ano 
                           AND (c.esta_cerrado IS NULL OR c.esta_cerrado = 0)";
-            
+
             $stmtCierre = $pdo->prepare($sqlCierre);
             $stmtCierre->execute([':mes' => $mes_actual, ':ano' => $ano_actual]);
             $rowCierre = $stmtCierre->fetch(PDO::FETCH_ASSOC);
             $abiertas = $rowCierre['abiertas'] ?? 0;
 
             if ($abiertas > 0) {
-                 $notifications[] = [
+                $notifications[] = [
                     'type' => 'cierre',
                     'id' => 'cierre_mes_' . $mes_actual, // ID único virtual
                     'mensaje' => "Cierre Remuneraciones",
@@ -99,9 +112,13 @@ try {
             }
         }
     }
-
 } catch (PDOException $e) {
     // error_log($e->getMessage());
 }
 
-echo json_encode(['count' => count($notifications), 'items' => $notifications]);
+$result = ['count' => count($notifications), 'items' => $notifications];
+
+// Guardar en caché de sesión para el próximo request
+$_SESSION[$cache_key] = ['ts' => time(), 'data' => $result];
+
+echo json_encode($result);

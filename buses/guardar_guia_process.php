@@ -22,6 +22,13 @@ try {
         throw new Exception("Faltan datos obligatorios (Fecha, Guía, Bus o Conductor).");
     }
 
+    // Validar que la fecha NO sea futura — se consulta CURDATE() a la BD,
+    // no date('Y-m-d') de PHP, para que no pueda eludirse cambiando el reloj del servidor.
+    $fechaHoyBD = $pdo->query("SELECT CURDATE()")->fetchColumn();
+    if ($fecha > $fechaHoyBD) {
+        throw new Exception("La fecha ingresada ({$fecha}) no puede ser mayor a la fecha actual ({$fechaHoyBD}). No se permiten registros con fechas futuras.");
+    }
+
     // --- VALIDACIONES DE REGLA DE NEGOCIO ---
 
     // --- VALIDACION DE ESTADO (Edit Mode) ---

@@ -16,11 +16,18 @@ $months_list = [1 => 'Enero', 2 => 'Febrero', 3 => 'Marzo', 4 => 'Abril', 5 => '
 // Empleadores del sistema actual
 $empleadores_filter = $pdo->query("SELECT id, nombre, empresa_sistema_id FROM empleadores WHERE empresa_sistema_id = " . ID_EMPRESA_SISTEMA . " ORDER BY nombre")->fetchAll();
 
-// Unidades del sistema actual
-$unidades_filter = $pdo->query("SELECT id, numero FROM unidades WHERE empresa_asociada_id = " . ID_EMPRESA_SISTEMA . " ORDER BY CAST(numero AS UNSIGNED)")->fetchAll();
+// Tablas opcionales: pueden no existir en todos los entornos
+try {
+    $unidades_filter = $pdo->query("SELECT id, numero FROM unidades WHERE empresa_asociada_id = " . ID_EMPRESA_SISTEMA . " ORDER BY CAST(numero AS UNSIGNED)")->fetchAll();
+} catch (Exception $e) {
+    $unidades_filter = [];
+}
 
-// Terminales vinculados a este sistema
-$terminales_filter = $pdo->query("SELECT t.id, t.nombre, t.unidad_id FROM terminales t JOIN unidades u ON t.unidad_id = u.id WHERE u.empresa_asociada_id = " . ID_EMPRESA_SISTEMA . " ORDER BY t.nombre")->fetchAll();
+try {
+    $terminales_filter = $pdo->query("SELECT t.id, t.nombre, t.unidad_id FROM terminales t JOIN unidades u ON t.unidad_id = u.id WHERE u.empresa_asociada_id = " . ID_EMPRESA_SISTEMA . " ORDER BY t.nombre")->fetchAll();
+} catch (Exception $e) {
+    $terminales_filter = [];
+}
 
 $msg = '';
 $msg_type = '';
@@ -150,21 +157,25 @@ if ($bus_id > 0) {
     $readonlyAttr = $isClosed ? 'readonly disabled' : '';
 } else {
     // B. SI ESTAMOS EN EL DASHBOARD (LISTA DE MÁQUINAS)
+    // ONLY_FULL_GROUP_BY fix: cm.id y cm.estado no son funcionalmente
+    // dependientes de b.id → se envuelven en ANY_VALUE() (hay máx. 1 cierre/bus/mes)
+    // Las demás columnas (b.*, e.nombre, t.nombre, u.numero) sí son determinadas
+    // por b.id (PK) o por el JOIN, MySQL 5.7+ las acepta si el modo lo permite.
     $sqlDashboard = "SELECT b.id, b.numero_maquina, b.patente, e.nombre as empleador,
-                            CASE WHEN t.nombre IS NULL THEN '' ELSE t.nombre END as nombre_terminal,
-                            CASE WHEN u.numero IS NULL THEN '' ELSE u.numero END as numero_unidad,
-                            COUNT(pb.id) as total_guias,
-                            SUM(pb.ingreso) as total_ingreso,
-                            cm.id as cierre_id,
-                            cm.estado as cierre_estado
+                            COALESCE(t.nombre, '') as nombre_terminal,
+                            COALESCE(u.numero, '') as numero_unidad,
+                            COUNT(pb.id)              as total_guias,
+                            SUM(pb.ingreso)           as total_ingreso,
+                            MAX(cm.id)                as cierre_id,
+                            MAX(cm.estado)            as cierre_estado
                      FROM buses b
                      JOIN produccion_buses pb ON b.id = pb.bus_id
                      JOIN empleadores e ON b.empleador_id = e.id
                      LEFT JOIN terminales t ON b.terminal_id = t.id
                      LEFT JOIN unidades u ON t.unidad_id = u.id
                      LEFT JOIN cierres_maquinas cm ON b.id = cm.bus_id AND cm.mes = ? AND cm.anio = ?
-                     WHERE MONTH(pb.fecha) = ? AND YEAR(pb.fecha) = ? 
-                     GROUP BY b.id
+                     WHERE MONTH(pb.fecha) = ? AND YEAR(pb.fecha) = ?
+                     GROUP BY b.id, b.numero_maquina, b.patente, e.nombre, t.nombre, u.numero
                      ORDER BY CAST(b.numero_maquina AS UNSIGNED) ASC";
 
     $stmtDash = $pdo->prepare($sqlDashboard);

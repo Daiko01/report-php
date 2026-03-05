@@ -5,6 +5,9 @@ require_once dirname(__DIR__) . '/app/includes/session_check.php';
 // Cargar Empleadores Iniciales
 $empleadores = $pdo->query("SELECT id, nombre, rut FROM empleadores WHERE empresa_sistema_id = " . ID_EMPRESA_SISTEMA . " ORDER BY nombre")->fetchAll();
 
+// Obtener fecha máxima desde la BD (independiente del reloj del sistema XAMPP)
+$fechaMaxBD = $pdo->query("SELECT CURDATE()")->fetchColumn();
+
 require_once dirname(__DIR__) . '/app/includes/header.php';
 ?>
 
@@ -57,7 +60,11 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
                     <div class="row mb-3">
                         <div class="col-6">
                             <label class="small fw-bold">Fecha</label>
-                            <input type="date" class="form-control" name="fecha" id="fecha" value="<?= date('Y-m-d') ?>" required>
+                            <input type="date" class="form-control" name="fecha" id="fecha"
+                                value="<?= $fechaMaxBD ?>"
+                                max="<?= $fechaMaxBD ?>"
+                                required>
+                            <div class="text-muted" style="font-size:0.7rem;"><i class="fas fa-lock"></i> Máx: <?= date('d/m/Y', strtotime($fechaMaxBD)) ?></div>
                         </div>
                         <div class="col-6">
                             <label class="small fw-bold">N° Guía</label>
@@ -603,32 +610,33 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
         // DELETE LOGIC
         window.eliminarGuia = function(id) {
             Swal.fire({
-                title: '¿Estás seguro?',
-                text: "No podrás revertir esto. Se borrará la guía y sus detalles.",
-                icon: 'warning',
+                title: '¿Eliminar Guía?',
+                text: "Esta acción es IRREVERSIBLE. El registro será eliminado permanentemente.",
+                icon: 'error',
                 showCancelButton: true,
-                confirmButtonColor: '#d33',
-                cancelButtonColor: '#3085d6',
-                confirmButtonText: 'Sí, eliminar',
-                cancelButtonText: 'Cancelar'
+                confirmButtonColor: '#e74a3b',
+                cancelButtonColor: '#858796',
+                confirmButtonText: '<i class="fas fa-trash me-1"></i> Sí, eliminar',
+                cancelButtonText: 'Cancelar',
+                reverseButtons: true
             }).then((result) => {
                 if (result.isConfirmed) {
-                    fetch('<?php echo BASE_URL; ?>/ajax/eliminar_guia_prod.php', {
+                    const formData = new FormData();
+                    formData.append('id', id);
+                    fetch('<?php echo BASE_URL; ?>/ajax/eliminar_guia.php', {
                             method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/x-www-form-urlencoded'
-                            },
-                            body: 'id=' + id
+                            body: formData
                         })
                         .then(r => r.json())
                         .then(res => {
                             if (res.success) {
-                                Swal.fire('Eliminado', 'La guía ha sido eliminada.', 'success');
+                                Swal.fire('Eliminada', res.message, 'success');
                                 loadHistory();
                             } else {
                                 Swal.fire('Error', res.message, 'error');
                             }
-                        });
+                        })
+                        .catch(() => Swal.fire('Error', 'Fallo de conexión', 'error'));
                 }
             });
         };
@@ -861,24 +869,55 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
             // No necesitamos borrar la validación del folio si es global y sigue siendo válida/inválida.
             // Pero si quieres re-validar por seguridad:
             // if ($('#nro_guia').val()) $('#nro_guia').trigger('blur');
-        }); // --- NAVEGACIÓN POR ENTER ---
-        $('body').on('keydown', 'input, select', function(e) {
-            if (e.key === "Enter") {
-                const self = $(this);
-                const form = self.parents('form:eq(0)');
-                if (form.length > 0) {
-                    const focusable = form.find('input, select, textarea, button').filter(':visible:not([readonly]):not([disabled])');
-                    const next = focusable.eq(focusable.index(this) + 1);
-                    if (next.length) {
-                        e.preventDefault();
-                        next.focus();
-                        // Si es select2, abrir (opcional, a veces molesta)
-                        // if (next.hasClass('select2-hidden-accessible')) { next.select2('open'); }
-                    } else {
-                        // Si es el último, submit? O nada.
-                        // e.preventDefault(); // Evitar submit accidental
-                    }
+        }); // --- NAVEGACIÓN POR TECLADO ---
+
+        // 1. TAB en Fecha → Nº Guía
+        $('#fecha').on('keydown', function(e) {
+            if (e.key === 'Tab' && !e.shiftKey) {
+                e.preventDefault();
+                $('#nro_guia').focus().select();
+            }
+        });
+
+        // 2. TAB en Nº Guía → abre Empleador (Select2)
+        $('#nro_guia').on('keydown', function(e) {
+            if (e.key === 'Tab' && !e.shiftKey) {
+                e.preventDefault();
+                $('#empleador_id').select2('open');
+            }
+        });
+
+        // 3. Al SELECCIONAR empleador → espera que carguen los buses y abre Bus (Select2)
+        $('#empleador_id').on('select2:select', function() {
+            const maxWait = Date.now() + 3000;
+            const check = setInterval(function() {
+                if (!$('#bus_id').prop('disabled') || Date.now() > maxWait) {
+                    clearInterval(check);
+                    setTimeout(() => $('#bus_id').select2('open'), 80);
                 }
+            }, 100);
+        });
+
+        // 4. Al SELECCIONAR bus → abre Conductor (Select2)
+        $('#bus_id').on('select2:select', function() {
+            setTimeout(() => $('#conductor_id').select2('open'), 80);
+        });
+
+        // 5. Al SELECCIONAR conductor → foco en primer campo Fin de Serie
+        $('#conductor_id').on('select2:select', function() {
+            setTimeout(() => $('.folio-fin').first().focus().select(), 100);
+        });
+
+        // 6. TAB en Fin de Serie → siguiente Fin de Serie (salteando Inicio de Serie)
+        $(document).on('keydown', '.folio-fin', function(e) {
+            if (e.key === 'Tab' && !e.shiftKey) {
+                const $all = $('.folio-fin');
+                const $next = $all.eq($all.index(this) + 1);
+                if ($next.length) {
+                    e.preventDefault();
+                    $next.focus().select();
+                }
+                // Si es el último fin de serie, flujo natural de Tab hacia gastos
             }
         });
 
