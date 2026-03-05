@@ -38,3 +38,4 @@ date_default_timezone_set('America/Santiago');
 define('ID_EMPRESA_SISTEMA', 1); // ID de Buses BP en la tabla empresas_sistema
 define('NOMBRE_SISTEMA', 'TransReport - Buses BP');
 define('COLOR_SISTEMA', '#007bff'); // Azul corporativo
+define('APP_VERSION', '1.5.7');
