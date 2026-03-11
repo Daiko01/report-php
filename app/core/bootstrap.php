@@ -33,9 +33,9 @@ $pdo = $database->connect();
 date_default_timezone_set('America/Santiago');
 
 // =========================================================
-// --- IDENTIDAD DEL SISTEMA (BUSES BP) ---
+// --- IDENTIDAD DEL SISTEMA (INVERSIONES SOL) ---
 // =========================================================
-define('ID_EMPRESA_SISTEMA', 1); // ID de Buses BP en la tabla empresas_sistema
-define('NOMBRE_SISTEMA', 'TransReport - Buses BP');
+define('ID_EMPRESA_SISTEMA', 1); // ID de Inversiones Sol en la tabla empresas_sistema
+define('NOMBRE_SISTEMA', 'TransReport - Inversiones Sol');
 define('COLOR_SISTEMA', '#007bff'); // Azul corporativo
 define('APP_VERSION', '1.5.7');

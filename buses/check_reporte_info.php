@@ -12,6 +12,7 @@ $anio = isset($_POST['anio']) ? (int)$_POST['anio'] : date('Y');
 $filtro_tipo = $_POST['filtro_tipo'] ?? 'todos';
 $bus_id = isset($_POST['bus_id']) ? (int)$_POST['bus_id'] : 0;
 $empleador_id = isset($_POST['empleador_id']) ? (int)$_POST['empleador_id'] : 0;
+$unidad_id = isset($_POST['unidad_id']) ? (int)$_POST['unidad_id'] : 0;
 
 $sql = "SELECT COUNT(*) FROM produccion_buses pb
         JOIN buses b ON pb.bus_id = b.id
@@ -25,6 +26,12 @@ if ($filtro_tipo === 'bus' && $bus_id) {
 } elseif ($filtro_tipo === 'empleador' && $empleador_id) {
     $sql .= " AND b.empleador_id = ? ";
     $params[] = $empleador_id;
+} elseif ($filtro_tipo === 'unidad' && $unidad_id) {
+    $sql = "SELECT COUNT(*) FROM produccion_buses pb
+            JOIN buses b ON pb.bus_id = b.id
+            JOIN terminales t ON b.terminal_id = t.id
+            WHERE MONTH(pb.fecha) = ? AND YEAR(pb.fecha) = ? AND t.unidad_id = ?";
+    $params = [$mes, $anio, $unidad_id];
 }
 
 try {

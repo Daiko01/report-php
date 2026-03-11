@@ -95,7 +95,7 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
         // Configuración DataTable
         const table = $('#tablaResumen').DataTable({
             language: {
-                url: '//cdn.datatables.net/plug-ins/1.13.4/i18n/es-ES.json'
+                url: '<?php echo BASE_URL; ?>/public/assets/vendor/datatables/Spanish.json'
             },
             paging: false, // Mostrar todo para cuadrar caja
             ordering: true, // Permitir ordenar por folio

@@ -226,12 +226,18 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
                                 <div class="card-body">
                                     <h6 class="font-weight-bold text-success mb-3">Tramo A</h6>
                                     <div class="mb-2">
-                                        <label class="small text-muted">Monto Carga ($)</label>
-                                        <input type="number" class="form-control form-control-sm" name="tramo[A][monto]" id="valAMonto" required>
+                                        <label class="small text-muted">Monto Carga</label>
+                                        <div class="input-group input-group-sm">
+                                            <span class="input-group-text">$</span>
+                                            <input type="text" class="form-control currency-input" name="tramo[A][monto]" id="valAMonto" required>
+                                        </div>
                                     </div>
                                     <div>
-                                        <label class="small text-muted">Renta Máxima (Tope $)</label>
-                                        <input type="number" class="form-control form-control-sm" name="tramo[A][tope]" id="valATope" required>
+                                        <label class="small text-muted">Renta Máxima (Tope)</label>
+                                        <div class="input-group input-group-sm">
+                                            <span class="input-group-text">$</span>
+                                            <input type="text" class="form-control currency-input" name="tramo[A][tope]" id="valATope" required>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -243,12 +249,18 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
                                 <div class="card-body">
                                     <h6 class="font-weight-bold text-info mb-3">Tramo B</h6>
                                     <div class="mb-2">
-                                        <label class="small text-muted">Monto Carga ($)</label>
-                                        <input type="number" class="form-control form-control-sm" name="tramo[B][monto]" id="valBMonto" required>
+                                        <label class="small text-muted">Monto Carga</label>
+                                        <div class="input-group input-group-sm">
+                                            <span class="input-group-text">$</span>
+                                            <input type="text" class="form-control currency-input" name="tramo[B][monto]" id="valBMonto" required>
+                                        </div>
                                     </div>
                                     <div>
-                                        <label class="small text-muted">Renta Máxima (Tope $)</label>
-                                        <input type="number" class="form-control form-control-sm" name="tramo[B][tope]" id="valBTope" required>
+                                        <label class="small text-muted">Renta Máxima (Tope)</label>
+                                        <div class="input-group input-group-sm">
+                                            <span class="input-group-text">$</span>
+                                            <input type="text" class="form-control currency-input" name="tramo[B][tope]" id="valBTope" required>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -260,12 +272,18 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
                                 <div class="card-body">
                                     <h6 class="font-weight-bold text-warning mb-3">Tramo C</h6>
                                     <div class="mb-2">
-                                        <label class="small text-muted">Monto Carga ($)</label>
-                                        <input type="number" class="form-control form-control-sm" name="tramo[C][monto]" id="valCMonto" required>
+                                        <label class="small text-muted">Monto Carga</label>
+                                        <div class="input-group input-group-sm">
+                                            <span class="input-group-text">$</span>
+                                            <input type="text" class="form-control currency-input" name="tramo[C][monto]" id="valCMonto" required>
+                                        </div>
                                     </div>
                                     <div>
-                                        <label class="small text-muted">Renta Máxima (Tope $)</label>
-                                        <input type="number" class="form-control form-control-sm" name="tramo[C][tope]" id="valCTope" required>
+                                        <label class="small text-muted">Renta Máxima (Tope)</label>
+                                        <div class="input-group input-group-sm">
+                                            <span class="input-group-text">$</span>
+                                            <input type="text" class="form-control currency-input" name="tramo[C][tope]" id="valCTope" required>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -277,12 +295,18 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
                                 <div class="card-body">
                                     <h6 class="font-weight-bold text-danger mb-3">Tramo D</h6>
                                     <div class="mb-2">
-                                        <label class="small text-muted">Monto Carga ($)</label>
-                                        <input type="number" class="form-control form-control-sm" name="tramo[D][monto]" id="valDMonto" required>
+                                        <label class="small text-muted">Monto Carga</label>
+                                        <div class="input-group input-group-sm">
+                                            <span class="input-group-text">$</span>
+                                            <input type="text" class="form-control currency-input" name="tramo[D][monto]" id="valDMonto" required>
+                                        </div>
                                     </div>
                                     <div>
-                                        <label class="small text-muted">Renta Máxima (Tope $)</label>
-                                        <input type="number" class="form-control form-control-sm" name="tramo[D][tope]" id="valDTope" required>
+                                        <label class="small text-muted">Renta Máxima (Tope)</label>
+                                        <div class="input-group input-group-sm">
+                                            <span class="input-group-text">$</span>
+                                            <input type="text" class="form-control currency-input" name="tramo[D][tope]" id="valDTope" required>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -320,9 +344,36 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
+        // Helper to format number with dots
+        function formatNumber(n) {
+            n = n.replace(/\D/g, "");
+            return n === "" ? "" : Number(n).toLocaleString("es-CL");
+        }
+
+        // Helper to unformat number (remove dots)
+        function unformatNumber(n) {
+            return n.replace(/\./g, "");
+        }
+
+        // Apply formatting to currency inputs
+        document.querySelectorAll('.currency-input').forEach(input => {
+            input.addEventListener('input', function() {
+                const rawValue = unformatNumber(this.value);
+                this.value = formatNumber(rawValue);
+            });
+        });
+
         // Initialize Modal
         const modalEl = document.getElementById('modalEditarTramos');
         const modal = new bootstrap.Modal(modalEl);
+        const form = modalEl.querySelector('form');
+
+        // Unformat values before submitting
+        form.addEventListener('submit', function() {
+            document.querySelectorAll('.currency-input').forEach(input => {
+                input.value = unformatNumber(input.value);
+            });
+        });
 
         document.querySelectorAll('.btn-editar-tramo').forEach(btn => {
             btn.addEventListener('click', function() {
@@ -332,17 +383,17 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
                 document.getElementById('inputMes').value = mes;
                 document.getElementById('lblMes').textContent = mesNom;
 
-                document.getElementById('valAMonto').value = this.dataset.aMonto;
-                document.getElementById('valATope').value = this.dataset.aTope;
+                document.getElementById('valAMonto').value = formatNumber(this.dataset.aMonto);
+                document.getElementById('valATope').value = formatNumber(this.dataset.aTope);
 
-                document.getElementById('valBMonto').value = this.dataset.bMonto;
-                document.getElementById('valBTope').value = this.dataset.bTope;
+                document.getElementById('valBMonto').value = formatNumber(this.dataset.bMonto);
+                document.getElementById('valBTope').value = formatNumber(this.dataset.bTope);
 
-                document.getElementById('valCMonto').value = this.dataset.cMonto;
-                document.getElementById('valCTope').value = this.dataset.cTope;
+                document.getElementById('valCMonto').value = formatNumber(this.dataset.cMonto);
+                document.getElementById('valCTope').value = formatNumber(this.dataset.cTope);
 
-                document.getElementById('valDMonto').value = this.dataset.dMonto;
-                document.getElementById('valDTope').value = this.dataset.dTope;
+                document.getElementById('valDMonto').value = formatNumber(this.dataset.dMonto);
+                document.getElementById('valDTope').value = formatNumber(this.dataset.dTope);
 
                 modal.show();
             });

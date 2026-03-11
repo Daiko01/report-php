@@ -1,5 +1,5 @@
 RewriteEngine On
-RewriteBase /transreport_bp/
+RewriteBase /transreport_sol/
 
 # Dashboard / Home
 RewriteRule ^dashboard$ index.php [L]

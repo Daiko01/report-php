@@ -250,7 +250,7 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
 
         $('#dataTable').DataTable({
             language: {
-                url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json'
+                url: '<?php echo BASE_URL; ?>/public/assets/vendor/datatables/Spanish.json'
             },
             pageLength: 25,
             dom: 'rtip',

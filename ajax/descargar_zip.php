@@ -28,7 +28,7 @@ try {
     // $mes_zip y $ano_zip se usaban para formatear titulo global si fuera necesario, aqui usamos loop
     $formatter = new IntlDateFormatter('es_ES', IntlDateFormatter::LONG, IntlDateFormatter::NONE, null, null, 'LLLL');
 
-    $stmt_sis = $pdo->prepare("SELECT tasa_sis_decimal FROM sis_historico WHERE (ano_inicio < :ano OR (ano_inicio = :ano AND mes_inicio <= :mes)) ORDER BY ano_inicio DESC, mes_inicio DESC LIMIT 1");
+    $stmt_sis = $pdo->prepare("SELECT tasa_sis_decimal FROM sis_historico WHERE (ano_inicio < :ano1 OR (ano_inicio = :ano2 AND mes_inicio <= :mes)) ORDER BY ano_inicio DESC, mes_inicio DESC LIMIT 1");
 
     foreach ($reportes as $r) {
         $empleador_id = $r['empleador_id'];
@@ -145,7 +145,7 @@ try {
         $totales_tabla = ['sueldo_imponible' => 0, 'descuento_afp' => 0, 'descuento_salud' => 0, 'adicional_salud_apv' => 0, 'seguro_cesantia' => 0, 'sindicato' => 0, 'cesantia_licencia_medica' => 0, 'total_descuentos' => 0, 'aportes' => 0, 'asignacion_familiar_calculada' => 0, 'saldo' => 0];
         foreach ($registros as $reg) foreach ($totales_tabla as $key => $value) if (isset($reg[$key])) $totales_tabla[$key] += $reg[$key];
 
-        $stmt_sis->execute(['ano' => $ano, 'mes' => $mes]);
+        $stmt_sis->execute(['ano1' => $ano, 'ano2' => $ano, 'mes' => $mes]);
         $sis_data = $stmt_sis->fetch();
         $TASA_SIS_ACTUAL = $sis_data ? (float)$sis_data['tasa_sis_decimal'] : 0.0;
         if (!defined('TASA_CAP_IND_CONST')) define('TASA_CAP_IND_CONST', 0.001);
@@ -216,7 +216,7 @@ try {
         <div class="info-header">
             <table class="header-table">
                 <tr>
-                    <td class="header-logo">TRANSREPORT<br><span style="font-size:7px; font-weight:normal;">Software de Gestión</span></td>
+                    <td class="header-logo">TRANSREPORT SOL<br><span style="font-size:7px; font-weight:normal;">Software de Gestión</span></td>
                     <td class="header-title">
                         <h1>Planilla de Cotizaciones</h1>
                         <span class="sub-title">PREVISIONALES | MENSUAL</span>

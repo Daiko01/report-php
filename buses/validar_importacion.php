@@ -117,28 +117,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         try {
             $pdo->beginTransaction();
-            $stmt = $pdo->prepare("INSERT INTO produccion_buses 
+            $stmtCheck = $pdo->prepare("SELECT id FROM produccion_buses WHERE bus_id = ? AND nro_guia = ? AND fecha = ? ORDER BY id ASC LIMIT 1");
+
+            $stmtUpdate = $pdo->prepare("UPDATE produccion_buses SET 
+                ingreso=?, gasto_petroleo=?, gasto_boletos=?, gasto_administracion=?, gasto_aseo=?, gasto_viatico=?, gasto_varios=?, pago_conductor=?, aporte_previsional=? 
+                WHERE id = ?");
+
+            $stmtInsert = $pdo->prepare("INSERT INTO produccion_buses 
                 (bus_id, fecha, nro_guia, ingreso, gasto_petroleo, gasto_boletos, gasto_administracion, gasto_aseo, gasto_viatico, gasto_varios, pago_conductor, aporte_previsional) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ON DUPLICATE KEY UPDATE 
-                ingreso=VALUES(ingreso), gasto_petroleo=VALUES(gasto_petroleo), gasto_administracion=VALUES(gasto_administracion), pago_conductor=VALUES(pago_conductor)");
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+
+            // Limpia duplicados accidentales creados por la falta de un índice UNIQUE previo
+            $stmtDeleteDups = $pdo->prepare("DELETE FROM produccion_buses WHERE bus_id = ? AND nro_guia = ? AND fecha = ? AND id != ?");
 
             foreach ($importData as $row) {
                 $d = $row['raw'];
-                $stmt->execute([
-                    $row['bus_id'],
-                    $row['fecha'],
-                    $d[1],
-                    (int)preg_replace('/\D/', '', $d[3]), // ingreso
-                    (int)preg_replace('/\D/', '', $d[4]), // petroleo
-                    (int)preg_replace('/\D/', '', $d[5]), // boletos
-                    (int)preg_replace('/\D/', '', $d[6]), // admin
-                    (int)preg_replace('/\D/', '', $d[7]), // aseo
-                    (int)preg_replace('/\D/', '', $d[8]), // viatico
-                    (int)preg_replace('/\D/', '', $d[10]), // varios
-                    (int)round((int)preg_replace('/\D/', '', $d[3]) * 0.22), // pago cond
-                    (int)preg_replace('/\D/', '', $d[9]) // aportes
-                ]);
+                $bus_id = $row['bus_id'];
+                $fecha = $row['fecha'];
+                $guia = $d[1];
+
+                $ingreso = (int)preg_replace('/\D/', '', $d[3]);
+                $petroleo = (int)preg_replace('/\D/', '', $d[4]);
+                $boletos = (int)preg_replace('/\D/', '', $d[5]);
+                $admin = (int)preg_replace('/\D/', '', $d[6]);
+                $aseo = (int)preg_replace('/\D/', '', $d[7]);
+                $viatico = (int)preg_replace('/\D/', '', $d[8]);
+                $varios = (int)preg_replace('/\D/', '', $d[10]);
+                $pago_cond = (int)round($ingreso * 0.22);
+                $aportes = (int)preg_replace('/\D/', '', $d[9]);
+
+                $stmtCheck->execute([$bus_id, $guia, $fecha]);
+                $existingId = $stmtCheck->fetchColumn();
+
+                if ($existingId) {
+                    $stmtUpdate->execute([$ingreso, $petroleo, $boletos, $admin, $aseo, $viatico, $varios, $pago_cond, $aportes, $existingId]);
+                    $stmtDeleteDups->execute([$bus_id, $guia, $fecha, $existingId]);
+                } else {
+                    $stmtInsert->execute([$bus_id, $fecha, $guia, $ingreso, $petroleo, $boletos, $admin, $aseo, $viatico, $varios, $pago_cond, $aportes]);
+                }
             }
 
             $pdo->commit();

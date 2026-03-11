@@ -128,6 +128,8 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
 
                             <option value="recaudador" <?php echo ($user['role'] == 'recaudador') ? 'selected' : ''; ?>>Recaudador (recaudador)</option>
 
+                            <option value="rrhh" <?php echo ($user['role'] == 'rrhh') ? 'selected' : ''; ?>>Recursos Humanos (rrhh)</option>
+
                         </select>
 
                     </div>

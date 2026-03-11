@@ -174,31 +174,52 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
                     <!-- Campos de Gastos -->
                     <div class="mb-2">
                         <label class="small fw-bold">Admin.</label>
-                        <input type="number" class="form-control form-control-sm input-gasto" name="gasto_administracion" placeholder="0">
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text">$</span>
+                            <input type="text" class="form-control input-gasto format-number" name="gasto_administracion" placeholder="0">
+                        </div>
                     </div>
                     <div class="mb-2">
                         <label class="small fw-bold">Imposiciones</label>
-                        <input type="number" class="form-control form-control-sm input-gasto" name="gasto_imposiciones" placeholder="0">
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text">$</span>
+                            <input type="text" class="form-control input-gasto format-number" name="gasto_imposiciones" placeholder="0">
+                        </div>
                     </div>
                     <div class="mb-2">
                         <label class="small fw-bold">Boletos</label>
-                        <input type="number" class="form-control form-control-sm input-gasto" name="gasto_boletos" placeholder="0">
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text">$</span>
+                            <input type="text" class="form-control input-gasto format-number" name="gasto_boletos" placeholder="0">
+                        </div>
                     </div>
                     <div class="mb-2">
                         <label class="small fw-bold">Aseo</label>
-                        <input type="number" class="form-control form-control-sm input-gasto" name="gasto_aseo" placeholder="0">
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text">$</span>
+                            <input type="text" class="form-control input-gasto format-number" name="gasto_aseo" placeholder="0">
+                        </div>
                     </div>
                     <div class="mb-2">
                         <label class="small fw-bold">Viático</label>
-                        <input type="number" class="form-control form-control-sm input-gasto" name="gasto_viatico" placeholder="0">
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text">$</span>
+                            <input type="text" class="form-control input-gasto format-number" name="gasto_viatico" placeholder="0">
+                        </div>
                     </div>
                     <div class="mb-2">
                         <label class="small fw-bold">Otros / Varios</label>
-                        <input type="number" class="form-control form-control-sm input-gasto" name="gasto_varios" placeholder="0">
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text">$</span>
+                            <input type="text" class="form-control input-gasto format-number" name="gasto_varios" placeholder="0">
+                        </div>
                     </div>
                     <div class="mb-3">
                         <label class="small fw-bold">Petróleo</label>
-                        <input type="number" class="form-control form-control-sm input-gasto" name="gasto_petroleo" placeholder="0">
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text">$</span>
+                            <input type="text" class="form-control input-gasto format-number" name="gasto_petroleo" placeholder="0">
+                        </div>
                     </div>
 
                     <div class="d-grid gap-2 pt-2">
@@ -399,13 +420,13 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
 
                     // Fill Expenses
                     if (gastos) {
-                        $('input[name="gasto_administracion"]').val(gastos.gasto_administracion || '');
-                        $('input[name="gasto_boletos"]').val(gastos.gasto_boletos || '');
-                        $('input[name="gasto_petroleo"]').val(gastos.gasto_petroleo || '');
-                        $('input[name="gasto_aseo"]').val(gastos.gasto_aseo || '');
-                        $('input[name="gasto_viatico"]').val(gastos.gasto_viatico || '');
-                        $('input[name="gasto_varios"]').val(gastos.gasto_varios || '');
-                        $('input[name="gasto_imposiciones"]').val(gastos.gasto_imposiciones || '');
+                        $('input[name="gasto_administracion"]').val(gastos.gasto_administracion ? formatMoney(gastos.gasto_administracion) : '');
+                        $('input[name="gasto_boletos"]').val(gastos.gasto_boletos ? formatMoney(gastos.gasto_boletos) : '');
+                        $('input[name="gasto_petroleo"]').val(gastos.gasto_petroleo ? formatMoney(gastos.gasto_petroleo) : '');
+                        $('input[name="gasto_aseo"]').val(gastos.gasto_aseo ? formatMoney(gastos.gasto_aseo) : '');
+                        $('input[name="gasto_viatico"]').val(gastos.gasto_viatico ? formatMoney(gastos.gasto_viatico) : '');
+                        $('input[name="gasto_varios"]').val(gastos.gasto_varios ? formatMoney(gastos.gasto_varios) : '');
+                        $('input[name="gasto_imposiciones"]').val(gastos.gasto_imposiciones ? formatMoney(gastos.gasto_imposiciones) : '');
                     }
 
                     // Iterar folios y llenar
@@ -460,7 +481,8 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
         function calculateLiquid(ingreso) {
             let egresos = 0;
             $('.input-gasto').each(function() {
-                egresos += parseInt($(this).val()) || 0;
+                let rawVal = String($(this).val()).replace(/\./g, '');
+                egresos += parseInt(rawVal) || 0;
             });
 
             // Use the display total, or Recalculate? Better pass it.
@@ -475,12 +497,20 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
 
         // Listeners for calc
         $(document).on('input', '.folio-inicio, .folio-fin, .input-gasto', function() {
+            if ($(this).hasClass('format-number')) {
+                var val = $(this).val();
+                $(this).val(formatNumberStrict(val));
+            }
             calculateTotals();
         });
 
         // Format Helper
         function formatMoney(n) {
             return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+        }
+
+        function formatNumberStrict(n) {
+            return n.replace(/\D/g, "").replace(/\B(?=(\d{3})+(?!\d))/g, ".");
         }
 
         // --- 4. GUARDADO Y VOUCHER ---
@@ -490,7 +520,19 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
                 return;
             }
 
+            // Desformatear antes de crear FormData
+            $('.format-number').each(function() {
+                var rawVal = String($(this).val()).replace(/\./g, '');
+                $(this).val(rawVal);
+            });
+
             const formData = new FormData($('#formGuia')[0]);
+
+            // Volver a formatear visualmente
+            $('.format-number').each(function() {
+                var val = $(this).val();
+                if (val) $(this).val(formatNumberStrict(val));
+            });
 
             Swal.fire({
                 title: 'Guardando...',
@@ -581,7 +623,7 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
                     // Init DataTables (Standard "Pretty" Mode)
                     $('#historialRapido').DataTable({
                         "language": {
-                            "url": "//cdn.datatables.net/plug-ins/1.13.4/i18n/es-ES.json"
+                            "url": "<?php echo BASE_URL; ?>/public/assets/vendor/datatables/Spanish.json"
                         },
                         "paging": true,
                         "lengthChange": false,

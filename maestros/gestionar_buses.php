@@ -51,41 +51,87 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             }
 
             if (!empty($_POST['bus_id'])) {
-                // Modo Edición
-                $patente = trim($_POST['patentes_input']);
+                // --- MODO EDICIÓN ---
                 $nro_maq = trim($_POST['maquinas_input']);
-                // ELIMINADO: unidad_id. Se deriva de terminal_id
+                $patente = strtoupper(trim($_POST['patentes_input']));
+
+                // 1. Validar duplicado de NÚMERO DE MÁQUINA
+                $chkMaq = $pdo->prepare("
+                    SELECT b.id FROM buses b 
+                    JOIN terminales t ON b.terminal_id = t.id 
+                    JOIN unidades u ON t.unidad_id = u.id 
+                    WHERE b.numero_maquina = ? AND u.empresa_asociada_id = ? AND b.id != ?
+                ");
+                $chkMaq->execute([$nro_maq, ID_EMPRESA_SISTEMA, $_POST['bus_id']]);
+                if ($chkMaq->fetch()) {
+                    throw new Exception("El Número de Máquina '$nro_maq' ya se encuentra registrado en otra unidad del sistema.");
+                }
+
+                // 2. VALIDACIÓN Y NORMALIZACIÓN DE PATENTE
+                if (!empty($patente)) {
+                    if (!preg_match('/^[A-Z]{4}-?[0-9]{2}$/', $patente)) {
+                        throw new Exception("La patente '$patente' no es válida. Formato correcto: 4 Letras y 2 Números (Ej: BBBB-12).");
+                    }
+                    $patente_norm = preg_replace('/^([A-Z]{4})-?([0-9]{2})$/', '$1-$2', $patente); // Con guion
+                    $patente_raw = str_replace('-', '', $patente_norm); // Sin guion
+
+                    // Chequear duplicado patente
+                    $chkPat = $pdo->prepare("SELECT id FROM buses WHERE (patente = ? OR patente = ?) AND id != ?");
+                    $chkPat->execute([$patente_norm, $patente_raw, $_POST['bus_id']]);
+                    if ($chkPat->fetch()) throw new Exception("La patente '$patente_norm' ya pertenece a otro bus registrado.");
+
+                    $patente = $patente_norm;
+                }
+
                 $stmt = $pdo->prepare("UPDATE buses SET empleador_id=?, terminal_id=?, numero_maquina=?, patente=? WHERE id=?");
                 $stmt->execute([$empleador_id, $terminal_id, $nro_maq, $patente, $_POST['bus_id']]);
                 $_SESSION['flash_message'] = ['type' => 'success', 'message' => 'Bus actualizado con éxito.'];
             } else {
-                // Modo Creación (Permite comas para ingreso múltiple)
+                // --- MODO CREACIÓN --- (Permite comas para ingreso múltiple)
                 $maquinas_raw = explode(',', $_POST['maquinas_input']);
                 $patentes_raw = explode(',', $_POST['patentes_input']);
-                // ELIMINADO: unidad_id
                 $stmt = $pdo->prepare("INSERT INTO buses (numero_maquina, empleador_id, terminal_id, patente) VALUES (?, ?, ?, ?)");
 
                 foreach ($maquinas_raw as $index => $nro) {
                     $nro = trim($nro);
                     if (empty($nro)) continue;
-                    $patente = isset($patentes_raw[$index]) ? trim($patentes_raw[$index]) : null;
 
-                    // Evitar duplicados en el mismo sistema
-                    $check = $pdo->prepare("SELECT id FROM buses WHERE numero_maquina = ?");
-                    $check->execute([$nro]);
-                    if ($check->fetch()) continue;
+                    $patente = isset($patentes_raw[$index]) ? strtoupper(trim($patentes_raw[$index])) : null;
 
-                    // En la nueva estructura, terminal_id es CUALQUIER COSA MENOS NULL si queremos unidad.
-                    // Si el usuario no seleccionó terminal, esto fallará silenciósamente o guardará sin unidad (si FK lo permite).
-                    // Como buses_ibfk_3 (terminal) es FK, debe ser válido. 
-                    // Asumimos que la validación HTML5 required en terminal_id está presente o manejada.
+                    // 1. Validar duplicado de NÚMERO DE MÁQUINA
+                    $chkMaq = $pdo->prepare("
+                        SELECT b.id FROM buses b 
+                        JOIN terminales t ON b.terminal_id = t.id 
+                        JOIN unidades u ON t.unidad_id = u.id 
+                        WHERE b.numero_maquina = ? AND u.empresa_asociada_id = ?
+                    ");
+                    $chkMaq->execute([$nro, ID_EMPRESA_SISTEMA]);
+                    if ($chkMaq->fetch()) {
+                        throw new Exception("El Número de Máquina '$nro' ya se encuentra registrado en el sistema. Ingrese uno diferente.");
+                    }
+
+                    // 2. VALIDACIÓN Y NORMALIZACIÓN DE PATENTE
+                    if (!empty($patente)) {
+                        if (!preg_match('/^[A-Z]{4}-?[0-9]{2}$/', $patente)) {
+                            throw new Exception("La patente '$patente' no es válida. Formato correcto: 4 Letras y 2 Números (Ej: BBBB-12).");
+                        }
+                        $patente_norm = preg_replace('/^([A-Z]{4})-?([0-9]{2})$/', '$1-$2', $patente); // Con guion
+                        $patente_raw = str_replace('-', '', $patente_norm); // Sin guion
+
+                        // Chequear duplicado patente
+                        $chkPat = $pdo->prepare("SELECT id FROM buses WHERE (patente = ? OR patente = ?)");
+                        $chkPat->execute([$patente_norm, $patente_raw]);
+                        if ($chkPat->fetch()) throw new Exception("La patente '$patente_norm' ya se encuentra registrada en el sistema.");
+
+                        $patente = $patente_norm;
+                    }
 
                     $stmt->execute([$nro, $empleador_id, $terminal_id, $patente]);
                 }
                 $_SESSION['flash_message'] = ['type' => 'success', 'message' => 'Registros procesados correctamente.'];
             }
         } catch (Exception $e) {
-            $_SESSION['flash_message'] = ['type' => 'error', 'message' => 'Error: ' . $e->getMessage()];
+            $_SESSION['flash_message'] = ['type' => 'error', 'message' => $e->getMessage()];
         }
         header('Location: ' . BASE_URL . '/listado-buses');
         exit;
@@ -111,16 +157,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 $linea++;
                 $procesados++;
 
-                // Nuevo Formato (6 columnas): 
-                // 0:Numero; 1:Patente; 2:Nombre_Dueño; 3:RUT_Dueño; 4:Num_Unidad; 5:Nombre_Terminal
+                // Nuevo Formato (6 columnas)
                 $nro = trim($data[0] ?? '');
-                $patente = trim($data[1] ?? '');
+                $patente = strtoupper(trim($data[1] ?? ''));
                 $nom_emp_ref = trim($data[2] ?? '');
                 $rut_emp = trim($data[3] ?? '');
                 $num_uni = trim($data[4] ?? '');
                 $nom_ter = trim($data[5] ?? '');
 
-                // Normalizar número de unidad: remover prefijos como "UN" → "16"
+                // Normalizar número de unidad
                 $num_uni_norm = preg_replace('/^[^0-9]+/', '', $num_uni);
 
                 if (empty($nro)) {
@@ -128,7 +173,26 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     continue;
                 }
 
-                // 1. Buscar Empleador por RUT en este sistema
+                // VALIDACIÓN Y NORMALIZACIÓN DE PATENTE CSV
+                if (!empty($patente)) {
+                    if (!preg_match('/^[A-Z]{4}-?[0-9]{2}$/', $patente)) {
+                        $errores[] = "Línea $linea: Patente '$patente' tiene formato inválido. Use 4 letras y 2 números (Ej: BBBB-12).";
+                        continue;
+                    }
+                    $patente_norm = preg_replace('/^([A-Z]{4})-?([0-9]{2})$/', '$1-$2', $patente);
+                    $patente_raw = str_replace('-', '', $patente_norm);
+
+                    // Verificar que la patente no le pertenezca a OTRA máquina distinta
+                    $chkPat = $pdo->prepare("SELECT numero_maquina FROM buses WHERE (patente = ? OR patente = ?) AND numero_maquina != ?");
+                    $chkPat->execute([$patente_norm, $patente_raw, $nro]);
+                    if ($chkPat->fetch()) {
+                        $errores[] = "Línea $linea: La patente '$patente_norm' ya pertenece a otro bus registrado.";
+                        continue;
+                    }
+                    $patente = $patente_norm;
+                }
+
+                // 1. Buscar Empleador por RUT
                 $emp_id = null;
                 if (!empty($rut_emp)) {
                     $stmt_e = $pdo->prepare("SELECT id FROM empleadores WHERE rut = ? AND empresa_sistema_id = ? LIMIT 1");
@@ -137,7 +201,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 }
 
                 if (!$emp_id) {
-                    // Si no se encuentra, dejar NULL y reportar
                     $label = !empty($rut_emp) ? "$nom_emp_ref ($rut_emp)" : ($nom_emp_ref ?: "Sin Info");
                     if (!isset($missingOwners[$label])) {
                         $missingOwners[$label] = true;
@@ -145,7 +208,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     $emp_id = null;
                 }
 
-                // 2. Buscar Unidad por número (normalizado) y sistema
+                // 2. Buscar Unidad
                 $uni = $pdo->prepare("SELECT id FROM unidades WHERE numero = ? AND empresa_asociada_id = ? LIMIT 1");
                 $uni->execute([$num_uni_norm, ID_EMPRESA_SISTEMA]);
                 $uni_id = $uni->fetchColumn();
@@ -155,7 +218,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     continue;
                 }
 
-                // 3. Buscar Terminal (AHORA OBLIGATORIO)
+                // 3. Buscar Terminal
                 $ter_id = null;
                 if ($uni_id && !empty($nom_ter)) {
                     $ter = $pdo->prepare("SELECT id FROM terminales WHERE nombre LIKE ? AND unidad_id = ? LIMIT 1");
@@ -170,7 +233,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
                 // 4. Insertar / Actualizar
                 try {
-                    // ELIMINADO: unidad_id
+                    // Si el numero de máquina ya existe, lo actualiza (Ideal para cargas masivas)
                     $ins = $pdo->prepare("INSERT INTO buses (numero_maquina, patente, empleador_id, terminal_id) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE patente=VALUES(patente), empleador_id=VALUES(empleador_id), terminal_id=VALUES(terminal_id)");
                     $ins->execute([$nro, $patente, $emp_id, $ter_id]);
                     $exitosos++;
@@ -184,7 +247,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $msg_missing = '';
             if (!empty($missingOwners)) {
                 $lista = implode("</li><li>", array_keys($missingOwners));
-                $msg_missing = "<div class='mt-2 alert alert-warning'><i class='fas fa-exclamation-triangle'></i> <b>Atención:</b> Se importaron buses sin dueño asignado (RUT no encontrado / No pertenece al sistema).<br><ul class='mb-0 mt-1 small'><li>$lista</li></ul></div>";
+                $msg_missing = "<div class='mt-2 alert alert-warning'><i class='fas fa-exclamation-triangle'></i> <b>Atención:</b> Se importaron buses sin dueño asignado.<br><ul class='mb-0 mt-1 small'><li>$lista</li></ul></div>";
             }
 
             if (count($errores) > 0) {
@@ -213,16 +276,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 }
 
 // --- 2. CARGA DE DATOS (FILTRADOS POR SISTEMA) ---
-// Empleadores del sistema actual
 $empleadores = $pdo->query("SELECT id, nombre, empresa_sistema_id FROM empleadores WHERE empresa_sistema_id = " . ID_EMPRESA_SISTEMA . " ORDER BY nombre")->fetchAll();
-
-// Unidades del sistema actual (14 o 16/17)
 $unidades = $pdo->query("SELECT id, numero, empresa_asociada_id FROM unidades WHERE empresa_asociada_id = " . ID_EMPRESA_SISTEMA)->fetchAll();
-
-// Terminales vinculados a este sistema
 $terminales = $pdo->query("SELECT t.id, t.nombre, t.unidad_id FROM terminales t JOIN unidades u ON t.unidad_id = u.id WHERE u.empresa_asociada_id = " . ID_EMPRESA_SISTEMA)->fetchAll();
 
-// 1. Obtener registros. JOIN U via T
+// 1. Obtener registros
 $sql_buses = "SELECT b.*, 
               e.nombre as nombre_empleador, 
               e.empresa_sistema_id,
@@ -236,8 +294,6 @@ $sql_buses = "SELECT b.*,
               WHERE u.empresa_asociada_id = " . ID_EMPRESA_SISTEMA . "
               ORDER BY CAST(b.numero_maquina AS UNSIGNED) ASC";
 $buses = $pdo->query($sql_buses)->fetchAll();
-
-
 
 $json_unidades = json_encode($unidades, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?: '[]';
 $json_terminales = json_encode($terminales, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?: '[]';
@@ -293,12 +349,13 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
                         </select>
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label fw-bold text-primary">N° de Máquina(s)</label>
-                        <input type="text" class="form-control" name="maquinas_input" id="maquinas_input" placeholder="Ej: 1040, 1041" required>
+                        <label class="form-label fw-bold text-primary">N° de Máquina</label>
+                        <input type="text" class="form-control" name="maquinas_input" id="maquinas_input" placeholder="Ej: 1040" required maxlength="4" oninput="this.value = this.value.replace(/[^0-9]/g, '');">
                     </div>
                     <div class="col-md-4">
                         <label class="form-label fw-bold text-primary">Patente</label>
-                        <input type="text" class="form-control" name="patentes_input" id="patentes_input" placeholder="Ej: ABCD-12">
+                        <input type="text" class="form-control" name="patentes_input" id="patentes_input" placeholder="Ej: BBBB-12" maxlength="7">
+                        <small class="text-muted" style="font-size: 11px;">4 Letras y 2 Números (Ej: BBBB-12)</small>
                     </div>
                     <div class="col-md-4 d-flex align-items-end">
                         <button type="submit" class="btn btn-success w-100 fw-bold shadow-sm">GUARDAR REGISTRO</button>
@@ -315,15 +372,12 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
                 <h6 class="m-0 fw-bold text-primary"><i class="fas fa-list me-1"></i> Flota Registrada (<?= count($buses) ?>)</h6>
 
                 <div class="d-flex align-items-center gap-2">
-                    <!-- Filters Toggle -->
                     <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#filterPanel">
                         <i class="fas fa-filter"></i> Filtros
                     </button>
-                    <!-- Columnas Toggle (Optional, can be added later) -->
                 </div>
             </div>
 
-            <!-- Filter Panel -->
             <div class="collapse border-top bg-light p-3" id="filterPanel">
                 <div class="row g-3">
                     <div class="col-md-3">
@@ -361,7 +415,6 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
                 </div>
             </div>
 
-            <!-- Bulk Actions Toolbar (Hidden by default) -->
             <div id="bulkToolbar" class="mt-2 text-end bg-warning bg-opacity-10 p-2 border-top border-warning" style="display:none;">
                 <span class="text-dark small fw-bold me-2"><span id="selectedCount">0</span> seleccionados</span>
                 <button type="button" class="btn btn-sm btn-danger shadow-sm" onclick="confirmBulkDelete()">
@@ -402,7 +455,7 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
                                     <td><span class="badge bg-light text-dark border">Unidad <?= $b['numero_unidad'] ?></span></td>
                                     <td><span class="small"><?= $b['nombre_terminal'] ?: '<i class="text-muted">No asignado</i>' ?></span></td>
                                     <td class="small fw-bold"><?= $b['nombre_empleador'] ? htmlspecialchars($b['nombre_empleador']) : '<span class="text-danger fst-italic"><i class="fas fa-exclamation-circle"></i> Sin Asignar</span>' ?></td>
-                                    <td><span class="font-monospace"><?= $b['patente'] ?></span></td>
+                                    <td><span class="badge bg-secondary font-monospace fs-6"><?= $b['patente'] ?></span></td>
                                     <td class="text-end pe-4">
                                         <button type="button" class="btn btn-sm btn-outline-primary btn-editar"
                                             data-id="<?= $b['id'] ?>"
@@ -424,9 +477,6 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
                     </table>
                 </div>
             </form>
-            <?php if (empty($buses)): ?>
-                <!-- Empty state handled by Datatables usually, but kept for fallback -->
-            <?php endif; ?>
         </div>
     </div>
 </div>
@@ -440,6 +490,9 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
             </div>
             <div class="modal-body">
                 <p class="small text-muted">Suba un archivo con formato: <code>Numero_Maquina; Patente; Nombre_Dueño; RUT_Dueño; Num_Unidad; Nombre_Terminal</code></p>
+                <div class="alert alert-info py-2 small">
+                    <i class="fas fa-info-circle"></i> La columna de <b>Patente</b> debe tener el formato de 4 letras y 2 números (Ej: BBBB-12).
+                </div>
                 <input type="file" name="archivo_csv" class="form-control" accept=".csv" required>
             </div>
             <div class="modal-footer"><button type="submit" class="btn btn-success fw-bold">PROCESAR ARCHIVO</button></div>
@@ -463,33 +516,26 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
             responsive: true,
             order: [
                 [1, 'asc']
-            ], // Order by Machine Number (Column 1)
+            ],
             columnDefs: [{
                     orderable: false,
                     targets: [0, 6]
-                }, // Disable sorting on Checkbox & Actions
+                },
                 {
                     className: "text-center",
                     targets: [1]
-                } // Center Number
+                }
             ],
             dom: '<"d-flex justify-content-between align-items-center m-2"lf>rt<"d-flex justify-content-between align-items-center m-2"ip>',
             pageLength: 25
         });
 
         // --- EXTERNAL FILTERS ---
-
-        // Custom filtering function
         $.fn.dataTable.ext.search.push(
             function(settings, data, dataIndex) {
                 const fUnidad = $('#filtroUnidad').val();
                 const fEmp = $('#filtroEmpleador').val();
                 const fTerm = $('#filtroTerminal').val();
-
-                // Column indices:
-                // 2: Unidad (contains "Unidad X")
-                // 3: Terminal
-                // 4: Dueño
 
                 const dbUnidad = data[2] || "";
                 const dbTerm = data[3] || "";
@@ -503,7 +549,6 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
             }
         );
 
-        // Event Listeners for Filters
         $('#filtroUnidad, #filtroEmpleador, #filtroTerminal').on('change', function() {
             table.draw();
         });
@@ -515,23 +560,11 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
             table.draw();
         });
 
-
-        // --- EXISTING LOGIC (Updated to work with DataTables) ---
-
-        // Global Select2 is already initialized in footer.php
-        // No need to re-initialize here unless specific config is needed.
-
-        // Helper to update Select2
-        function updateSelect($el, html) {
-            $el.html(html).prop('disabled', false).trigger('change');
-        }
-
-        // 1. Filtrado de Unidades (Edit Form)
+        // 1. Filtrado de Unidades
         $('#empleador_id').on('change', function() {
             const $u = $('#unidad_id');
             const $t = $('#terminal_id');
 
-            // Reset logic
             $u.html('<option value="">Seleccione Unidad...</option>').prop('disabled', true).trigger('change');
             $t.html('<option value="">Sin Terminal / No Aplica</option>').prop('disabled', true).trigger('change');
 
@@ -541,7 +574,6 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
                     unidadesData.forEach(u => {
                         opts += `<option value="${u.id}">Unidad ${u.numero}</option>`;
                     });
-                    // Use the helper or just direct chain
                     $u.html(opts).prop('disabled', false).trigger('change');
                 } else {
                     $u.html('<option disabled>No hay unidades registradas en el sistema</option>').trigger('change');
@@ -549,7 +581,7 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
             }
         });
 
-        // 2. Filtrado de Terminales (Edit Form)
+        // 2. Filtrado de Terminales
         $('#unidad_id').on('change', function() {
             const unidadId = parseInt($(this).val()) || 0;
             const $t = $('#terminal_id');
@@ -571,20 +603,15 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
             }
         });
 
-        // 3. Edición (Cargar Formulario) - USE DELEGATION for DataTables pages
-        // .btn-editar might be on a second page, so use $(document).on
+        // 3. Edición (Cargar Formulario)
         $(document).on('click', '.btn-editar', function() {
             const btn = $(this);
             $('#bus_id').val(btn.data('id'));
             $('#maquinas_input').val(btn.data('nro'));
             $('#patentes_input').val(btn.data('patente'));
 
-            // Select2 requires triggering change
             $('#empleador_id').val(btn.data('emp')).trigger('change');
 
-            // Wait specifically for unit population? Select2 logic above is synchronous enough here
-            // because data is preloaded. But in complex cases might need delay.
-            // For now, assume sync:
             setTimeout(() => {
                 $('#unidad_id').val(btn.data('uni')).trigger('change');
                 setTimeout(() => {
@@ -592,10 +619,8 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
                 }, 50);
             }, 50);
 
-            // Change UI State to Edit
             $('#collapseForm').collapse('show');
             $('#btnCancelar').show();
-            // Scroll to form
             $('html, body').animate({
                 scrollTop: $("#collapseForm").offset().top - 100
             }, 500);
@@ -615,9 +640,6 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
         const $selectedCount = $('#selectedCount');
 
         function updateToolbar() {
-            // Checkboxes in DataTable might be on other pages, but typically we only count visible ones for bulk action
-            // Or we need extensive logic for cross-page selection. 
-            // For now, let's assume we operate on current view's DOM for simplicity or users check "Select All" on current page.
             const count = $('.check-item:checked').length;
             $selectedCount.text(count);
             if (count > 0) {
@@ -627,15 +649,12 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
             }
         }
 
-        // Handle "Select All"
         $checkAll.on('change', function() {
             const isChecked = $(this).is(':checked');
-            // Select only visible rows in current page
             $('.check-item').prop('checked', isChecked);
             updateToolbar();
         });
 
-        // Handle individual checks - Delegation needed
         $(document).on('change', '.check-item', function() {
             const total = $('.check-item').length;
             const checked = $('.check-item:checked').length;
@@ -644,7 +663,6 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
             updateToolbar();
         });
 
-        // DataTable draw event: Re-bind state or uncheck "Select All" if traversing pages
         table.on('draw', function() {
             $checkAll.prop('checked', false);
             updateToolbar();
@@ -659,11 +677,10 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
             }
         };
 
-        // 5. Single Delete Handler - Delegation needed
+        // 5. Single Delete Handler
         $(document).on('click', '.btn-eliminar', function() {
             const id = $(this).data('id');
             if (confirm('¿Está seguro de eliminar este bus?')) {
-                // Create a dynamic form to submit generic delete
                 const form = $('<form method="POST" action="<?php echo BASE_URL; ?>/listado-buses">' +
                     '<input type="hidden" name="csrf_token" value="<?php echo csrf_token(); ?>">' +
                     '<input type="hidden" name="action" value="delete">' +
@@ -673,5 +690,33 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
                 form.submit();
             }
         });
+
+        // --- MÁSCARA INTELIGENTE DE PATENTE ---
+        $('#patentes_input').on('input', function() {
+            // 1. Quitamos todo lo que no sea letra o número
+            let val = $(this).val().toUpperCase().replace(/[^A-Z0-9]/g, '');
+            let result = '';
+
+            // 2. Armamos la patente letra por letra con las reglas
+            for (let i = 0; i < val.length; i++) {
+                if (i < 4) {
+                    // Posición 1 a 4: SOLO LETRAS
+                    if (/[A-Z]/.test(val[i])) {
+                        result += val[i];
+                    }
+                } else if (i < 6) {
+                    // Agregamos el guion automáticamente al llegar al 5to caracter válido
+                    if (i === 4 && result.length === 4) result += '-';
+
+                    // Posición 5 y 6: SOLO NÚMEROS
+                    if (/[0-9]/.test(val[i])) {
+                        result += val[i];
+                    }
+                }
+            }
+            // 3. Devolvemos el texto formateado a la caja
+            $(this).val(result);
+        });
+
     });
 </script>

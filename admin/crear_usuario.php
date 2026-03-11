@@ -110,12 +110,16 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
 
                         <label for="password" class="form-label">Contraseña</label>
 
-                        <input type="password" class="form-control" id="password" name="password" required>
+                        <div class="input-group">
+                            <input type="password" class="form-control" id="password" name="password" required>
+                            <button class="btn btn-outline-secondary border-secondary-subtle" type="button" id="togglePassword">
+                                <i class="fas fa-eye text-muted" id="togglePasswordIcon"></i>
+                            </button>
+                            <div class="invalid-feedback">
 
-                        <div class="invalid-feedback">
+                                La contraseña es obligatoria.
 
-                            La contraseña es obligatoria.
-
+                            </div>
                         </div>
 
                     </div>
@@ -133,6 +137,8 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
                             <option value="admin">Administrador (admin)</option>
 
                             <option value="recaudador">Recaudador (recaudador)</option>
+
+                            <option value="rrhh">Recursos Humanos (rrhh)</option>
 
                         </select>
 
@@ -198,6 +204,20 @@ require_once dirname(__DIR__) . '/app/includes/footer.php';
                 }, false)
 
             })
+
+        // Toggle Password Visibility
+        const togglePassword = document.querySelector('#togglePassword');
+        const password = document.querySelector('#password');
+        const togglePasswordIcon = document.querySelector('#togglePasswordIcon');
+
+        if (togglePassword) {
+            togglePassword.addEventListener('click', function(e) {
+                const type = password.getAttribute('type') === 'password' ? 'text' : 'password';
+                password.setAttribute('type', type);
+                togglePasswordIcon.classList.toggle('fa-eye');
+                togglePasswordIcon.classList.toggle('fa-eye-slash');
+            });
+        }
 
     })()
 </script>

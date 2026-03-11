@@ -214,17 +214,11 @@ foreach ($lista_empleadores as $empleador_id) {
 
 // Mensaje Final
 if ($total_generadas > 0) {
-
-
     $_SESSION['flash_message'] = ['type' => 'success', 'message' => "Proceso Masivo Completo. Se generaron $total_generadas liquidaciones de $empresas_procesadas empresas."];
+    header('Location: ' . BASE_URL . '/listado-liquidaciones?mes=' . $mes . '&ano=' . $ano);
 } else {
     $_SESSION['flash_message'] = ['type' => 'warning', 'message' => "No se generaron liquidaciones. Verifica que existan planillas guardadas para el mes seleccionado."];
+    header('Location: ' . BASE_URL . '/generar-liquidacion');
 }
 
-if (!empty($errores)) {
-    // Podrías guardar los errores en log, por ahora solo mostramos el primero si hubo fallo total
-    // O redirigir a una página de log.
-}
-
-header('Location: ' . BASE_URL . '/listado-liquidaciones?mes=' . $mes . '&ano=' . $ano);
 exit;

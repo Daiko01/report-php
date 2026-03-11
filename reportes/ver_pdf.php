@@ -311,7 +311,7 @@ try {
         <table class="header-table">
             <tr>
                 <td class="header-logo">
-                    TRANSREPORT<br><span style="color:#718096; font-weight:normal; font-size: 8pt;">Software de Gestión</span>
+                    TRANSREPORT SOL<br><span style="color:#718096; font-weight:normal; font-size: 8pt;">Software de Gestión</span>
                 </td>
                 <td class="header-title">
                     <h1>Planilla de Cotizaciones Previsionales</h1>
@@ -326,7 +326,7 @@ try {
         </table>
     </div>';
     $mpdf->SetHTMLHeader($header_html);
-    $footer_html = '<table width="100%" style="font-size: 8pt; color: #888;"><tr><td width="50%">Reporte generado por Sistema de Reportes Transreport.</td><td width="50%" style="text-align: right;">Página {PAGENO} de {nbpg}</td></tr></table>';
+    $footer_html = '<table width="100%" style="font-size: 8pt; color: #888;"><tr><td width="50%">Reporte generado por Sistema de Reportes TransReport Sol.</td><td width="50%" style="text-align: right;">Página {PAGENO} de {nbpg}</td></tr></table>';
     $mpdf->SetHTMLFooter($footer_html);
 
     $mpdf->WriteHTML($css, \Mpdf\HTMLParserMode::HEADER_CSS);

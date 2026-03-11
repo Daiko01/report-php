@@ -54,7 +54,7 @@ class CalculoPlanillaService
         $this->stmt_afp_comision = $this->pdo->prepare("
             SELECT comision_decimal FROM afp_comisiones_historicas 
             WHERE afp_id = :afp_id 
-              AND (ano_inicio < :ano OR (ano_inicio = :ano AND mes_inicio <= :mes))
+              AND (ano_inicio < :ano OR (ano_inicio = :ano2 AND mes_inicio <= :mes))
             ORDER BY ano_inicio DESC, mes_inicio DESC 
             LIMIT 1
         ");
@@ -191,6 +191,7 @@ class CalculoPlanillaService
                         $this->stmt_afp_comision->execute([
                             'afp_id' => $trabajador['afp_id'],
                             'ano' => $ano,
+                            'ano2' => $ano,
                             'mes' => $mes
                         ]);
                         $comision_data = $this->stmt_afp_comision->fetch(PDO::FETCH_ASSOC);

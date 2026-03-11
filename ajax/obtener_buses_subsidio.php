@@ -7,6 +7,7 @@ header('Content-Type: application/json');
 $mes = isset($_GET['mes']) ? (int)$_GET['mes'] : 0;
 $anio = isset($_GET['anio']) ? (int)$_GET['anio'] : 0;
 $empleador_id = isset($_GET['empleador_id']) ? (int)$_GET['empleador_id'] : 0;
+$unidad_id = isset($_GET['unidad_id']) ? (int)$_GET['unidad_id'] : 0;
 
 if ($mes <= 0 || $mes > 12 || $anio < 2000) {
     echo json_encode(['success' => false, 'message' => 'Parámetros de fecha inválidos.']);
@@ -22,7 +23,11 @@ try {
             JOIN produccion_buses pb ON pb.bus_id = b.id AND MONTH(pb.fecha) = ? AND YEAR(pb.fecha) = ? ";
 
     $params = [$mes, $anio];
-    if ($empleador_id > 0) {
+
+    if ($unidad_id > 0) {
+        $sql .= " JOIN terminales t ON b.terminal_id = t.id WHERE t.unidad_id = ? ";
+        $params[] = $unidad_id;
+    } elseif ($empleador_id > 0) {
         $sql .= " WHERE b.empleador_id = ? ";
         $params[] = $empleador_id;
     }

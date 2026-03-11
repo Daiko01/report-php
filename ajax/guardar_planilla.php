@@ -34,8 +34,8 @@ $tasa_mutual_decimal = $stmt_emp->fetchColumn() ?: 0.0;
 $tasa_mutual_aplicada = $tasa_mutual_decimal * 100; // Guardamos en porcentaje %
 
 // SIS (Global vigente)
-$stmt_sis = $pdo->prepare("SELECT tasa_sis_decimal FROM sis_historico WHERE (ano_inicio < :ano OR (ano_inicio = :ano AND mes_inicio <= :mes)) ORDER BY ano_inicio DESC, mes_inicio DESC LIMIT 1");
-$stmt_sis->execute(['ano' => $ano, 'mes' => $mes]);
+$stmt_sis = $pdo->prepare("SELECT tasa_sis_decimal FROM sis_historico WHERE (ano_inicio < :ano OR (ano_inicio = :ano2 AND mes_inicio <= :mes)) ORDER BY ano_inicio DESC, mes_inicio DESC LIMIT 1");
+$stmt_sis->execute(['ano' => $ano, 'ano2' => $ano, 'mes' => $mes]);
 $tasa_sis_decimal = $stmt_sis->fetchColumn() ?: 0.0;
 $sis_aplicado = $tasa_sis_decimal * 100; // Guardamos en porcentaje %
 

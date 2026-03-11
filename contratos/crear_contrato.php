@@ -84,7 +84,7 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
                         <label for="sueldo_imponible" class="form-label fw-bold">Sueldo Base (Imponible)</label>
                         <div class="input-group">
                             <span class="input-group-text">$</span>
-                            <input type="number" class="form-control" id="sueldo_imponible" name="sueldo_imponible" required placeholder="0">
+                            <input type="text" class="form-control format-number" id="sueldo_imponible" name="sueldo_imponible" required placeholder="0">
                         </div>
                     </div>
 
@@ -92,7 +92,7 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
                         <label for="pacto_colacion" class="form-label">Asignación Colación (Fijo)</label>
                         <div class="input-group">
                             <span class="input-group-text">$</span>
-                            <input type="number" class="form-control" id="pacto_colacion" name="pacto_colacion" value="0">
+                            <input type="text" class="form-control format-number" id="pacto_colacion" name="pacto_colacion" value="0">
                         </div>
                     </div>
 
@@ -100,7 +100,7 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
                         <label for="pacto_movilizacion" class="form-label">Asignación Movilización (Fijo)</label>
                         <div class="input-group">
                             <span class="input-group-text">$</span>
-                            <input type="number" class="form-control" id="pacto_movilizacion" name="pacto_movilizacion" value="0">
+                            <input type="text" class="form-control format-number" id="pacto_movilizacion" name="pacto_movilizacion" value="0">
                         </div>
                     </div>
                 </div>
@@ -146,5 +146,33 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
 
         $tipoContrato.on('change', toggleFields);
         toggleFields(); // Ejecutar al cargar
+
+        // Formato Moneda (Separador de miles)
+        function formatNumber(n) {
+            return n.replace(/\D/g, "").replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+        }
+
+        $('.format-number').on('input', function() {
+            var val = $(this).val();
+            var formatted = formatNumber(val);
+            $(this).val(formatted);
+        });
+
+        // Formatear al inicio si tiene valor por defecto
+        $('.format-number').each(function() {
+            var val = $(this).val();
+            if (val) {
+                $(this).val(formatNumber(val));
+            }
+        });
+
+        // Limpiar formato antes de enviar el formulario
+        $('#form-contrato').on('submit', function() {
+            $('.format-number').each(function() {
+                var rawVal = String($(this).val()).replace(/\./g, '');
+                $(this).val(rawVal);
+            });
+            return true;
+        });
     });
 </script>

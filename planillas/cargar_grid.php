@@ -54,14 +54,14 @@ try {
             -- Sueldo Base: Último anexo con sueldo > 0, o el del contrato original
             COALESCE(
                 (SELECT nuevo_sueldo FROM anexos_contrato ac 
-                 WHERE ac.contrato_id = c.id AND ac.fecha_anexo <= :ultimo_dia AND ac.nuevo_sueldo > 0 
+                 WHERE ac.contrato_id = c.id AND ac.fecha_anexo <= :ultimo_dia1 AND ac.nuevo_sueldo > 0 
                  ORDER BY ac.fecha_anexo DESC LIMIT 1),
                 c.sueldo_imponible
             ) as sueldo_base,
             -- Part Time: Último anexo con valor definido (no null), o el del contrato original (default 0)
             COALESCE(
                 (SELECT nuevo_es_part_time FROM anexos_contrato ac 
-                 WHERE ac.contrato_id = c.id AND ac.fecha_anexo <= :ultimo_dia AND ac.nuevo_es_part_time IS NOT NULL 
+                 WHERE ac.contrato_id = c.id AND ac.fecha_anexo <= :ultimo_dia2 AND ac.nuevo_es_part_time IS NOT NULL 
                  ORDER BY ac.fecha_anexo DESC LIMIT 1),
                 c.es_part_time,
                 0
@@ -69,16 +69,19 @@ try {
         FROM trabajadores t
         JOIN contratos c ON t.id = c.trabajador_id 
         WHERE c.empleador_id = :eid
-        AND c.fecha_inicio <= :ultimo_dia
-        AND (c.fecha_termino IS NULL OR c.fecha_termino >= :primer_dia)
-        AND (c.fecha_finiquito IS NULL OR c.fecha_finiquito >= :primer_dia)
+        AND c.fecha_inicio <= :ultimo_dia3
+        AND (c.fecha_termino IS NULL OR c.fecha_termino >= :primer_dia1)
+        AND (c.fecha_finiquito IS NULL OR c.fecha_finiquito >= :primer_dia2)
         GROUP BY t.id, c.id
         ORDER BY t.nombre
     ");
     $trabajadores->execute([
         'eid' => $empleador_id,
-        'primer_dia' => $primer_dia_mes,
-        'ultimo_dia' => $ultimo_dia_mes
+        'primer_dia1' => $primer_dia_mes,
+        'primer_dia2' => $primer_dia_mes,
+        'ultimo_dia1' => $ultimo_dia_mes,
+        'ultimo_dia2' => $ultimo_dia_mes,
+        'ultimo_dia3' => $ultimo_dia_mes
     ]);
     $trabajadores = $trabajadores->fetchAll();
     // (Bucle N+1 eliminado porque los datos ya vienen en la consulta)
@@ -87,10 +90,10 @@ try {
                             c.sueldo_imponible as sueldo_base_contrato
                      FROM planillas_mensuales p
                      JOIN trabajadores t ON p.trabajador_id = t.id
-                     LEFT JOIN contratos c ON t.id = c.trabajador_id AND c.esta_finiquitado = 0 AND c.empleador_id = :eid
-                     WHERE p.empleador_id = :eid AND p.mes = :mes AND p.ano = :ano";
+                     LEFT JOIN contratos c ON t.id = c.trabajador_id AND c.esta_finiquitado = 0 AND c.empleador_id = :eid1
+                     WHERE p.empleador_id = :eid2 AND p.mes = :mes AND p.ano = :ano";
     $stmt_p = $pdo->prepare($sql_planilla);
-    $stmt_p->execute(['eid' => $empleador_id, 'mes' => $mes, 'ano' => $ano]);
+    $stmt_p->execute(['eid1' => $empleador_id, 'eid2' => $empleador_id, 'mes' => $mes, 'ano' => $ano]);
     $planilla_guardada = $stmt_p->fetchAll();
 } catch (PDOException $e) {
     die("Error: " . $e->getMessage());

@@ -61,7 +61,7 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
 
                             <span class="input-group-text">$</span>
 
-                            <input type="number" class="form-control" id="descuento" name="descuento" value="<?php echo $sindicato['descuento']; ?>" required>
+                            <input type="text" class="form-control currency-input" id="descuento" name="descuento" value="<?php echo number_format($sindicato['descuento'], 0, ',', '.'); ?>" required>
 
                         </div>
 
@@ -84,3 +84,37 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
 </div>
 
 <?php require_once dirname(__DIR__) . '/app/includes/footer.php'; ?>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Helper to format number with dots
+        function formatNumber(n) {
+            n = n.replace(/\D/g, "");
+            return n === "" ? "" : Number(n).toLocaleString("es-CL");
+        }
+
+        // Helper to unformat number (remove dots)
+        function unformatNumber(n) {
+            return n.replace(/\./g, "");
+        }
+
+        // Apply formatting to currency inputs
+        const discountInput = document.querySelector('.currency-input');
+        if (discountInput) {
+            discountInput.addEventListener('input', function() {
+                const rawValue = unformatNumber(this.value);
+                this.value = formatNumber(rawValue);
+            });
+        }
+
+        // Unformat values before submitting
+        const form = document.querySelector('form');
+        if (form) {
+            form.addEventListener('submit', function() {
+                document.querySelectorAll('.currency-input').forEach(input => {
+                    input.value = unformatNumber(input.value);
+                });
+            });
+        }
+    });
+</script>

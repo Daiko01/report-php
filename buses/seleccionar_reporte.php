@@ -63,6 +63,7 @@ $empleadores = $pdo->query("SELECT id, nombre, rut FROM empleadores ORDER BY nom
                             <label class="small fw-bold text-muted mb-1"><i class="fas fa-filter me-1"></i> Tipo de Filtro</label>
                             <select name="filtro_tipo" id="filtro_tipo" class="form-select form-select-lg shadow-sm border-left-primary">
                                 <option value="todos">Todos los Buses</option>
+                                <option value="unidad">Por Unidad Operativa</option>
                                 <option value="bus">Por Máquina Individual</option>
                                 <option value="empleador">Por Empleador</option>
                             </select>
@@ -78,6 +79,13 @@ $empleadores = $pdo->query("SELECT id, nombre, rut FROM empleadores ORDER BY nom
                                         <?php foreach ($buses as $b): ?>
                                             <option value="<?= $b['id'] ?>">Nº <?= $b['numero_maquina'] ?> - <?= $b['patente'] ?></option>
                                         <?php endforeach; ?>
+                                    </select>
+                                </div>
+
+                                <div id="row_unidad" style="display:none;">
+                                    <label class="small fw-bold text-primary mb-1">Seleccione Unidad Operativa</label>
+                                    <select name="unidad_id" id="unidad_id" class="form-select select2 w-100">
+                                        <option value="">Cargando unidades...</option>
                                     </select>
                                 </div>
 
@@ -184,11 +192,15 @@ $empleadores = $pdo->query("SELECT id, nombre, rut FROM empleadores ORDER BY nom
         $('#filtro_tipo').on('change', function() {
             let val = $(this).val();
             $('#dynamic-options').hide();
-            $('#row_bus, #row_empleador').hide();
+            $('#row_bus, #row_unidad, #row_empleador').hide();
 
             if (val === 'bus') {
                 $('#dynamic-options').slideDown();
                 $('#row_bus').show();
+            }
+            if (val === 'unidad') {
+                $('#dynamic-options').slideDown();
+                $('#row_unidad').show();
             }
             if (val === 'empleador') {
                 $('#dynamic-options').slideDown();
@@ -304,6 +316,28 @@ $empleadores = $pdo->query("SELECT id, nombre, rut FROM empleadores ORDER BY nom
                     }
                 }
             });
+
+            // Cargar Unidades Operativas
+            $.ajax({
+                url: '<?php echo BASE_URL; ?>/ajax/get_unidades_by_date.php',
+                type: 'GET',
+                data: {
+                    mes: mes,
+                    anio: anio
+                },
+                dataType: 'json',
+                success: function(res) {
+                    let selectUni = $('#unidad_id');
+                    selectUni.empty();
+                    if (res.success && res.data.length > 0) {
+                        res.data.forEach(function(u) {
+                            selectUni.append(new Option('Unidad ' + u.numero, u.id));
+                        });
+                    } else {
+                        selectUni.append(new Option('Sin unidades con liquidaciones activas', ''));
+                    }
+                }
+            });
         }
 
         // Llamar en change
@@ -325,19 +359,18 @@ $empleadores = $pdo->query("SELECT id, nombre, rut FROM empleadores ORDER BY nom
         $('#offcanvasSubsidios').on('show.bs.offcanvas', function() {
             let mes = $('select[name="mes"]').val();
             let anio = $('input[name="anio"]').val();
-            let empId = $('select[name="empleador_id"]').val() || 0;
-            // Si el filtro no es empleador, mandamos 0 para traer todos
-            if ($('#filtro_tipo').val() !== 'empleador') {
-                empId = 0;
-            }
+
+            let filtro_tipo = $('#filtro_tipo').val();
+            let empId = (filtro_tipo === 'empleador') ? $('select[name="empleador_id"]').val() : 0;
+            let uniId = (filtro_tipo === 'unidad') ? $('select[name="unidad_id"]').val() : 0;
 
             let textoMes = $('select[name="mes"] option:selected').text();
             $('#lblMesAnioData').text(textoMes + ' ' + anio);
 
-            cargarTablaSubsidios(mes, anio, empId);
+            cargarTablaSubsidios(mes, anio, empId, uniId);
         });
 
-        function cargarTablaSubsidios(mes, anio, empId) {
+        function cargarTablaSubsidios(mes, anio, empId, uniId) {
             $('#loaderSubsidios').removeClass('d-none').addClass('d-flex');
 
             $.ajax({
@@ -346,7 +379,8 @@ $empleadores = $pdo->query("SELECT id, nombre, rut FROM empleadores ORDER BY nom
                 data: {
                     mes: mes,
                     anio: anio,
-                    empleador_id: empId
+                    empleador_id: empId,
+                    unidad_id: uniId
                 },
                 dataType: 'json',
                 success: function(res) {

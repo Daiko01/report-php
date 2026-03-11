@@ -150,9 +150,16 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
             <h1 class="h4 mb-0 text-gray-800 fw-bold">Gestión de Contratos</h1>
             <p class="small text-muted mb-0">Mostrando <span class="badge bg-dark rounded-pill"><?php echo $total_records; ?></span> resultados</p>
         </div>
-        <a href="<?php echo BASE_URL; ?>/crear-contrato" class="btn btn-primary btn-sm px-4 fw-bold shadow-sm rounded-pill">
-            <i class="fas fa-plus me-1"></i> NUEVO CONTRATO
-        </a>
+        <div>
+            <?php if (isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'admin'): ?>
+                <button id="btnEliminarMasivo" class="btn btn-danger btn-sm shadow-sm rounded-pill px-3 me-2" style="display: none;">
+                    <i class="fas fa-trash-alt me-2"></i>Eliminar Seleccionados (<span id="countSeleccionados">0</span>)
+                </button>
+            <?php endif; ?>
+            <a href="<?php echo BASE_URL; ?>/crear-contrato" class="btn btn-primary btn-sm px-4 fw-bold shadow-sm rounded-pill">
+                <i class="fas fa-plus me-1"></i> NUEVO CONTRATO
+            </a>
+        </div>
     </div>
 
     <!-- Sección de Filtros Externa (NUEVA) -->
@@ -193,9 +200,14 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
     </div>
 
     <div id="tableContainer" class="table-responsive shadow-sm rounded-3 bg-white">
-        <table class="table table-modern table-hover align-middle mb-0 datatable-es" id="tablaContratos">
+        <table class="table table-modern table-hover align-middle mb-0 datatable-es" id="tablaContratos" width="100%">
             <thead class="bg-light">
                 <tr class="small text-muted fw-bold">
+                    <?php if (isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'admin'): ?>
+                        <th class="text-center" style="width: 40px;">
+                            <input type="checkbox" id="cbSelectAll" class="form-check-input">
+                        </th>
+                    <?php endif; ?>
                     <th class="ps-4">TRABAJADOR</th>
                     <th>EMPLEADOR</th>
                     <th>PERIODO</th>
@@ -248,6 +260,11 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
                     }
                 ?>
                     <tr>
+                        <?php if (isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'admin'): ?>
+                            <td class="text-center">
+                                <input type="checkbox" class="form-check-input cb-contrato" value="<?php echo $c['id']; ?>">
+                            </td>
+                        <?php endif; ?>
                         <td class="ps-4">
                             <div class="fw-bold text-dark mb-0"><?php echo htmlspecialchars($c['trabajador_nombre']); ?></div>
                             <div class="text-muted small"><?php echo $c['trabajador_rut']; ?></div>
@@ -282,6 +299,9 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
 
 <script>
     $(document).ready(function() {
+        const isAdminUser = <?php echo (isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'admin') ? 'true' : 'false'; ?>;
+        const colOffset = isAdminUser ? 1 : 0;
+
         // --- CONFIGURACIÓN DATATABLES ---
         var table = $('#tablaContratos').DataTable({
             language: {
@@ -291,7 +311,7 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
             orderCellsTop: true,
             fixedHeader: true,
             order: [
-                [2, "desc"]
+                [2 + colOffset, "desc"]
             ], // Ordenar por fecha inicio desc
 
             // Updated DOM with better structure and padding classes
@@ -326,7 +346,7 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
                     }
                 }
 
-                populateSelect(1, '#filterEmpleador');
+                populateSelect(1 + colOffset, '#filterEmpleador');
                 // Estado is now hardcoded in HTML for specific options requested
             }
         });
@@ -340,16 +360,16 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
                 const fEstado = $('#filterEstado').val();
 
                 // Column indices:
-                // 1: Empleador
-                // 4: Estado (w/ HTML)
+                // 1 + colOffset: Empleador
+                // 4 + colOffset: Estado (w/ HTML)
 
-                const cellEmp = data[1] || "";
-                const cellEstado = data[4] || "";
+                const cellEmp = data[1 + colOffset] || "";
+                const cellEstado = data[4 + colOffset] || "";
 
                 if (fEmp && !cellEmp.includes(fEmp)) return false;
 
                 // Custom Logic for Status using data-attribute
-                const node = settings.aoData[dataIndex].anCells[4];
+                const node = settings.aoData[dataIndex].anCells[4 + colOffset];
                 const statusValue = $(node).data('status');
 
                 // Strict match since visual options match data-status values
@@ -374,6 +394,77 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
 
             // Reset DataTable Search (Global + Columns)
             table.search('').columns().search('').draw();
+        });
+
+        // LÓGICA DE CHECKBOXES MASIVOS
+        function updateBulkDeleteButton() {
+            let count = $('.cb-contrato:checked').length;
+            if (count > 0) {
+                $('#countSeleccionados').text(count);
+                $('#btnEliminarMasivo').fadeIn();
+            } else {
+                $('#btnEliminarMasivo').fadeOut();
+            }
+        }
+
+        $('#cbSelectAll').on('change', function() {
+            let isChecked = $(this).is(':checked');
+            $('.cb-contrato').prop('checked', isChecked);
+            updateBulkDeleteButton();
+        });
+
+        $('#tablaContratos tbody').on('change', '.cb-contrato', function() {
+            let total = $('.cb-contrato').length;
+            let checked = $('.cb-contrato:checked').length;
+            $('#cbSelectAll').prop('checked', total === checked && total > 0);
+            updateBulkDeleteButton();
+        });
+
+        $('#btnEliminarMasivo').on('click', function() {
+            let selectedIds = [];
+            $('.cb-contrato:checked').each(function() {
+                selectedIds.push($(this).val());
+            });
+
+            if (selectedIds.length === 0) return;
+
+            Swal.fire({
+                title: `¿Eliminar ${selectedIds.length} contrato(s)?`,
+                text: "Esta acción es IRREVERSIBLE. Se eliminarán permanentemente junto con sus anexos.",
+                icon: 'error',
+                showCancelButton: true,
+                confirmButtonColor: '#e74a3b',
+                cancelButtonColor: '#858796',
+                confirmButtonText: '<i class="fas fa-trash-alt me-1"></i> Sí, eliminar todo',
+                cancelButtonText: 'Cancelar',
+                reverseButtons: true
+            }).then((res) => {
+                if (res.isConfirmed) {
+                    Swal.showLoading();
+                    const formData = new FormData();
+                    formData.append('ids', JSON.stringify(selectedIds));
+
+                    fetch('<?php echo BASE_URL; ?>/ajax/eliminar_contrato_masivo.php', {
+                            method: 'POST',
+                            body: formData
+                        })
+                        .then(r => r.json())
+                        .then(res => {
+                            if (res.success) {
+                                Swal.fire({
+                                    title: '¡Eliminados!',
+                                    text: res.message,
+                                    icon: 'success'
+                                }).then(() => {
+                                    window.location.reload();
+                                });
+                            } else {
+                                Swal.fire('Error', res.message, 'error');
+                            }
+                        })
+                        .catch(() => Swal.fire('Error', 'Fallo de conexión o error en el servidor', 'error'));
+                }
+            });
         });
     });
 </script>

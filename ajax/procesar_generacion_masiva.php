@@ -63,8 +63,8 @@ try {
     $stmt_insert = $pdo->prepare($sql_insert);
 
     // Obtener SIS vigente (Global) - Copiado de guardar_planilla.php
-    $stmt_sis = $pdo->prepare("SELECT tasa_sis_decimal FROM sis_historico WHERE (ano_inicio < :ano OR (ano_inicio = :ano AND mes_inicio <= :mes)) ORDER BY ano_inicio DESC, mes_inicio DESC LIMIT 1");
-    $stmt_sis->execute(['ano' => $ano, 'mes' => $mes]);
+    $stmt_sis = $pdo->prepare("SELECT tasa_sis_decimal FROM sis_historico WHERE (ano_inicio < :ano OR (ano_inicio = :ano2 AND mes_inicio <= :mes)) ORDER BY ano_inicio DESC, mes_inicio DESC LIMIT 1");
+    $stmt_sis->execute(['ano' => $ano, 'ano2' => $ano, 'mes' => $mes]);
     $tasa_sis_decimal = $stmt_sis->fetchColumn() ?: 0.0;
     $sis_aplicado = $tasa_sis_decimal * 100;
 
@@ -106,12 +106,12 @@ try {
             JOIN trabajadores t ON c.trabajador_id = t.id
             WHERE c.empleador_id = :eid
               AND c.fecha_inicio <= :ultimo_dia
-              AND (c.fecha_termino IS NULL OR c.fecha_termino >= :primer_dia)
-              AND (c.fecha_finiquito IS NULL OR c.fecha_finiquito >= :primer_dia)
+              AND (c.fecha_termino IS NULL OR c.fecha_termino >= :primer_dia1)
+              AND (c.fecha_finiquito IS NULL OR c.fecha_finiquito >= :primer_dia2)
             ORDER BY c.fecha_inicio DESC
         ";
         $stmt_c = $pdo->prepare($sql_contratos);
-        $stmt_c->execute(['eid' => $empleador_id, 'ultimo_dia' => $ultimo_dia, 'primer_dia' => $primer_dia]);
+        $stmt_c->execute(['eid' => $empleador_id, 'ultimo_dia' => $ultimo_dia, 'primer_dia1' => $primer_dia, 'primer_dia2' => $primer_dia]);
         $contratos = $stmt_c->fetchAll(PDO::FETCH_ASSOC);
 
         if (empty($contratos)) {

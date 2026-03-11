@@ -45,12 +45,12 @@ $sql_contratos = "SELECT c.*, t.rut as rut_trabajador
                   JOIN trabajadores t ON c.trabajador_id = t.id
                   WHERE c.empleador_id = :eid
                   AND c.fecha_inicio <= :ultimo_dia
-                  AND (c.fecha_termino IS NULL OR c.fecha_termino >= :primer_dia)
-                  AND (c.fecha_finiquito IS NULL OR c.fecha_finiquito >= :primer_dia)
+                  AND (c.fecha_termino IS NULL OR c.fecha_termino >= :primer_dia1)
+                  AND (c.fecha_finiquito IS NULL OR c.fecha_finiquito >= :primer_dia2)
 ";
 
 $stmt_contratos = $pdo->prepare($sql_contratos);
-$stmt_contratos->execute([':eid' => $empleador_id, ':ultimo_dia' => $ultimo_dia, ':primer_dia' => $primer_dia]);
+$stmt_contratos->execute([':eid' => $empleador_id, ':ultimo_dia' => $ultimo_dia, ':primer_dia1' => $primer_dia, ':primer_dia2' => $primer_dia]);
 $contratos_vigentes = $stmt_contratos->fetchAll();
 
 if (empty($contratos_vigentes)) {

@@ -41,6 +41,7 @@ try {
     $filtro_tipo = $_REQUEST['filtro_tipo'] ?? 'todos';
     $bus_id = isset($_REQUEST['bus_id']) ? (int)$_REQUEST['bus_id'] : 0;
     $empleador_id = isset($_REQUEST['empleador_id']) ? (int)$_REQUEST['empleador_id'] : 0;
+    $unidad_id = isset($_REQUEST['unidad_id']) ? (int)$_REQUEST['unidad_id'] : 0;
 
     // Subsidio Masivo
     $aplicar_subsidio = isset($_REQUEST['aplicar_subsidio']) ? (int)$_REQUEST['aplicar_subsidio'] : 0;
@@ -73,6 +74,17 @@ try {
     } elseif ($filtro_tipo === 'empleador' && $empleador_id) {
         $sqlBuses .= " AND b.empleador_id = ? ";
         $params[] = $empleador_id;
+    } elseif ($filtro_tipo === 'unidad' && $unidad_id) {
+        // Redefinimos la consulta para incluir el JOIN con terminales
+        $sqlBuses = "SELECT DISTINCT pb.bus_id, b.numero_maquina, b.patente, b.empleador_id,
+                            e.nombre as empleador_nombre, e.rut as empleador_rut
+                     FROM produccion_buses pb
+                     JOIN buses b ON pb.bus_id = b.id
+                     JOIN terminales t ON b.terminal_id = t.id
+                     JOIN empleadores e ON b.empleador_id = e.id
+                     WHERE MONTH(pb.fecha) = ? AND YEAR(pb.fecha) = ? 
+                     AND t.unidad_id = ?";
+        $params = [$mes, $anio, $unidad_id];
     }
 
     $sqlBuses .= " ORDER BY CAST(b.numero_maquina AS UNSIGNED) ASC";

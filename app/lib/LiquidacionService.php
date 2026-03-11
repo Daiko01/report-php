@@ -1,10 +1,11 @@
 <?php
 require_once __DIR__ . '/CalculoPlanillaService.php';
 
-class LiquidacionService {
+class LiquidacionService
+{
     private $pdo;
     private $calculoPrevisional;
-    
+
     // Preparar statements para optimizar
     private $stmt_utm;
     private $stmt_tramos;
@@ -14,9 +15,10 @@ class LiquidacionService {
     private $cache_tramos = [];
     private $cache_cargado = false;
 
-    const TOPE_GRATIFICACION = 203125; 
+    const TOPE_GRATIFICACION = 203125;
 
-    public function __construct(PDO $pdo) {
+    public function __construct(PDO $pdo)
+    {
         $this->pdo = $pdo;
         $this->calculoPrevisional = new CalculoPlanillaService($pdo);
 
@@ -24,7 +26,7 @@ class LiquidacionService {
         $this->stmt_utm = $this->pdo->prepare("
             SELECT valor_utm 
             FROM utm_valores 
-            WHERE (ano < :ano OR (ano = :ano AND mes <= :mes))
+            WHERE (ano < :ano1 OR (ano = :ano2 AND mes <= :mes))
             ORDER BY ano DESC, mes DESC 
             LIMIT 1
         ");
@@ -37,9 +39,10 @@ class LiquidacionService {
      * Pre-carga datos globales para el mes indicado.
      * Esto evita hacer query de UTM y Tramos por cada trabajador.
      */
-    public function setPeriodo($mes, $ano) {
+    public function setPeriodo($mes, $ano)
+    {
         // 1. Cargar UTM
-        $this->stmt_utm->execute([':ano' => $ano, ':mes' => $mes]);
+        $this->stmt_utm->execute([':ano1' => $ano, ':ano2' => $ano, ':mes' => $mes]);
         $val = $this->stmt_utm->fetchColumn();
         $this->cache_utm_valor = $val ? (int)$val : 0;
 
@@ -53,12 +56,13 @@ class LiquidacionService {
         $this->cache_cargado = true;
     }
 
-    public function calcularLiquidacion($contrato, $variables, $mes, $ano) {
-        
+    public function calcularLiquidacion($contrato, $variables, $mes, $ano)
+    {
+
         // --- 1. DEFINIR BASES IMPONIBLES ---
         $sueldo_base = (int)$contrato['sueldo_imponible'];
         $dias_trabajados = (int)$variables['dias_trabajados'];
-        
+
         if ($dias_trabajados < 30 && $dias_trabajados > 0) {
             $sueldo_base = round(($sueldo_base / 30) * $dias_trabajados);
         }
@@ -75,7 +79,7 @@ class LiquidacionService {
         // --- 2. OBTENER DESCUENTOS PREVISIONALES ---
         $fila_simulada = [
             'trabajador_id' => $contrato['trabajador_id'],
-            'sueldo_imponible' => $total_imponible, 
+            'sueldo_imponible' => $total_imponible,
             'tipo_contrato' => $contrato['tipo_contrato'],
             'cotiza_cesantia_pensionado' => $variables['cotiza_cesantia_pensionado'] ?? 0
         ];
@@ -95,7 +99,7 @@ class LiquidacionService {
         // --- 3. CÁLCULO TRIBUTARIO DINÁMICO (IMPUESTO ÚNICO) ---
         // Base Tributable = Imponible - (Leyes Sociales Obligatorias + APV)
         $base_tributable = $total_imponible - ($afp + $salud + $cesantia + $apv_adicional);
-        
+
         // Si la base es negativa, es 0
         $base_tributable = max(0, $base_tributable);
 
@@ -106,11 +110,11 @@ class LiquidacionService {
         // --- 4. HABERES NO IMPONIBLES ---
         $pacto_col = (int)$contrato['pacto_colacion'];
         $pacto_mov = (int)$contrato['pacto_movilizacion'];
-        
+
         $colacion = ($dias_trabajados == 30) ? $pacto_col : round(($pacto_col / 30) * $dias_trabajados);
         $movilizacion = ($dias_trabajados == 30) ? $pacto_mov : round(($pacto_mov / 30) * $dias_trabajados);
         $viaticos = (int)($variables['viaticos'] ?? 0);
-        
+
         $total_no_imponible = $colacion + $movilizacion + $viaticos + $asig_familiar;
 
 
@@ -156,7 +160,8 @@ class LiquidacionService {
     /**
      * Calcula el Impuesto Único basado en UTM y tablas oficiales.
      */
-    private function calcularImpuestoUnico($base_tributable, $mes, $ano) {
+    private function calcularImpuestoUnico($base_tributable, $mes, $ano)
+    {
         if ($base_tributable <= 0) return 0;
 
         $valor_utm = 0;
@@ -167,9 +172,9 @@ class LiquidacionService {
             $tramos = $this->cache_tramos;
         } else {
             // Fallback (Modo antiguo / edición simple)
-            $this->stmt_utm->execute([':ano' => $ano, ':mes' => $mes]);
+            $this->stmt_utm->execute([':ano1' => $ano, ':ano2' => $ano, ':mes' => $mes]);
             $valor_utm = $this->stmt_utm->fetchColumn();
-            
+
             $this->stmt_tramos->execute();
             $tramos = $this->stmt_tramos->fetchAll(PDO::FETCH_ASSOC);
         }
@@ -183,23 +188,23 @@ class LiquidacionService {
             // Convertir límites UTM a Pesos
             // Limite inferior en pesos
             $limite_inf_pesos = $t['limite_inferior_utm'] * $valor_utm;
-            
+
             // Limite superior en pesos (Si es NULL, es infinito)
             $limite_sup_pesos = ($t['limite_superior_utm'] === null) ? PHP_FLOAT_MAX : ($t['limite_superior_utm'] * $valor_utm);
 
             // Verificar si la base cae en este tramo
             // Lógica: Base > Limite Inferior AND Base <= Limite Superior
             if ($base_tributable > $limite_inf_pesos && $base_tributable <= $limite_sup_pesos) {
-                
+
                 // Calcular Factor
                 $impuesto_bruto = $base_tributable * $t['factor'];
-                
+
                 // Calcular Rebaja (Rebaja en UTM * Valor UTM)
                 $rebaja_pesos = $t['rebaja_utm'] * $valor_utm;
-                
+
                 // Impuesto Final = (Base * Factor) - Rebaja
                 $impuesto = $impuesto_bruto - $rebaja_pesos;
-                
+
                 break; // Ya encontramos el tramo, salir del bucle
             }
         }
@@ -208,4 +213,3 @@ class LiquidacionService {
         return max(0, round($impuesto));
     }
 }
-?>

@@ -131,8 +131,8 @@ function calcular_cierre_bus($pdo, $bus_id, $mes, $anio, $parametros_mensuales =
             $tasa_mutual = (float)($stmt_emp->fetchColumn() ?: 0.0);
 
             // Fetch Tasa SIS (una sola vez por bus-pagador)
-            $stmt_sis = $pdo->prepare("SELECT tasa_sis_decimal FROM sis_historico WHERE (ano_inicio < :ano OR (ano_inicio = :ano AND mes_inicio <= :mes)) ORDER BY ano_inicio DESC, mes_inicio DESC LIMIT 1");
-            $stmt_sis->execute(['ano' => $anio, 'mes' => $mes]);
+            $stmt_sis = $pdo->prepare("SELECT tasa_sis_decimal FROM sis_historico WHERE (ano_inicio < ? OR (ano_inicio = ? AND mes_inicio <= ?)) ORDER BY ano_inicio DESC, mes_inicio DESC LIMIT 1");
+            $stmt_sis->execute([$anio, $anio, $mes]);
             $tasa_sis = (float)($stmt_sis->fetchColumn() ?: 0.0154);
 
             $TASA_CAP_IND_CONST = 0.001;

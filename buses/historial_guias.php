@@ -10,9 +10,16 @@ $empleadores = $pdo->query("SELECT id, nombre FROM empleadores WHERE empresa_sis
 ?>
 <div class="d-sm-flex align-items-center justify-content-between mb-4">
     <h1 class="h3 mb-0 text-gray-800"><i class="fas fa-history text-primary me-2"></i>Historial de Guías</h1>
-    <a href="<?php echo BASE_URL; ?>/ingreso-guia" class="btn btn-secondary shadow-sm rounded-pill px-3">
-        <i class="fas fa-plus me-2"></i>Nueva Guía
-    </a>
+    <div>
+        <?php if (isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'admin'): ?>
+            <button id="btnEliminarMasivo" class="btn btn-danger shadow-sm rounded-pill px-3 me-2" style="display: none;">
+                <i class="fas fa-trash-alt me-2"></i>Eliminar Seleccionados (<span id="countSeleccionados">0</span>)
+            </button>
+        <?php endif; ?>
+        <a href="<?php echo BASE_URL; ?>/ingreso-guia" class="btn btn-secondary shadow-sm rounded-pill px-3">
+            <i class="fas fa-plus me-2"></i>Nueva Guía
+        </a>
+    </div>
 </div>
 
 <!-- FILTROS -->
@@ -69,6 +76,11 @@ $empleadores = $pdo->query("SELECT id, nombre FROM empleadores WHERE empresa_sis
             <table class="table table-sm table-striped table-hover small" id="tablaHistorial" width="100%">
                 <thead class="bg-primary text-white">
                     <tr>
+                        <?php if (isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'admin'): ?>
+                            <th class="text-center" style="width: 40px;">
+                                <input type="checkbox" id="cbSelectAll" class="form-check-input">
+                            </th>
+                        <?php endif; ?>
                         <th>Fecha</th>
                         <th>Folio</th>
                         <th>Bus</th>
@@ -132,74 +144,151 @@ $empleadores = $pdo->query("SELECT id, nombre FROM empleadores WHERE empresa_sis
             });
 
         // INIT DATATABLE
+        const isAdminUser = <?php echo (isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'admin') ? 'true' : 'false'; ?>;
+        const datatableColumns = [];
+
+        if (isAdminUser) {
+            datatableColumns.push({
+                data: null,
+                className: 'text-center',
+                orderable: false,
+                render: function(data, type, row) {
+                    if (row.is_admin) {
+                        return `<input type="checkbox" class="form-check-input cb-guia" value="${row.id}">`;
+                    }
+                    return '';
+                }
+            });
+        }
+
+        datatableColumns.push({
+            data: 'fecha'
+        }, {
+            data: 'folio',
+            className: 'fw-bold'
+        }, {
+            data: 'bus'
+        }, {
+            data: 'patente'
+        }, {
+            data: 'empleador'
+        }, {
+            data: 'conductor'
+        }, {
+            data: 'ingreso',
+            className: 'text-end text-success fw-bold'
+        }, {
+            data: 'liquido',
+            className: 'text-end fw-bold'
+        }, {
+            data: 'estado',
+            className: 'text-center',
+            render: function(data, type, row) {
+                if (row.mes_cerrado) return '<span class="badge bg-danger shadow-sm"><i class="fas fa-lock"></i> Mes Cerrado</span>';
+                if (data === 'Cerrada') return '<span class="badge bg-secondary"><i class="fas fa-lock"></i> Cerrada</span>';
+                return '<span class="badge bg-success"><i class="fas fa-unlock"></i> Abierta</span>';
+            }
+        }, {
+            data: null,
+            className: 'text-center',
+            render: function(data, type, row) {
+                let btns = `<button class="btn btn-xs btn-outline-info me-1" onclick="window.open('<?php echo BASE_URL; ?>/imprimir-voucher/${row.id}', '_blank')"><i class="fas fa-print"></i></button>`;
+
+                if (row.can_edit) {
+                    btns += `<a href="<?php echo BASE_URL; ?>/editar-guia/${row.id}" class="btn btn-xs btn-outline-warning me-1"><i class="fas fa-pen"></i></a>`;
+                    btns += `<button class="btn btn-xs btn-outline-secondary me-1" onclick="cerrarGuia(${row.id})"><i class="fas fa-lock"></i></button>`;
+                } else if (row.mes_cerrado) {
+                    // No actions on month closed
+                } else if (row.estado === 'Cerrada' && row.can_reopen) {
+                    btns += `<button class="btn btn-xs btn-outline-warning me-1" onclick="reabrirGuia(${row.id})"><i class="fas fa-unlock"></i></button>`;
+                }
+
+                if (row.is_admin) {
+                    btns += `<button class="btn btn-xs btn-outline-danger" onclick="eliminarGuia(${row.id})" title="Eliminar registro"><i class="fas fa-trash"></i></button>`;
+                }
+
+                return btns;
+            }
+        });
+
         const table = $('#tablaHistorial').DataTable({
             language: {
-                url: '//cdn.datatables.net/plug-ins/1.13.4/i18n/es-ES.json'
+                url: '<?php echo BASE_URL; ?>/public/assets/vendor/datatables/Spanish.json'
             },
-            columns: [{
-                    data: 'fecha'
-                },
-                {
-                    data: 'folio',
-                    className: 'fw-bold'
-                },
-                {
-                    data: 'bus'
-                },
-                {
-                    data: 'patente'
-                },
-                {
-                    data: 'empleador'
-                },
-                {
-                    data: 'conductor'
-                },
-                {
-                    data: 'ingreso',
-                    className: 'text-end text-success fw-bold'
-                },
-                {
-                    data: 'liquido',
-                    className: 'text-end fw-bold'
-                },
-                {
-                    data: 'estado',
-                    className: 'text-center',
-                    render: function(data, type, row) {
-                        if (row.mes_cerrado) return '<span class="badge bg-danger shadow-sm"><i class="fas fa-lock"></i> Mes Cerrado</span>';
-                        if (data === 'Cerrada') return '<span class="badge bg-secondary"><i class="fas fa-lock"></i> Cerrada</span>';
-                        return '<span class="badge bg-success"><i class="fas fa-unlock"></i> Abierta</span>';
-                    }
-                },
-                {
-                    data: null,
-                    className: 'text-center',
-                    render: function(data, type, row) {
-                        let btns = `<button class="btn btn-xs btn-outline-info me-1" onclick="window.open('<?php echo BASE_URL; ?>/imprimir-voucher/${row.id}', '_blank')"><i class="fas fa-print"></i></button>`;
-
-                        if (row.can_edit) {
-                            btns += `<a href="<?php echo BASE_URL; ?>/editar-guia/${row.id}" class="btn btn-xs btn-outline-warning me-1"><i class="fas fa-pen"></i></a>`;
-                            btns += `<button class="btn btn-xs btn-outline-secondary me-1" onclick="cerrarGuia(${row.id})"><i class="fas fa-lock"></i></button>`;
-                        } else if (row.mes_cerrado) {
-                            // No actions on month closed
-                        } else if (row.estado === 'Cerrada' && row.can_reopen) {
-                            btns += `<button class="btn btn-xs btn-outline-warning me-1" onclick="reabrirGuia(${row.id})"><i class="fas fa-unlock"></i></button>`;
-                        }
-
-                        if (row.is_admin) {
-                            btns += `<button class="btn btn-xs btn-outline-danger" onclick="eliminarGuia(${row.id})" title="Eliminar registro"><i class="fas fa-trash"></i></button>`;
-                        }
-
-                        return btns;
-                    }
-                }
-            ],
+            columns: datatableColumns,
             order: [
-                [0, 'desc'],
-                [1, 'desc']
+                [isAdminUser ? 1 : 0, 'desc'],
+                [isAdminUser ? 2 : 1, 'desc']
             ],
             deferRender: true
+        });
+
+        // LÓGICA DE CHECKBOXES MASIVOS
+        function updateBulkDeleteButton() {
+            let count = $('.cb-guia:checked').length;
+            if (count > 0) {
+                $('#countSeleccionados').text(count);
+                $('#btnEliminarMasivo').fadeIn();
+            } else {
+                $('#btnEliminarMasivo').fadeOut();
+            }
+        }
+
+        $('#cbSelectAll').on('change', function() {
+            let isChecked = $(this).is(':checked');
+            $('.cb-guia').prop('checked', isChecked);
+            updateBulkDeleteButton();
+        });
+
+        $('#tablaHistorial tbody').on('change', '.cb-guia', function() {
+            let total = $('.cb-guia').length;
+            let checked = $('.cb-guia:checked').length;
+            $('#cbSelectAll').prop('checked', total === checked && total > 0);
+            updateBulkDeleteButton();
+        });
+
+        $('#btnEliminarMasivo').on('click', function() {
+            let selectedIds = [];
+            $('.cb-guia:checked').each(function() {
+                selectedIds.push($(this).val());
+            });
+
+            if (selectedIds.length === 0) return;
+
+            Swal.fire({
+                title: `¿Eliminar ${selectedIds.length} guías?`,
+                text: "Esta acción es IRREVERSIBLE. Se eliminarán permanentemente de la base de datos.",
+                icon: 'error',
+                showCancelButton: true,
+                confirmButtonColor: '#e74a3b',
+                cancelButtonColor: '#858796',
+                confirmButtonText: '<i class="fas fa-trash-alt me-1"></i> Sí, eliminar todas',
+                cancelButtonText: 'Cancelar',
+                reverseButtons: true
+            }).then((res) => {
+                if (res.isConfirmed) {
+                    Swal.showLoading();
+                    const formData = new FormData();
+                    formData.append('ids', JSON.stringify(selectedIds));
+
+                    fetch('<?php echo BASE_URL; ?>/ajax/eliminar_guia_masivo.php', {
+                            method: 'POST',
+                            body: formData
+                        })
+                        .then(r => r.json())
+                        .then(res => {
+                            if (res.success) {
+                                Swal.fire('Eliminadas', res.message, 'success');
+                                $('#cbSelectAll').prop('checked', false);
+                                $('#btnEliminarMasivo').hide();
+                                loadData();
+                            } else {
+                                Swal.fire('Error', res.message, 'error');
+                            }
+                        })
+                        .catch(() => Swal.fire('Error', 'Fallo de conexión', 'error'));
+                }
+            });
         });
 
         // BUSCAR
@@ -220,6 +309,8 @@ $empleadores = $pdo->query("SELECT id, nombre FROM empleadores WHERE empresa_sis
                     Swal.close();
                     if (res.success) {
                         table.clear().rows.add(res.data).draw();
+                        $('#cbSelectAll').prop('checked', false);
+                        updateBulkDeleteButton();
                     } else {
                         Swal.fire('Error', res.message, 'error');
                     }

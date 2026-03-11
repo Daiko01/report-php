@@ -204,6 +204,11 @@ function val($key, $default = 0)
         </h1>
         <?php if ($bus_id == 0): ?>
             <div class="d-none d-sm-block">
+                <?php if (isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'admin'): ?>
+                    <button id="btnEliminarCierres" class="btn btn-sm btn-danger shadow-sm me-2" style="display: none;" onclick="procesarEliminacionMasiva()">
+                        <i class="fas fa-trash-alt fa-sm text-white-50"></i> Eliminar (<span id="countCierres">0</span>)
+                    </button>
+                <?php endif; ?>
                 <button onclick="procesarCierreMasivo()" class="btn btn-sm btn-primary shadow-sm">
                     <i class="fas fa-magic fa-sm text-white-50"></i> Procesar Cierre Masivo
                 </button>
@@ -304,7 +309,12 @@ function val($key, $default = 0)
                     <table class="table table-hover align-middle mb-0" id="tablaStatusFlota" width="100%">
                         <thead class="bg-light text-uppercase text-xs font-weight-bold">
                             <tr>
-                                <th class="ps-4">Máquina</th>
+                                <?php if (isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'admin'): ?>
+                                    <th class="ps-3 text-center" style="width: 40px;">
+                                        <input type="checkbox" id="cbSelectAllCierres" class="form-check-input">
+                                    </th>
+                                <?php endif; ?>
+                                <th class="<?= (isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'admin') ? '' : 'ps-4' ?>">Máquina</th>
                                 <th>Unidad/Terminal</th> <!-- Nuevo -->
                                 <th>Producción</th>
                                 <th>Ingreso Total</th>
@@ -321,7 +331,12 @@ function val($key, $default = 0)
                                     $borrador = ($tiene_cierre && $estado === 'Abierto');
                                 ?>
                                     <tr>
-                                        <td class="ps-4">
+                                        <?php if (isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'admin'): ?>
+                                            <td class="ps-3 text-center">
+                                                <input type="checkbox" class="form-check-input cb-cierre" value="<?= $m['id'] ?>">
+                                            </td>
+                                        <?php endif; ?>
+                                        <td class="<?= (isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'admin') ? '' : 'ps-4' ?>">
                                             <div class="fw-bold text-gray-800">Nº <?= $m['numero_maquina'] ?></div>
                                             <small class="text-muted"><?= $m['patente'] ?> &bull; <?= htmlspecialchars($m['empleador']) ?></small>
                                         </td>
@@ -576,11 +591,11 @@ function val($key, $default = 0)
                                     <input type="number" name="gps" class="form-control" value="<?= val('gps', $defaults['gps']) ?>" <?= $readonlyAttr ?>>
                                 </div>
                                 <div class="col-md-6 mb-2">
-                                    <label class="small fw-bold">Boleta Grantía</label>
+                                    <label class="small fw-bold">Boleta Garantía</label>
                                     <input type="number" name="boleta_garantia" class="form-control" value="<?= val('boleta_garantia', $defaults['boleta_garantia']) ?>" <?= $readonlyAttr ?>>
                                 </div>
                                 <div class="col-md-6 mb-2">
-                                    <label class="small fw-bold">Boleta Grantía 2</label>
+                                    <label class="small fw-bold">Boleta Garantía 2</label>
                                     <input type="number" name="boleta_garantia_dos" class="form-control" value="<?= val('boleta_garantia_dos', $defaults['boleta_garantia_dos']) ?>" <?= $readonlyAttr ?>>
                                 </div>
                             </div>
@@ -641,6 +656,8 @@ function val($key, $default = 0)
 <script>
     document.addEventListener("DOMContentLoaded", function() {
         // Inicializar DataTable "Bonito"
+        const isAdminUser = <?php echo (isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'admin') ? 'true' : 'false'; ?>;
+
         const table = $('#tablaStatusFlota').DataTable({
             language: {
                 url: '<?= BASE_URL ?>/public/assets/vendor/datatables/Spanish.json'
@@ -649,20 +666,20 @@ function val($key, $default = 0)
             autoWidth: false,
             pageLength: 25,
             order: [
-                [4, 'asc'], // Order by Estado (Column 4)
-                [0, 'asc'] // Order by Maquina (Column 0)
+                [isAdminUser ? 5 : 4, 'asc'], // Order by Estado
+                [isAdminUser ? 1 : 0, 'asc'] // Order by Maquina
             ],
             columnDefs: [{
                     orderable: false,
-                    targets: [5] // Acciones
+                    targets: isAdminUser ? [0, 6] : [5] // Acciones (y checkbox si admin)
                 },
                 {
                     className: "text-center",
-                    targets: [2, 4] // Produccion, Estado
+                    targets: isAdminUser ? [3, 5] : [2, 4] // Produccion, Estado
                 },
                 {
                     className: "text-end",
-                    targets: [3, 5] // Ingreso, Accion
+                    targets: isAdminUser ? [4, 6] : [3, 5] // Ingreso, Accion
                 }
             ],
             dom: '<"d-flex justify-content-between align-items-center mb-3"f<"d-flex gap-2"l>>rt<"d-flex justify-content-between align-items-center mt-3"ip>',
@@ -685,8 +702,8 @@ function val($key, $default = 0)
                 // 1: Unidad/Terminal (contains Text)
 
                 // Let's grab text from cells
-                const cellMaquina = data[0] || ""; // Contains Employer and Name
-                const cellUbi = data[1] || ""; // Contains Unit and Terminal
+                const cellMaquina = isAdminUser ? (data[1] || "") : (data[0] || ""); // Contains Employer and Name
+                const cellUbi = isAdminUser ? (data[2] || "") : (data[1] || ""); // Contains Unit and Terminal
 
                 if (fUnidad && !cellUbi.includes(fUnidad)) return false;
                 if (fTerm && !cellUbi.includes(fTerm)) return false;
@@ -707,6 +724,94 @@ function val($key, $default = 0)
             $('#filtroTerminal').val('');
             table.draw();
         });
+
+        // CHECKBOXES ELIMINACION MASIVA CIERRES
+        function updateBulkDeleteCierresBtn() {
+            let count = $('.cb-cierre:checked').length;
+            if (count > 0) {
+                $('#countCierres').text(count);
+                $('#btnEliminarCierres').fadeIn();
+            } else {
+                $('#btnEliminarCierres').fadeOut();
+            }
+        }
+
+        $('#cbSelectAllCierres').on('change', function() {
+            let isChecked = $(this).is(':checked');
+            if (isChecked) {
+                table.rows({
+                    search: 'applied'
+                }).nodes().to$().find('.cb-cierre').prop('checked', true);
+            } else {
+                $('.cb-cierre').prop('checked', false);
+            }
+            updateBulkDeleteCierresBtn();
+        });
+
+        $('#tablaStatusFlota tbody').on('change', '.cb-cierre', function() {
+            let total = table.rows({
+                search: 'applied'
+            }).nodes().length;
+            let checked = table.rows({
+                search: 'applied'
+            }).nodes().to$().find('.cb-cierre:checked').length;
+            $('#cbSelectAllCierres').prop('checked', total === checked && total > 0);
+            updateBulkDeleteCierresBtn();
+        });
+
+        window.procesarEliminacionMasiva = function() {
+            let selectedBuses = [];
+            $('.cb-cierre:checked').each(function() {
+                selectedBuses.push($(this).val());
+            });
+
+            if (selectedBuses.length === 0) return;
+
+            Swal.fire({
+                title: `¿Eliminar la información de ${selectedBuses.length} buses?`,
+                html: "<strong>¡ADVERTENCIA CRÍTICA!</strong><br><br>Esta acción eliminará de forma irreversible:<br>1. Los registros de <b>Cierre Mensual</b> del mes actual.<br>2. <b>TODAS LAS GUÍAS DEL HISTORIAL</b> (producción) asociadas a estos buses en este mes.<br><br>¿Está seguro de querer continuar?",
+                icon: 'error',
+                showCancelButton: true,
+                confirmButtonColor: '#e74a3b',
+                cancelButtonColor: '#858796',
+                confirmButtonText: '<i class="fas fa-trash-alt me-1"></i> Sí, borrar todo',
+                cancelButtonText: 'Cancelar',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    Swal.fire({
+                        title: 'Eliminando...',
+                        html: 'Borrando cierres y guías. Por favor espere.',
+                        timerProgressBar: true,
+                        allowOutsideClick: false,
+                        didOpen: () => {
+                            Swal.showLoading();
+                        }
+                    });
+
+                    const formData = new FormData();
+                    formData.append('mes', '<?= $mes_sel ?>');
+                    formData.append('anio', '<?= $anio_sel ?>');
+                    formData.append('buses', JSON.stringify(selectedBuses));
+
+                    fetch('<?= BASE_URL ?>/ajax/eliminar_cierres_masivo.php', {
+                            method: 'POST',
+                            body: formData
+                        })
+                        .then(r => r.json())
+                        .then(res => {
+                            if (res.success) {
+                                Swal.fire('¡Eliminado!', res.message, 'success').then(() => {
+                                    location.reload();
+                                });
+                            } else {
+                                Swal.fire('Error', res.message, 'error');
+                            }
+                        })
+                        .catch(() => Swal.fire('Error', 'Fallo de conexión al intentar eliminar', 'error'));
+                }
+            });
+        };
     });
 
     function procesarCierreMasivo() {

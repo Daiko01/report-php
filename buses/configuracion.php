@@ -221,7 +221,7 @@ $months_list = [1 => 'Enero', 2 => 'Febrero', 3 => 'Marzo', 4 => 'Abril', 5 => '
                         <label class="form-label fw-bold">Monto Admin. Global ($)</label>
                         <div class="input-group mb-3">
                             <span class="input-group-text">$</span>
-                            <input type="number" name="monto_admin" class="form-control" value="<?= $defaults['monto_administracion_global'] ?>" required>
+                            <input type="text" name="monto_admin" class="form-control format-number" value="<?= $defaults['monto_administracion_global'] ?>" required>
                         </div>
 
                         <h6 class="font-weight-bold text-gray-800 border-bottom pb-2 mb-3 mt-4">Otros Descuentos Mensuales</h6>
@@ -231,7 +231,7 @@ $months_list = [1 => 'Enero', 2 => 'Febrero', 3 => 'Marzo', 4 => 'Abril', 5 => '
                                 <label class="small fw-bold">Derechos de Loza</label>
                                 <div class="input-group input-group-sm">
                                     <span class="input-group-text">$</span>
-                                    <input type="number" name="derechos_loza" class="form-control" value="<?= $defaults['derechos_loza_global'] ?>">
+                                    <input type="text" name="derechos_loza" class="form-control format-number" value="<?= $defaults['derechos_loza_global'] ?>">
                                 </div>
                             </div>
 
@@ -239,7 +239,7 @@ $months_list = [1 => 'Enero', 2 => 'Febrero', 3 => 'Marzo', 4 => 'Abril', 5 => '
                                 <label class="small fw-bold">Seguro y Cartolas (Sept.)</label>
                                 <div class="input-group input-group-sm">
                                     <span class="input-group-text">$</span>
-                                    <input type="number" name="seguro_cartolas" class="form-control"
+                                    <input type="text" name="seguro_cartolas" class="form-control format-number"
                                         value="<?= ($mes_sel == 9) ? $defaults['seguro_cartolas_global'] : 0 ?>"
                                         <?= ($mes_sel != 9) ? 'readonly style="background-color: #e9ecef;"' : '' ?>>
                                 </div>
@@ -252,23 +252,23 @@ $months_list = [1 => 'Enero', 2 => 'Febrero', 3 => 'Marzo', 4 => 'Abril', 5 => '
                                 <label class="small fw-bold">GPS</label>
                                 <div class="input-group input-group-sm">
                                     <span class="input-group-text">$</span>
-                                    <input type="number" name="gps" class="form-control" value="<?= $defaults['gps_global'] ?>">
+                                    <input type="text" name="gps" class="form-control format-number" value="<?= $defaults['gps_global'] ?>">
                                 </div>
                             </div>
 
                             <div class="col-md-6 mb-3">
-                                <label class="small fw-bold">Boleta Grantía</label>
+                                <label class="small fw-bold">Boleta Garantía</label>
                                 <div class="input-group input-group-sm">
                                     <span class="input-group-text">$</span>
-                                    <input type="number" name="boleta_garantia" class="form-control" value="<?= $defaults['boleta_garantia_global'] ?>">
+                                    <input type="text" name="boleta_garantia" class="form-control format-number" value="<?= $defaults['boleta_garantia_global'] ?>">
                                 </div>
                             </div>
 
                             <div class="col-md-6 mb-3">
-                                <label class="small fw-bold">Boleta Grantía 2</label>
+                                <label class="small fw-bold">Boleta Garantía 2</label>
                                 <div class="input-group input-group-sm">
                                     <span class="input-group-text">$</span>
-                                    <input type="number" name="boleta_garantia_dos" class="form-control" value="<?= $defaults['boleta_garantia_dos_global'] ?>">
+                                    <input type="text" name="boleta_garantia_dos" class="form-control format-number" value="<?= $defaults['boleta_garantia_dos_global'] ?>">
                                 </div>
                             </div>
                         </div>
@@ -396,6 +396,35 @@ $months_list = [1 => 'Enero', 2 => 'Febrero', 3 => 'Marzo', 4 => 'Abril', 5 => '
                 var text = $(this).find(".employer-name").text().toLowerCase();
                 $(this).toggle(text.indexOf(value) > -1)
             });
+        });
+
+        // Formato Moneda (Separador de miles)
+        function formatNumber(n) {
+            // Elimina caracteres no numéricos y luego aplica separador de miles
+            return n.replace(/\D/g, "").replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+        }
+
+        $('.format-number').on('input', function() {
+            var val = $(this).val();
+            var formatted = formatNumber(val);
+            $(this).val(formatted);
+        });
+
+        // Formatear al inicio
+        $('.format-number').each(function() {
+            var val = $(this).val();
+            if (val) {
+                $(this).val(formatNumber(val));
+            }
+        });
+
+        // Quitar formato antes de enviar el formulario
+        $('#mainForm').on('submit', function() {
+            $('.format-number').each(function() {
+                var rawVal = String($(this).val()).replace(/\./g, '');
+                $(this).val(rawVal);
+            });
+            return true;
         });
     });
 </script>

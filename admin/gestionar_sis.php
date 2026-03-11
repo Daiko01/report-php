@@ -149,7 +149,7 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
         // Initialize DataTables with specific config
         $('#tabla_sis').DataTable({
             language: {
-                url: "//cdn.datatables.net/plug-ins/1.13.4/i18n/es-ES.json"
+                url: "<?php echo BASE_URL; ?>/public/assets/vendor/datatables/Spanish.json"
             },
             order: [
                 [0, "desc"]

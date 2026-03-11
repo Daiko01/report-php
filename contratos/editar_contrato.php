@@ -35,7 +35,13 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
 ?>
 
 <div class="container-fluid">
-    <h1 class="h3 mb-4 text-gray-800">Detalle del Contrato</h1>
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">Detalle del Contrato</h1>
+        <a href="<?php echo BASE_URL; ?>/listado-contratos" class="btn btn-secondary btn-sm shadow-sm rounded-pill px-4 fw-bold">
+            <i class="fas fa-arrow-left me-1"></i> Volver al Listado
+        </a>
+    </div>
+
     <h5 class="mb-4 text-dark">
         <i class="fas fa-user-tie me-2"></i><?php echo htmlspecialchars($contrato['trabajador_nombre']); ?>
         <small class="text-muted">en</small>
@@ -151,12 +157,15 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
                                 <div class="row">
                                     <div class="col-md-4 mb-3">
                                         <label class="form-label">Nuevo Sueldo Base</label>
-                                        <input type="number" class="form-control" name="nuevo_sueldo" placeholder="Actual: $<?php echo number_format($contrato['sueldo_imponible'], 0, ',', '.'); ?>">
+                                        <div class="input-group">
+                                            <span class="input-group-text">$</span>
+                                            <input type="text" class="form-control format-number" name="nuevo_sueldo" placeholder="Actual: $<?php echo number_format($contrato['sueldo_imponible'], 0, ',', '.'); ?>">
+                                        </div>
                                     </div>
 
                                     <div class="col-md-4 mb-3" id="wrapper-nueva-fecha">
-                                        <label class="form-label">Nueva Fecha Término</label>
-                                        <input type="date" class="form-control" name="nueva_fecha_termino">
+                                        <label class="form-label">Nueva Fecha Término <span class="text-danger d-none" id="req-asterisk">*</span></label>
+                                        <input type="date" class="form-control" name="nueva_fecha_termino" id="nueva_fecha_termino">
                                         <div class="form-text text-muted">Dejar vacío si no cambia.</div>
                                     </div>
 
@@ -185,6 +194,9 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
                                     <th>Fecha Vigencia</th>
                                     <th>Descripción</th>
                                     <th>Detalles del Cambio</th>
+                                    <?php if (isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'admin'): ?>
+                                        <th class="text-center" style="width: 80px;">Acciones</th>
+                                    <?php endif; ?>
                                 </tr>
                             </thead>
                             <tbody>
@@ -206,11 +218,19 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
                                                 ?>
                                             </ul>
                                         </td>
+                                        <?php if (isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'admin'): ?>
+                                            <td class="text-center">
+                                                <button class="btn btn-sm btn-outline-danger" onclick="eliminarAnexo(<?php echo $a['id']; ?>, <?php echo $contrato_id; ?>)" title="Eliminar Anexo">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </td>
+                                        <?php endif; ?>
                                     </tr>
                                 <?php endforeach; ?>
                                 <?php if (empty($anexos)): ?>
                                     <tr>
-                                        <td colspan="3" class="text-center text-muted py-3">No existen anexos registrados.</td>
+                                        <?php $colspan = (isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'admin') ? 4 : 3; ?>
+                                        <td colspan="<?php echo $colspan; ?>" class="text-center text-muted py-3">No existen anexos registrados.</td>
                                     </tr>
                                 <?php endif; ?>
                             </tbody>
@@ -255,7 +275,8 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
 
         const $nuevoTipo = $('#nuevo_tipo_contrato');
         const $wrapperNuevaFecha = $('#wrapper-nueva-fecha');
-        const $inputNuevaFecha = $('input[name="nueva_fecha_termino"]');
+        const $inputNuevaFecha = $('#nueva_fecha_termino');
+        const $reqAsterisk = $('#req-asterisk');
 
         function toggleAnexoFields() {
             let seleccion = $nuevoTipo.val();
@@ -266,14 +287,26 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
             }
 
             // Lógica:
-            // 1. Si el tipo resultante es "Indefinido", ocultamos la fecha.
+            // 1. Si el tipo resultante es "Indefinido", ocultamos la fecha y no es requerida.
             // 2. Si el tipo resultante es "Fijo", mostramos la fecha.
+            // Si además se cambia EXPLÍCITAMENTE a "Fijo", la fecha debe ser requerida.
 
             if (seleccion === 'Indefinido') {
                 $wrapperNuevaFecha.hide();
                 $inputNuevaFecha.val(''); // Limpiar valor para que no se envíe
+                $inputNuevaFecha.prop('required', false);
+                $reqAsterisk.addClass('d-none');
             } else {
                 $wrapperNuevaFecha.show();
+
+                // Si el usuario seleccionó manualmente cambiar a Fijo, es obligatorio poner la fecha de término
+                if ($nuevoTipo.val() === 'Fijo') {
+                    $inputNuevaFecha.prop('required', true);
+                    $reqAsterisk.removeClass('d-none');
+                } else {
+                    $inputNuevaFecha.prop('required', false);
+                    $reqAsterisk.addClass('d-none');
+                }
             }
         }
 
@@ -281,5 +314,68 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
 
         // Ejecutar al cargar para establecer el estado inicial correcto
         toggleAnexoFields();
+
+        // Formato Moneda (Separador de miles)
+        function formatNumber(n) {
+            return n.replace(/\D/g, "").replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+        }
+
+        $('.format-number').on('input', function() {
+            var val = $(this).val();
+            var formatted = formatNumber(val);
+            $(this).val(formatted);
+        });
+
+        // Limpiar formato antes de enviar el formulario de anexos
+        $('form[action*="agregar_anexo_process"]').on('submit', function() {
+            var $input = $(this).find('.format-number');
+            var rawVal = String($input.val()).replace(/\./g, '');
+            $input.val(rawVal);
+            return true;
+        });
     });
+
+    // Función para eliminar un anexo
+    function eliminarAnexo(id_anexo, id_contrato) {
+        Swal.fire({
+            title: '¿Eliminar este anexo?',
+            text: "Esta acción es irreversible y se eliminará el registro de cambios. (Nota: Si este anexo modificó el sueldo del contrato base, el sueldo NO retrocederá automáticamente, deberás ajustarlo creando otro anexo o editándolo manualmente si es necesario).",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#e74a3b',
+            cancelButtonColor: '#858796',
+            confirmButtonText: '<i class="fas fa-trash me-1"></i> Sí, eliminar',
+            cancelButtonText: 'Cancelar',
+            reverseButtons: true
+        }).then((result) => {
+            if (result.isConfirmed) {
+                Swal.showLoading();
+                const formData = new FormData();
+                formData.append('id_anexo', id_anexo);
+                formData.append('id_contrato', id_contrato);
+
+                fetch('<?php echo BASE_URL; ?>/ajax/eliminar_anexo.php', {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(r => r.json())
+                    .then(res => {
+                        if (res.success) {
+                            Swal.fire({
+                                title: '¡Eliminado!',
+                                text: res.message,
+                                icon: 'success'
+                            }).then(() => {
+                                window.location.reload();
+                            });
+                        } else {
+                            Swal.fire('Error', res.message, 'error');
+                        }
+                    })
+                    .catch(() => {
+                        Swal.fire('Error', 'Fallo de conexión con el servidor', 'error');
+                    });
+            }
+        });
+    }
 </script>

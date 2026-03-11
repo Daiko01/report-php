@@ -318,7 +318,7 @@ try {
         </div>
 
         <div class="footer">
-            Sistema TransReport <br>
+            Sistema TransReport Sol <br>
             <?php echo $hora_actual; ?>
         </div>
 

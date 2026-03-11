@@ -161,7 +161,7 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
         if (!$.fn.DataTable.isDataTable('.datatable-es')) {
             $('.datatable-es').DataTable({
                 language: {
-                    url: "//cdn.datatables.net/plug-ins/1.13.4/i18n/es-ES.json"
+                    url: "<?php echo BASE_URL; ?>/public/assets/vendor/datatables/Spanish.json"
                 },
                 columnDefs: [{
                     target: 3,

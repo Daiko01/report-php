@@ -3,14 +3,18 @@ require_once dirname(__DIR__) . '/app/core/bootstrap.php';
 require_once dirname(__DIR__) . '/app/includes/session_check.php';
 require_once dirname(__DIR__) . '/app/lib/utils.php';
 
-if ($_SERVER['REQUEST_METHOD'] != 'POST') { header('Location: cargar_aportes.php'); exit; }
+if ($_SERVER['REQUEST_METHOD'] != 'POST') {
+    header('Location: cargar_aportes.php');
+    exit;
+}
 
 $mes = (int)$_POST['mes'];
 $ano = (int)$_POST['ano'];
 
 if (!isset($_FILES['archivo_aportes']) || $_FILES['archivo_aportes']['error'] != 0) {
     $_SESSION['flash_message'] = ['type' => 'error', 'message' => 'Error al subir el archivo.'];
-    header('Location: cargar_aportes.php'); exit;
+    header('Location: cargar_aportes.php');
+    exit;
 }
 
 $tmp_name = $_FILES['archivo_aportes']['tmp_name'];
@@ -20,11 +24,12 @@ $file_name = $_FILES['archivo_aportes']['name'];
 $ext = strtolower(pathinfo($file_name, PATHINFO_EXTENSION));
 if ($ext != 'csv') {
     $_SESSION['flash_message'] = ['type' => 'error', 'message' => 'Solo se permiten archivos CSV.'];
-    header('Location: cargar_aportes.php'); exit;
+    header('Location: cargar_aportes.php');
+    exit;
 }
 
-$aportes_validos = []; 
-$lista_excedentes = []; 
+$aportes_validos = [];
+$lista_excedentes = [];
 
 // 2. PREPARAR CONSULTAS NUEVAS (FASE 4: JOIN CON EMPRESAS_SISTEMA)
 
@@ -53,8 +58,8 @@ $stmt_contrato = $pdo->prepare("
     WHERE t.rut = :rut 
     AND c.empleador_id = :eid
     AND c.fecha_inicio <= :fin_mes
-    AND (c.esta_finiquitado = 0 OR c.fecha_finiquito >= :inicio_mes)
-    AND (c.fecha_termino IS NULL OR c.fecha_termino >= :inicio_mes)
+    AND (c.esta_finiquitado = 0 OR c.fecha_finiquito >= :inicio_mes1)
+    AND (c.fecha_termino IS NULL OR c.fecha_termino >= :inicio_mes2)
     LIMIT 1
 ");
 
@@ -66,8 +71,8 @@ $stmt_detective = $pdo->prepare("
     JOIN empleadores e ON c.empleador_id = e.id
     WHERE t.rut = :rut
     AND c.fecha_inicio <= :fin_mes
-    AND (c.esta_finiquitado = 0 OR c.fecha_finiquito >= :inicio_mes)
-    AND (c.fecha_termino IS NULL OR c.fecha_termino >= :inicio_mes)
+    AND (c.esta_finiquitado = 0 OR c.fecha_finiquito >= :inicio_mes1)
+    AND (c.fecha_termino IS NULL OR c.fecha_termino >= :inicio_mes2)
     LIMIT 1
 ");
 
@@ -77,7 +82,7 @@ try {
     $pdo->prepare("DELETE FROM aportes_externos WHERE mes = ? AND ano = ?")->execute([$mes, $ano]);
 
     if (($handle = fopen($tmp_name, "r")) !== FALSE) {
-        
+
         $firstLine = fgets($handle);
         rewind($handle);
         $delimiter = (substr_count($firstLine ?? '', ';') > substr_count($firstLine ?? '', ',')) ? ';' : ',';
@@ -85,17 +90,17 @@ try {
         while (($data = fgetcsv($handle, 1000, $delimiter)) !== FALSE) {
             if (count($data) < 4) continue;
 
-            $maquina = trim($data[0]); 
+            $maquina = trim($data[0]);
             $rut_crudo = trim($data[1]);
             $nombre_conductor = trim($data[2]);
-            
-            $rut_limpio = strtoupper(preg_replace('/[^0-9kK]/', '', $rut_crudo)); 
-            
+
+            $rut_limpio = strtoupper(preg_replace('/[^0-9kK]/', '', $rut_crudo));
+
             if (!mb_check_encoding($nombre_conductor, 'UTF-8')) {
                 $nombre_conductor = mb_convert_encoding($nombre_conductor, 'UTF-8', 'ISO-8859-1');
             }
 
-            $monto = (int)preg_replace('/[^0-9]/', '', $data[3]); 
+            $monto = (int)preg_replace('/[^0-9]/', '', $data[3]);
 
             if (empty($rut_limpio) || $monto <= 0) continue;
 
@@ -107,8 +112,12 @@ try {
 
             if (!$info_bus) {
                 $lista_excedentes[] = [
-                    'rut' => $rut_crudo, 'nombre' => $nombre_conductor, 'maquina' => $maquina,
-                    'monto' => $monto, 'empresa' => 'DESCONOCIDA', 'motivo' => 'Máquina no registrada'
+                    'rut' => $rut_crudo,
+                    'nombre' => $nombre_conductor,
+                    'maquina' => $maquina,
+                    'monto' => $monto,
+                    'empresa' => 'DESCONOCIDA',
+                    'motivo' => 'Máquina no registrada'
                 ];
                 continue;
             }
@@ -119,18 +128,19 @@ try {
 
             // 2. Verificar Contrato
             $rut_bd = number_format(substr($rut_limpio, 0, -1), 0, ',', '.') . '-' . substr($rut_limpio, -1);
-            
+
             $stmt_contrato->execute([
                 ':rut' => $rut_bd,
                 ':eid' => $empleador_id_bus,
-                ':inicio_mes' => $fecha_inicio_mes,
+                ':inicio_mes1' => $fecha_inicio_mes,
+                ':inicio_mes2' => $fecha_inicio_mes,
                 ':fin_mes' => $fecha_fin_mes
             ]);
 
             if ($stmt_contrato->fetch()) {
                 // VALIDO
-                $key = $rut_limpio . '_' . $empresa_sistema; 
-                
+                $key = $rut_limpio . '_' . $empresa_sistema;
+
                 if (!isset($aportes_validos[$key])) {
                     $aportes_validos[$key] = [
                         'rut' => $rut_limpio, // Guardamos limpio
@@ -139,10 +149,9 @@ try {
                     ];
                 }
                 $aportes_validos[$key]['monto'] += $monto;
-
             } else {
                 // EXCEDENTE
-                $stmt_detective->execute([':rut' => $rut_bd, ':inicio_mes' => $fecha_inicio_mes, ':fin_mes' => $fecha_fin_mes]);
+                $stmt_detective->execute([':rut' => $rut_bd, ':inicio_mes1' => $fecha_inicio_mes, ':inicio_mes2' => $fecha_inicio_mes, ':fin_mes' => $fecha_fin_mes]);
                 $otro_empleador = $stmt_detective->fetchColumn();
 
                 if ($otro_empleador) {
@@ -152,8 +161,12 @@ try {
                 }
 
                 $lista_excedentes[] = [
-                    'rut' => $rut_crudo, 'nombre' => $nombre_conductor, 'maquina' => $maquina,
-                    'monto' => $monto, 'empresa' => $empresa_sistema, 'motivo' => $motivo
+                    'rut' => $rut_crudo,
+                    'nombre' => $nombre_conductor,
+                    'maquina' => $maquina,
+                    'monto' => $monto,
+                    'empresa' => $empresa_sistema,
+                    'motivo' => $motivo
                 ];
             }
         }
@@ -171,10 +184,10 @@ try {
         }
 
         $pdo->commit();
-        
+
         $total_validos = count($aportes_validos);
         $total_excedentes = count($lista_excedentes);
-        
+
         if ($total_excedentes > 0) {
             session_start();
             $_SESSION['reporte_excedentes'] = [
@@ -189,14 +202,12 @@ try {
             header('Location: cargar_aportes.php');
         }
         exit;
-
     } else {
         throw new Exception("No se pudo abrir el archivo.");
     }
-
 } catch (Exception $e) {
     $pdo->rollBack();
     $_SESSION['flash_message'] = ['type' => 'error', 'message' => 'Error: ' . $e->getMessage()];
-    header('Location: cargar_aportes.php'); exit;
+    header('Location: cargar_aportes.php');
+    exit;
 }
-?>

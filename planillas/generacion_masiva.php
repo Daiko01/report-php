@@ -17,11 +17,12 @@ try {
                 FROM empleadores e
                 INNER JOIN contratos c ON e.id = c.empleador_id
                 WHERE c.fecha_inicio <= :fin_mes 
-                AND (c.fecha_termino IS NULL OR c.fecha_termino >= :inicio_mes)
+                AND (c.fecha_termino IS NULL OR c.fecha_termino >= :inicio_mes1)
+                AND (c.fecha_finiquito IS NULL OR c.fecha_finiquito >= :inicio_mes2)
                 ORDER BY e.nombre";
 
     $stmt = $pdo->prepare($sql);
-    $stmt->execute([':inicio_mes' => $inicio_mes, ':fin_mes' => $fin_mes]);
+    $stmt->execute([':inicio_mes1' => $inicio_mes, ':inicio_mes2' => $inicio_mes, ':fin_mes' => $fin_mes]);
     $empleadores = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     // 4. Verificar cuáles ya tienen planilla generada para este mes/año
@@ -38,7 +39,6 @@ require_once dirname(__DIR__) . '/app/includes/header.php';
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1 class="h3 text-gray-800">Generación Masiva de Planillas</h1>
-        <a href="<?php echo BASE_URL; ?>/planillas/cargar_selector.php" class="btn btn-secondary btn-sm"><i class="fas fa-arrow-left"></i> Volver</a>
     </div>
 
     <!-- Filtro de Periodo -->
